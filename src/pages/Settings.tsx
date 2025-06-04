@@ -18,37 +18,37 @@ const Settings = () => {
   const [preferredChannel, setPreferredChannel] = useState("phone");
 
   return (
-    <div className="min-h-screen bg-warm-gradient">
+    <div className="min-h-screen bg-cosmic-gradient">
       {/* Header */}
       <div className="flex items-center p-4 md:p-6">
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => navigate('/journal')}
-          className="text-lumi-wood hover:bg-lumi-wood/10 mr-3"
+          className="text-white hover:bg-white/10 mr-3"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-2xl font-medium text-lumi-wood">when should i call you?</h1>
+        <h1 className="text-2xl font-medium text-white">when should i call you?</h1>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8">
         <div className="space-y-6">
           {/* Call Time */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lumi-wood text-lg">your daily check-in time</CardTitle>
+              <CardTitle className="text-white text-lg">your daily check-in time</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-lumi-wood/80">what time works best for you?</Label>
+                <Label className="text-white/80">what time works best for you?</Label>
                 <Input
                   type="time"
                   value={callTime}
                   onChange={(e) => setCallTime(e.target.value)}
-                  className="border-lumi-wood/20 focus:border-lumi-aqua"
+                  className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white"
                 />
-                <p className="text-sm text-lumi-wood/60">
+                <p className="text-sm text-white/60">
                   i'll call you every day at this time. we can always adjust this later.
                 </p>
               </div>
@@ -56,24 +56,24 @@ const Settings = () => {
           </Card>
 
           {/* Phone Number */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lumi-wood text-lg">how can i reach you?</CardTitle>
+              <CardTitle className="text-white text-lg">how can i reach you?</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-lumi-wood/80">your phone number</Label>
+                <Label className="text-white/80">your phone number</Label>
                 <Input
                   type="tel"
                   placeholder="+1 (555) 123-4567"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="border-lumi-wood/20 focus:border-lumi-aqua"
+                  className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
                 />
               </div>
               
               <div className="space-y-3">
-                <Label className="text-lumi-wood/80">how would you prefer i reach out?</Label>
+                <Label className="text-white/80">how would you prefer i reach out?</Label>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
                     <input
@@ -83,9 +83,9 @@ const Settings = () => {
                       value="phone"
                       checked={preferredChannel === "phone"}
                       onChange={(e) => setPreferredChannel(e.target.value)}
-                      className="text-lumi-wood focus:ring-lumi-aqua"
+                      className="text-lumi-sunset-coral focus:ring-lumi-aquamarine"
                     />
-                    <label htmlFor="phone" className="flex items-center space-x-2 text-lumi-wood">
+                    <label htmlFor="phone" className="flex items-center space-x-2 text-white">
                       <Phone className="w-4 h-4" />
                       <span>phone call</span>
                     </label>
@@ -98,9 +98,9 @@ const Settings = () => {
                       value="whatsapp"
                       checked={preferredChannel === "whatsapp"}
                       onChange={(e) => setPreferredChannel(e.target.value)}
-                      className="text-lumi-wood focus:ring-lumi-aqua"
+                      className="text-lumi-sunset-coral focus:ring-lumi-aquamarine"
                     />
-                    <label htmlFor="whatsapp" className="flex items-center space-x-2 text-lumi-wood">
+                    <label htmlFor="whatsapp" className="flex items-center space-x-2 text-white">
                       <MessageSquare className="w-4 h-4" />
                       <span>whatsapp</span>
                     </label>
@@ -111,15 +111,15 @@ const Settings = () => {
           </Card>
 
           {/* Retry Settings */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lumi-wood text-lg">if you miss my call</CardTitle>
+              <CardTitle className="text-white text-lg">if you miss my call</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label className="text-lumi-wood/80">should i try calling again?</Label>
-                  <p className="text-sm text-lumi-wood/60">
+                  <Label className="text-white/80">should i try calling again?</Label>
+                  <p className="text-sm text-white/60">
                     life happens. i understand if you can't always answer.
                   </p>
                 </div>
@@ -131,9 +131,9 @@ const Settings = () => {
               
               {retryEnabled && (
                 <div className="space-y-2">
-                  <Label className="text-lumi-wood/80">how many times should i retry?</Label>
+                  <Label className="text-white/80">how many times should i retry?</Label>
                   <Select value={maxRetries} onValueChange={setMaxRetries}>
-                    <SelectTrigger className="border-lumi-wood/20 focus:border-lumi-aqua">
+                    <SelectTrigger className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white">
                       <SelectValue placeholder="Select retry count" />
                     </SelectTrigger>
                     <SelectContent>
@@ -142,7 +142,7 @@ const Settings = () => {
                       <SelectItem value="3">3 times (recommended)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-lumi-wood/60">
+                  <p className="text-sm text-white/60">
                     i'll space these out throughout the day, so don't worry about being bothered.
                   </p>
                 </div>
@@ -152,7 +152,7 @@ const Settings = () => {
 
           {/* Save Button */}
           <Button 
-            className="w-full bg-lumi-wood hover:bg-lumi-wood/90 text-white py-3 text-lg font-medium rounded-xl"
+            className="w-full bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 text-lg font-medium rounded-xl"
           >
             save my preferences
           </Button>
