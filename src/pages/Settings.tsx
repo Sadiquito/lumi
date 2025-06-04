@@ -61,7 +61,7 @@ const Settings = () => {
       setFormData({
         call_time: preferences.call_time || "07:30",
         phone_number: preferences.phone_number || "",
-        preferred_channel: preferences.preferred_channel || "phone",
+        preferred_channel: (preferences.preferred_channel as 'phone' | 'whatsapp') || "phone",
         retry_enabled: preferences.retry_enabled ?? true,
         max_retries: preferences.max_retries || 3,
       });
