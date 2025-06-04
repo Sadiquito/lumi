@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,7 @@ import { ELEVENLABS_VOICES } from '@/utils/elevenLabsConfig';
 
 const TTSTestingPanel: React.FC = () => {
   const [testText, setTestText] = useState('Welcome to Lumi! This is a test of our voice synthesis feature. How does this sound to you?');
-  const [selectedVoice, setSelectedVoice] = useState(ELEVENLABS_VOICES.aria);
+  const [selectedVoice, setSelectedVoice] = useState<string>(ELEVENLABS_VOICES.aria);
   const [testResults, setTestResults] = useState<{
     networkTest: 'pending' | 'success' | 'failed';
     voiceTest: 'pending' | 'success' | 'failed';
