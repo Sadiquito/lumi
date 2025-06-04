@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('subscription_status, trial_start_date')
+          .select('subscription_status, trial_start_date, created_at')
           .eq('id', user.id)
           .maybeSingle();
         
@@ -74,27 +74,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // Enhanced trial status check with timezone and grace period handling
-  const { data: trialStatusData, isLoading: trialStatusLoading, error: trialStatusError } = useQuery({
+  const { data: trialStatusData, isLoading: enhancedTrialLoading, error: trialStatusError } = useQuery({
     queryKey: ['enhanced-trial-status', user?.id, userData?.trial_start_date],
     queryFn: async () => {
       if (!user?.id || !userData) return null;
       
       try {
-        // Use server-side function to ensure timezone-accurate calculations
+        // Use existing functions for now
         const { data: isExpired, error: expiredError } = await supabase
-          .rpc('is_trial_expired_with_grace', { user_id: user.id });
+          .rpc('is_trial_expired', { user_id: user.id });
         
         if (expiredError) throw expiredError;
 
         const { data: daysRemaining, error: daysError } = await supabase
-          .rpc('get_trial_days_remaining_precise', { user_id: user.id });
+          .rpc('get_trial_days_remaining', { user_id: user.id });
         
         if (daysError) throw daysError;
 
-        const { data: gracePeriodStatus, error: graceError } = await supabase
-          .rpc('get_grace_period_status', { user_id: user.id });
+        // Calculate grace period status locally for now
+        let isInGracePeriod = false;
+        let gracePeriodEndsAt = null;
         
-        if (graceError) throw graceError;
+        if (userData.trial_start_date && isExpired) {
+          const startDate = new Date(userData.trial_start_date);
+          const graceEndDate = new Date(startDate);
+          graceEndDate.setDate(graceEndDate.getDate() + 8); // 7 days trial + 1 day grace
+          
+          const now = new Date();
+          if (now < graceEndDate) {
+            isInGracePeriod = true;
+            gracePeriodEndsAt = graceEndDate.toISOString();
+          }
+        }
 
         // Calculate trial end date with timezone consideration
         let trialEndDate = null;
@@ -109,8 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isTrialExpired: isExpired || false,
           daysRemaining: Math.max(0, daysRemaining || 0),
           trialEndDate,
-          isInGracePeriod: gracePeriodStatus?.is_in_grace_period || false,
-          gracePeriodEndsAt: gracePeriodStatus?.grace_period_ends_at || null,
+          isInGracePeriod,
+          gracePeriodEndsAt,
         };
       } catch (error) {
         console.error('Error checking trial status:', error);
@@ -129,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       try {
         const { data, error } = await supabase
-          .rpc('has_premium_access_with_grace', { user_id: user.id });
+          .rpc('has_premium_access', { user_id: user.id });
         
         if (error) throw error;
         return data || false;
@@ -181,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     enabled: !!user?.id,
   });
 
-  const trialStatusLoading = userLoading || trialStatusLoading || 
+  const allQueriesLoading = userLoading || enhancedTrialLoading || 
                            premiumAccessLoading || ttsLoading || aiAdviceLoading;
 
   // Collect any errors
@@ -198,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     trialEndDate: trialStatusData?.trialEndDate || null,
     isInGracePeriod: trialStatusData?.isInGracePeriod || false,
     gracePeriodEndsAt: trialStatusData?.gracePeriodEndsAt || null,
-    isLoading: trialStatusLoading,
+    isLoading: allQueriesLoading,
     error,
   };
 
