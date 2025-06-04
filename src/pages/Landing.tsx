@@ -20,18 +20,18 @@ const Landing = () => {
   const features = [
     {
       icon: <Mic className="w-6 h-6" />,
-      title: "Voice-First Journaling",
-      description: "Speak naturally about your day, thoughts, and feelings"
+      title: "Voice-First, Forever",
+      description: "Writing sucks. Just speak your mind."
     },
     {
       icon: <Heart className="w-6 h-6" />,
-      title: "Thoughtful Inspiration",
-      description: "Lumi provides guidance when you don't know what to say"
+      title: "Thoughtful Guidance",
+      description: "Let Lumi guide you when you don't know what to say"
     },
     {
       icon: <Clock className="w-6 h-6" />,
-      title: "Daily Consistency",
-      description: "Build a sustainable daily practice that grows with you"
+      title: "Day In, Day Out",
+      description: "Build a daily habit that will last until you croak"
     }
   ];
 
@@ -82,11 +82,14 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              Step Into
+            <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
+              Your Daily
               <br />
-              <span className="text-lumi-aquamarine font-semibold">Your Center</span>
+              <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
             </h2>
+            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
+              (Journaling is fucking good for you, but it also fucking sucks. We make it fucking fun. Interested?)
+            </p>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Lumi is a powerful journaling companion that listens to your thoughts, 
               offers thoughtful guidance, and helps you build a consistent reflection practice.
