@@ -67,15 +67,15 @@ const Landing = () => {
             <h1 className="text-8xl md:text-9xl font-title font-bold tracking-wider relative">
               {/* Mystical glow effect - larger and more prominent */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
-                Lumi
+                lumi
               </span>
               {/* Secondary glow for depth */}
               <span className="absolute inset-0 text-lumi-sunset-gold/30 blur-xl transform scale-105">
-                Lumi
+                lumi
               </span>
               {/* Main text with warm, inviting gradient */}
               <span className="relative bg-gradient-to-b from-amber-100 via-orange-100 to-rose-100 bg-clip-text text-transparent drop-shadow-lg">
-                Lumi
+                lumi
               </span>
             </h1>
           </div>
@@ -83,9 +83,9 @@ const Landing = () => {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              Your Daily
+              your daily
               <br />
-              <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
+              <span className="text-lumi-aquamarine font-semibold">reflection companion</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Journaling is fucking good for you, but it also fucking sucks. 
