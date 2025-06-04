@@ -191,7 +191,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_use_ai_advice: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      can_use_tts: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      get_trial_days_remaining: {
+        Args: { user_id: string }
+        Returns: number
+      }
+      has_premium_access: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      is_trial_expired: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
