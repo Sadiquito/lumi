@@ -55,7 +55,7 @@ const Landing = () => {
           </div>
           <Button 
             onClick={() => navigate('/auth')}
-            className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
+            className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white font-sans"
           >
             Get Started
           </Button>
@@ -76,13 +76,13 @@ const Landing = () => {
               <br />
               <span className="text-lumi-aquamarine">Reflection Companion</span>
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Lumi is an AI-powered journaling companion that listens to your thoughts, 
               asks meaningful questions, and helps you build a consistent reflection practice.
             </p>
             <Button 
               onClick={() => navigate('/auth')}
-              className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl"
+              className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl font-sans"
             >
               Start Your Journey
             </Button>
@@ -101,7 +101,7 @@ const Landing = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/90">
+                  <p className="text-white/90 font-sans">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -115,12 +115,12 @@ const Landing = () => {
               <h3 className="text-2xl font-title text-white mb-4">
                 Ready to Begin?
               </h3>
-              <p className="text-white/90 mb-6 max-w-md mx-auto">
+              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
                 Join thousands who are building meaningful reflection practices with Lumi.
               </p>
               <Button 
                 onClick={() => navigate('/auth')}
-                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 px-6 text-lg font-medium rounded-xl"
+                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 px-6 text-lg font-medium rounded-xl font-sans"
               >
                 Create Your Account
               </Button>

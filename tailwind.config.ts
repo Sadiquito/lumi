@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -19,9 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Nunito', 'system-ui', 'sans-serif'],
+				sans: ['Nohemi', 'system-ui', 'sans-serif'],
 				hero: ['Raleway', 'system-ui', 'sans-serif'],
-				title: ['Agetya', 'serif'],
+				title: ['Migra', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
