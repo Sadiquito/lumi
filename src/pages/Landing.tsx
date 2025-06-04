@@ -82,10 +82,10 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              Your Daily
+            <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
+              Step Into
               <br />
-              <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
+              <span className="text-lumi-aquamarine font-semibold">Your Center</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Lumi is a powerful journaling companion that listens to your thoughts, 
