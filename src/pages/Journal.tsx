@@ -16,6 +16,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
+import TrialCountdown from "@/components/TrialCountdown";
+import FeatureGate from "@/components/FeatureGate";
 
 const Journal = () => {
   const navigate = useNavigate();
@@ -101,7 +103,8 @@ const Journal = () => {
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          <TrialCountdown variant="compact" />
           <Button
             variant="ghost"
             size="icon"
@@ -133,51 +136,53 @@ const Journal = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Today's Call Status */}
-            <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-white text-lg flex items-center">
-                  <Phone className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-                  today's check-in
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {preferences ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/80">scheduled for:</span>
-                      <span className="text-white font-medium flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {preferences.call_time || '07:30'}
-                      </span>
+            <FeatureGate feature="premium">
+              <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg flex items-center">
+                    <Phone className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+                    today's check-in
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {preferences ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/80">scheduled for:</span>
+                        <span className="text-white font-medium flex items-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          {preferences.call_time || '07:30'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/80">method:</span>
+                        <span className="text-white font-medium">
+                          {preferences.preferred_channel === 'whatsapp' ? 'WhatsApp' : 'Phone call'}
+                        </span>
+                      </div>
+                      <div className="mt-4 p-3 bg-lumi-deep-space/30 rounded-lg">
+                        <p className="text-white/70 text-sm">
+                          i'll reach out to you today at {preferences.call_time}. 
+                          looking forward to our conversation!
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/80">method:</span>
-                      <span className="text-white font-medium">
-                        {preferences.preferred_channel === 'whatsapp' ? 'WhatsApp' : 'Phone call'}
-                      </span>
-                    </div>
-                    <div className="mt-4 p-3 bg-lumi-deep-space/30 rounded-lg">
-                      <p className="text-white/70 text-sm">
-                        i'll reach out to you today at {preferences.call_time}. 
-                        looking forward to our conversation!
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-white/70 mb-3">
+                        let's set up your daily check-in time
                       </p>
+                      <Button
+                        onClick={() => navigate('/settings')}
+                        className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
+                      >
+                        configure settings
+                      </Button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-white/70 mb-3">
-                      let's set up your daily check-in time
-                    </p>
-                    <Button
-                      onClick={() => navigate('/settings')}
-                      className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
-                    >
-                      configure settings
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </FeatureGate>
 
             {/* Recent Conversations */}
             <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
@@ -212,11 +217,13 @@ const Journal = () => {
                           {conversation.transcript || 'No transcript available'}
                         </p>
                         {conversation.ai_response && (
-                          <div className="mt-2 pt-2 border-t border-lumi-sunset-coral/10">
-                            <p className="text-white/70 text-xs">
-                              <span className="text-lumi-aquamarine">lumi's insight:</span> {conversation.ai_response}
-                            </p>
-                          </div>
+                          <FeatureGate feature="ai_advice" showUpgradePrompt={false}>
+                            <div className="mt-2 pt-2 border-t border-lumi-sunset-coral/10">
+                              <p className="text-white/70 text-xs">
+                                <span className="text-lumi-aquamarine">lumi's insight:</span> {conversation.ai_response}
+                              </p>
+                            </div>
+                          </FeatureGate>
                         )}
                       </div>
                     ))}
@@ -237,47 +244,49 @@ const Journal = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Daily Wisdom */}
-            <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-white text-lg">daily wisdom</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {adviceLoading ? (
-                  <div className="text-white/70 text-center py-4">
-                    loading wisdom...
-                  </div>
-                ) : dailyAdvice && dailyAdvice.length > 0 ? (
-                  <div className="space-y-4">
-                    {dailyAdvice.slice(0, 1).map((advice) => (
-                      <div key={advice.id} className="space-y-2">
-                        <p className="text-white/80 text-sm leading-relaxed">
-                          {advice.advice_text}
-                        </p>
-                        <p className="text-white/50 text-xs">
-                          {format(parseISO(advice.created_at), 'MMM dd')}
-                        </p>
-                      </div>
-                    ))}
-                    {dailyAdvice.length > 1 && (
-                      <div className="pt-2 border-t border-lumi-sunset-coral/10">
-                        <Button 
-                          variant="link" 
-                          className="text-lumi-aquamarine hover:text-lumi-aquamarine/80 p-0 h-auto text-sm"
-                        >
-                          view all wisdom
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-white/70 text-sm">
-                      your personalized wisdom will appear here after our conversations
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <FeatureGate feature="ai_advice">
+              <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg">daily wisdom</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {adviceLoading ? (
+                    <div className="text-white/70 text-center py-4">
+                      loading wisdom...
+                    </div>
+                  ) : dailyAdvice && dailyAdvice.length > 0 ? (
+                    <div className="space-y-4">
+                      {dailyAdvice.slice(0, 1).map((advice) => (
+                        <div key={advice.id} className="space-y-2">
+                          <p className="text-white/80 text-sm leading-relaxed">
+                            {advice.advice_text}
+                          </p>
+                          <p className="text-white/50 text-xs">
+                            {format(parseISO(advice.created_at), 'MMM dd')}
+                          </p>
+                        </div>
+                      ))}
+                      {dailyAdvice.length > 1 && (
+                        <div className="pt-2 border-t border-lumi-sunset-coral/10">
+                          <Button 
+                            variant="link" 
+                            className="text-lumi-aquamarine hover:text-lumi-aquamarine/80 p-0 h-auto text-sm"
+                          >
+                            view all wisdom
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-white/70 text-sm">
+                        your personalized wisdom will appear here after our conversations
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </FeatureGate>
 
             {/* Profile Quick View */}
             <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">

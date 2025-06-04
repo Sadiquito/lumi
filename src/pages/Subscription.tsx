@@ -2,11 +2,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Check, Star } from "lucide-react";
+import { ArrowLeft, Check, Star, Clock, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTrialStatus } from "@/hooks/useTrialStatus";
+import TrialCountdown from "@/components/TrialCountdown";
 
 const Subscription = () => {
   const navigate = useNavigate();
+  const { isTrialExpired, daysRemaining, hasPremiumAccess } = useTrialStatus();
 
   const features = [
     "daily ai-powered calls at your chosen time",
@@ -18,29 +21,101 @@ const Subscription = () => {
     "secure, private conversations"
   ];
 
+  // Don't show subscription page if user already has premium access
+  if (hasPremiumAccess && !isTrialExpired) {
+    return (
+      <div className="min-h-screen bg-cosmic-gradient">
+        <div className="flex items-center p-4 md:p-6">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/journal')}
+            className="text-white hover:bg-white/10 mr-3"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-2xl font-title font-medium text-white tracking-wide">subscription</h1>
+        </div>
+        
+        <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8 text-center">
+          <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-aquamarine shadow-lg">
+            <CardContent className="p-8">
+              <h2 className="text-2xl font-title text-white mb-4">you're all set!</h2>
+              <p className="text-white/70 mb-6">
+                you have access to all lumi premium features. enjoy your journey of reflection and growth.
+              </p>
+              <Button 
+                onClick={() => navigate('/journal')}
+                className="bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
+              >
+                back to journal
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cosmic-gradient">
       {/* Header */}
-      <div className="flex items-center p-4 md:p-6">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={() => navigate('/journal')}
-          className="text-white hover:bg-white/10 mr-3"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-2xl font-title font-medium text-white tracking-wide">join lumi</h1>
+      <div className="flex items-center justify-between p-4 md:p-6">
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate('/journal')}
+            className="text-white hover:bg-white/10 mr-3"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-2xl font-title font-medium text-white tracking-wide">join lumi</h1>
+        </div>
+        <TrialCountdown variant="full" />
       </div>
 
       <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8">
+        {/* Trial Status Banner */}
+        {isTrialExpired ? (
+          <Card className="bg-red-500/20 backdrop-blur-sm border-red-500/30 shadow-lg mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <div>
+                  <h3 className="text-white font-medium">your trial has expired</h3>
+                  <p className="text-white/70 text-sm">
+                    upgrade now to continue accessing all lumi features
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : daysRemaining <= 3 ? (
+          <Card className="bg-lumi-sunset-coral/20 backdrop-blur-sm border-lumi-sunset-coral/30 shadow-lg mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <Clock className="w-6 h-6 text-lumi-sunset-coral" />
+                <div>
+                  <h3 className="text-white font-medium">trial ending soon</h3>
+                  <p className="text-white/70 text-sm">
+                    only {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left - upgrade to keep your progress
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="text-center mb-8">
           <h2 className="text-3xl font-title text-white mb-4 tracking-wide">
-            invest in your daily reflection practice
+            {isTrialExpired ? 'continue your journey' : 'invest in your daily reflection practice'}
           </h2>
           <p className="text-white/70 leading-relaxed font-sans">
-            lumi is designed to be your long-term companion for building lasting journaling habits. 
-            choose the plan that works best for your commitment to growth.
+            {isTrialExpired 
+              ? 'your trial has ended, but your journey toward better mental health continues with lumi premium.'
+              : 'lumi is designed to be your long-term companion for building lasting journaling habits. choose the plan that works best for your commitment to growth.'
+            }
           </p>
         </div>
 
@@ -63,7 +138,7 @@ const Subscription = () => {
             </CardHeader>
             <CardContent>
               <Button className="w-full bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white py-3 text-lg font-medium rounded-xl mb-4 font-sans">
-                start my annual journey
+                {isTrialExpired ? 'restore full access' : 'start my annual journey'}
               </Button>
               <p className="text-sm text-white/60 text-center font-sans">
                 $27.75/month • commit to a full year of growth
@@ -85,7 +160,7 @@ const Subscription = () => {
                 variant="outline"
                 className="w-full border-lumi-sunset-coral text-lumi-sunset-coral hover:bg-lumi-sunset-coral/10 py-3 text-lg font-medium rounded-xl mb-4 font-sans"
               >
-                try monthly first
+                {isTrialExpired ? 'continue monthly' : 'try monthly first'}
               </Button>
               <p className="text-sm text-white/60 text-center font-sans">
                 cancel anytime • perfect for getting started
