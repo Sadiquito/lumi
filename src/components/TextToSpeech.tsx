@@ -31,7 +31,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_ID);
+  const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_VOICE_ID);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { config, loading: configLoading } = useElevenLabsConfig();
