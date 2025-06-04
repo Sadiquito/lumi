@@ -29,11 +29,11 @@ const Landing = () => {
           <div className="animate-fade-in max-w-4xl mx-auto text-center">
             {/* Brand Header - Positioned in clear sky space */}
             <div className="mb-8">
-              <h1 className="text-5xl md:text-7xl font-light text-white mb-3 tracking-tight drop-shadow-2xl">
-                lumi
+              <h1 className="text-5xl md:text-7xl font-hero font-light text-white mb-3 tracking-tight drop-shadow-2xl">
+                Lumi
               </h1>
               <p className="text-lg md:text-xl text-white/95 font-light drop-shadow-lg">
-                take a moment for yourself, daily
+                Take a moment for yourself, daily
               </p>
             </div>
 
@@ -49,10 +49,10 @@ const Landing = () => {
                   
                   <div className="space-y-3 text-center">
                     <h2 className="text-xl font-medium text-white">
-                      your cosmic companion for reflection
+                      Your cosmic companion for reflection
                     </h2>
                     <p className="text-white/85 leading-relaxed text-sm">
-                      lumi calls you every day, listens to your thoughts, and helps you build a lasting journaling practice through gentle AI guidance.
+                      Lumi calls you every day, listens to your thoughts, and helps you build a lasting journaling practice through gentle AI guidance.
                     </p>
                   </div>
 
@@ -61,14 +61,14 @@ const Landing = () => {
                       className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2.5 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                       onClick={() => navigate('/journal')}
                     >
-                      start your journey
+                      Start your journey
                     </Button>
                     <Button 
                       variant="outline" 
                       className="w-full border-white/40 text-white hover:bg-white/15 backdrop-blur-sm py-2.5 text-base font-medium rounded-xl"
                       onClick={() => navigate('/journal')}
                     >
-                      sign in
+                      Sign in
                     </Button>
                   </div>
                 </div>
@@ -84,24 +84,24 @@ const Landing = () => {
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
                 <Stars className="w-5 h-5 text-purple-300" />
               </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">daily calls</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">lumi calls you at your chosen time</p>
+              <h3 className="font-medium text-white drop-shadow-lg text-sm">Daily calls</h3>
+              <p className="text-xs text-white/80 drop-shadow-sm">Lumi calls you at your chosen time</p>
             </div>
             
             <div className="text-center space-y-2">
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
                 <Sparkles className="w-5 h-5 text-pink-300" />
               </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">ai guidance</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">personalized prompts that evolve with you</p>
+              <h3 className="font-medium text-white drop-shadow-lg text-sm">AI guidance</h3>
+              <p className="text-xs text-white/80 drop-shadow-sm">Personalized prompts that evolve with you</p>
             </div>
             
             <div className="text-center space-y-2">
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
                 <Moon className="w-5 h-5 text-amber-300" />
               </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">lasting habits</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">build reflection into your daily routine</p>
+              <h3 className="font-medium text-white drop-shadow-lg text-sm">Lasting habits</h3>
+              <p className="text-xs text-white/80 drop-shadow-sm">Build reflection into your daily routine</p>
             </div>
           </div>
         </div>
