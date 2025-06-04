@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Phone, Clock, Settings as SettingsIcon, Crown, AlertTriangle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Phone, Clock, Settings as SettingsIcon, Crown, AlertTriangle, CheckCircle, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,7 @@ import ProfileManagement from "@/components/ProfileManagement";
 import TrialCountdown from "@/components/TrialCountdown";
 import FeatureGate from "@/components/FeatureGate";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
+import { Slider } from "@/components/ui/slider";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -236,6 +236,77 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <Separator className="bg-lumi-sunset-coral/10" />
+
+        {/* TTS Settings - Premium Feature */}
+        <div>
+          <h2 className="text-xl font-title text-white mb-4 tracking-wide">voice responses</h2>
+          
+          <FeatureGate feature="tts">
+            <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-white text-lg flex items-center font-title">
+                  <Volume2 className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+                  text-to-speech configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-white/80 font-sans">voice selection</Label>
+                  <Select defaultValue="alloy">
+                    <SelectTrigger className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-lumi-deep-space border-lumi-sunset-coral/20">
+                      <SelectItem value="alloy" className="text-white focus:bg-lumi-sunset-coral/20">Alloy (Default)</SelectItem>
+                      <SelectItem value="echo" className="text-white focus:bg-lumi-sunset-coral/20">Echo</SelectItem>
+                      <SelectItem value="fable" className="text-white focus:bg-lumi-sunset-coral/20">Fable</SelectItem>
+                      <SelectItem value="onyx" className="text-white focus:bg-lumi-sunset-coral/20">Onyx</SelectItem>
+                      <SelectItem value="nova" className="text-white focus:bg-lumi-sunset-coral/20">Nova</SelectItem>
+                      <SelectItem value="shimmer" className="text-white focus:bg-lumi-sunset-coral/20">Shimmer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-white/80 font-sans">enable voice responses</Label>
+                    <p className="text-white/60 text-sm font-sans">
+                      receive spoken responses during conversations
+                    </p>
+                  </div>
+                  <Switch
+                    defaultChecked={true}
+                    className="data-[state=checked]:bg-lumi-aquamarine"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white/80 font-sans">speaking speed</Label>
+                  <Slider
+                    defaultValue={[1]}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-white/60">
+                    <span>0.5x (slower)</span>
+                    <span>1.0x (normal)</span>
+                    <span>2.0x (faster)</span>
+                  </div>
+                </div>
+
+                <Button 
+                  className="w-full bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 text-lg font-medium rounded-xl font-sans"
+                >
+                  save voice settings
+                </Button>
+              </CardContent>
+            </Card>
+          </FeatureGate>
         </div>
 
         <Separator className="bg-lumi-sunset-coral/10" />

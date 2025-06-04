@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,6 +20,9 @@ import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import TrialCountdown from "@/components/TrialCountdown";
 import FeatureGate from "@/components/FeatureGate";
+import ConversationFeatureGate from "@/components/ConversationFeatureGate";
+import TTSFeatureGate from "@/components/TTSFeatureGate";
+import AudioRecordingFeature from "@/components/AudioRecordingFeature";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 
 const Journal = () => {
@@ -229,6 +231,13 @@ const Journal = () => {
               </Card>
             </FeatureGate>
 
+            {/* Audio Recording - Always Available */}
+            <AudioRecordingFeature
+              onTranscriptionComplete={(transcript) => {
+                console.log('Transcription received:', transcript);
+              }}
+            />
+
             {/* Recent Conversations */}
             <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
               <CardHeader>
@@ -262,13 +271,13 @@ const Journal = () => {
                           {conversation.transcript || 'No transcript available'}
                         </p>
                         {conversation.ai_response && (
-                          <FeatureGate feature="ai_advice" showUpgradePrompt={false}>
+                          <ConversationFeatureGate feature="ai_insights">
                             <div className="mt-2 pt-2 border-t border-lumi-sunset-coral/10">
                               <p className="text-white/70 text-xs">
                                 <span className="text-lumi-aquamarine">lumi's insight:</span> {conversation.ai_response}
                               </p>
                             </div>
-                          </FeatureGate>
+                          </ConversationFeatureGate>
                         )}
                       </div>
                     ))}
@@ -284,6 +293,9 @@ const Journal = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* TTS Feature Demo/Status */}
+            <TTSFeatureGate showAlert={true} />
           </div>
 
           {/* Sidebar */}
@@ -311,7 +323,7 @@ const Journal = () => {
                           </p>
                         </div>
                       ))}
-                      {dailyAdvice.length > 1 && (
+                      <ConversationFeatureGate feature="advanced_history">
                         <div className="pt-2 border-t border-lumi-sunset-coral/10">
                           <Button 
                             variant="link" 
@@ -320,7 +332,7 @@ const Journal = () => {
                             view all wisdom
                           </Button>
                         </div>
-                      )}
+                      </ConversationFeatureGate>
                     </div>
                   ) : (
                     <div className="text-center py-4">
