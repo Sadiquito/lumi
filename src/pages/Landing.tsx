@@ -91,7 +91,7 @@ const Landing = () => {
           {/* Features */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-gradient-to-br from-black/40 via-black/30 to-transparent backdrop-blur-md border-white/10 shadow-2xl transition-all duration-300 hover:from-black/50 hover:via-black/40">
+              <Card key={index} className="bg-black/10 backdrop-blur-sm border-white/5 shadow-xl transition-all duration-300 hover:bg-black/20">
                 <CardHeader>
                   <div className="text-lumi-aquamarine mb-3">
                     {feature.icon}
@@ -101,7 +101,7 @@ const Landing = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/80">
+                  <p className="text-white/90">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -110,12 +110,12 @@ const Landing = () => {
           </div>
 
           {/* CTA Section */}
-          <Card className="bg-gradient-to-br from-black/40 via-black/30 to-transparent backdrop-blur-md border-white/10 shadow-2xl">
+          <Card className="bg-black/10 backdrop-blur-sm border-white/5 shadow-xl">
             <CardContent className="pt-8 pb-8 text-center">
               <h3 className="text-2xl font-title text-white mb-4">
                 Ready to Begin?
               </h3>
-              <p className="text-white/80 mb-6 max-w-md mx-auto">
+              <p className="text-white/90 mb-6 max-w-md mx-auto">
                 Join thousands who are building meaningful reflection practices with Lumi.
               </p>
               <Button 
