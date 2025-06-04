@@ -123,6 +123,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          call_time: string | null
+          created_at: string
+          id: string
+          max_retries: number | null
+          phone_number: string | null
+          preferred_channel: string | null
+          retry_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_time?: string | null
+          created_at?: string
+          id?: string
+          max_retries?: number | null
+          phone_number?: string | null
+          preferred_channel?: string | null
+          retry_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_time?: string | null
+          created_at?: string
+          id?: string
+          max_retries?: number | null
+          phone_number?: string | null
+          preferred_channel?: string | null
+          retry_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
