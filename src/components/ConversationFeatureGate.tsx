@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Crown, Lock, Zap } from 'lucide-react';
@@ -17,7 +17,8 @@ const ConversationFeatureGate: React.FC<ConversationFeatureGateProps> = ({
   children, 
   fallback 
 }) => {
-  const { canUseAIAdvice, hasPremiumAccess, isTrialExpired } = useTrialStatus();
+  const { trialStatus } = useAuth();
+  const { canUseAIAdvice, hasPremiumAccess, isTrialExpired } = trialStatus;
   const navigate = useNavigate();
 
   // Determine if user has access to the advanced conversation feature

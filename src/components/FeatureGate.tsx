@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Crown, Lock } from 'lucide-react';
@@ -19,7 +19,8 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
   fallback,
   showUpgradePrompt = true 
 }) => {
-  const { canUseTTS, canUseAIAdvice, hasPremiumAccess, isTrialExpired, daysRemaining } = useTrialStatus();
+  const { trialStatus } = useAuth();
+  const { canUseTTS, canUseAIAdvice, hasPremiumAccess, isTrialExpired, daysRemaining } = trialStatus;
   const navigate = useNavigate();
 
   // Determine if user has access to the feature

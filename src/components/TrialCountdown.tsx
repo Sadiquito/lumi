@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { useAuth } from '@/components/AuthProvider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Crown, Clock, AlertTriangle } from 'lucide-react';
@@ -15,13 +15,14 @@ const TrialCountdown: React.FC<TrialCountdownProps> = ({
   variant = 'compact',
   className = '' 
 }) => {
+  const { trialStatus } = useAuth();
   const { 
     isTrialExpired, 
     daysRemaining, 
     hasPremiumAccess, 
     subscriptionStatus,
     isLoading 
-  } = useTrialStatus();
+  } = trialStatus;
   const navigate = useNavigate();
 
   if (isLoading) {

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { useAuth } from '@/components/AuthProvider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Crown, Volume2, VolumeX } from 'lucide-react';
@@ -15,7 +15,8 @@ const TTSFeatureGate: React.FC<TTSFeatureGateProps> = ({
   children, 
   showAlert = true 
 }) => {
-  const { canUseTTS, isTrialExpired, daysRemaining } = useTrialStatus();
+  const { trialStatus } = useAuth();
+  const { canUseTTS, isTrialExpired, daysRemaining } = trialStatus;
   const navigate = useNavigate();
 
   // If user has TTS access, show the children

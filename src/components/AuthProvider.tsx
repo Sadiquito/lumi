@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useTrialStatus } from '@/hooks/useTrialStatus';
 
 interface AuthContextType {
   user: User | null;
@@ -14,6 +14,17 @@ interface AuthContextType {
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
   loading: boolean;
   isAuthenticated: boolean;
+  // Trial status integration
+  trialStatus: {
+    isTrialExpired: boolean;
+    daysRemaining: number;
+    hasPremiumAccess: boolean;
+    canUseTTS: boolean;
+    canUseAIAdvice: boolean;
+    subscriptionStatus: string;
+    trialStartDate: string | null;
+    isLoading: boolean;
+  };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Get trial status using the existing hook
+  const trialStatus = useTrialStatus();
 
   useEffect(() => {
     // Set up auth state listener first
@@ -50,6 +64,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('Token refreshed successfully');
         } else if (event === 'SIGNED_IN') {
           console.log('User signed in successfully');
+          // Ensure trial start date is set for existing users
+          if (session?.user) {
+            setTimeout(() => {
+              ensureTrialStartDate(session.user.id);
+            }, 0);
+          }
+        } else if (event === 'SIGNED_UP') {
+          console.log('New user signed up, trial start date will be set by trigger');
         }
       }
     );
@@ -68,6 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Ensure trial start date is set for existing users
+          if (session?.user) {
+            setTimeout(() => {
+              ensureTrialStartDate(session.user.id);
+            }, 0);
+          }
         }
       } catch (error) {
         console.error('Unexpected error getting session:', error);
@@ -80,6 +109,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, [toast]);
+
+  // Function to ensure trial start date is set for existing users
+  const ensureTrialStartDate = async (userId: string) => {
+    try {
+      const { data: userData, error: fetchError } = await supabase
+        .from('users')
+        .select('trial_start_date, subscription_status')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error fetching user data:', fetchError);
+        return;
+      }
+
+      // If user exists but doesn't have trial_start_date set, set it now
+      if (userData && !userData.trial_start_date && userData.subscription_status === 'trial') {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ trial_start_date: new Date().toISOString() })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.error('Error setting trial start date:', updateError);
+        } else {
+          console.log('Trial start date set for existing user');
+        }
+      }
+    } catch (error) {
+      console.error('Error in ensureTrialStartDate:', error);
+    }
+  };
 
   const signUp = async (email: string, password: string, name?: string) => {
     try {
@@ -112,6 +173,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: "Sign Up Error",
           description: friendlyMessage,
           variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome to Lumi!",
+          description: "Your 7-day free trial has started. Check your email to confirm your account.",
         });
       }
 
@@ -286,7 +352,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateProfile,
     updatePassword,
     loading,
-    isAuthenticated: !!session
+    isAuthenticated: !!session,
+    trialStatus
   };
 
   return (
