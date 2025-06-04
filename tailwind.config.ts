@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Crimson Text', 'Arial', 'serif'],
-				hero: ['Crimson Text', 'Arial', 'serif'],
+				sans: ['Inter', 'Arial', 'serif'],
+				hero: ['Inter', 'Arial', 'serif'],
 				title: ['Cinzel', 'serif'],
 			},
 			colors: {
