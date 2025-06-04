@@ -7,7 +7,7 @@ import { Crown, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TTSFeatureGateProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   showAlert?: boolean;
 }
 
