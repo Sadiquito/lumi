@@ -70,8 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ensureTrialStartDate(session.user.id);
             }, 0);
           }
-        } else if (event === 'SIGNED_UP') {
-          console.log('New user signed up, trial start date will be set by trigger');
         }
       }
     );
