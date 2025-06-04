@@ -20,9 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
-				hero: ['Space Grotesk', 'system-ui', 'sans-serif'],
-				title: ['Orbitron', 'monospace'],
+				sans: ['Crimson Text', 'Georgia', 'serif'],
+				hero: ['Crimson Text', 'Georgia', 'serif'],
+				title: ['Cinzel', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

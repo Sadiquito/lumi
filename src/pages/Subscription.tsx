@@ -35,10 +35,10 @@ const Subscription = () => {
 
       <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-title font-light text-white mb-4 tracking-wide">
+          <h2 className="text-3xl font-title text-white mb-4 tracking-wide">
             invest in your daily reflection practice
           </h2>
-          <p className="text-white/70 leading-relaxed font-sans font-light">
+          <p className="text-white/70 leading-relaxed font-sans">
             lumi is designed to be your long-term companion for building lasting journaling habits. 
             choose the plan that works best for your commitment to growth.
           </p>
@@ -56,7 +56,7 @@ const Subscription = () => {
             <CardHeader>
               <CardTitle className="text-white text-xl font-title font-medium tracking-wide">annual commitment</CardTitle>
               <div className="flex items-baseline space-x-2">
-                <span className="text-4xl font-title font-light text-white">$333</span>
+                <span className="text-4xl font-title text-white">$333</span>
                 <span className="text-white/60 font-sans">/year</span>
               </div>
               <p className="text-sm text-lumi-aquamarine font-medium font-sans">save $63 compared to monthly</p>
@@ -65,7 +65,7 @@ const Subscription = () => {
               <Button className="w-full bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white py-3 text-lg font-medium rounded-xl mb-4 font-sans">
                 start my annual journey
               </Button>
-              <p className="text-sm text-white/60 text-center font-sans font-light">
+              <p className="text-sm text-white/60 text-center font-sans">
                 $27.75/month • commit to a full year of growth
               </p>
             </CardContent>
@@ -76,7 +76,7 @@ const Subscription = () => {
             <CardHeader>
               <CardTitle className="text-white text-xl font-title font-medium tracking-wide">monthly flexibility</CardTitle>
               <div className="flex items-baseline space-x-2">
-                <span className="text-4xl font-title font-light text-white">$33</span>
+                <span className="text-4xl font-title text-white">$33</span>
                 <span className="text-white/60 font-sans">/month</span>
               </div>
             </CardHeader>
@@ -87,7 +87,7 @@ const Subscription = () => {
               >
                 try monthly first
               </Button>
-              <p className="text-sm text-white/60 text-center font-sans font-light">
+              <p className="text-sm text-white/60 text-center font-sans">
                 cancel anytime • perfect for getting started
               </p>
             </CardContent>
@@ -103,7 +103,7 @@ const Subscription = () => {
                 {features.map((feature, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <Check className="w-5 h-5 text-lumi-aquamarine mt-0.5 flex-shrink-0" />
-                    <span className="text-white/80 font-sans font-light">{feature}</span>
+                    <span className="text-white/80 font-sans">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -112,7 +112,7 @@ const Subscription = () => {
 
           {/* Additional Info */}
           <div className="text-center space-y-4 text-sm text-white/60">
-            <p className="font-sans font-light">
+            <p className="font-sans">
               secure payments powered by stripe • cancel anytime • 
               <br />
               your conversations are private and never shared

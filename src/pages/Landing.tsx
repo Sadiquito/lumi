@@ -62,19 +62,19 @@ const Landing = () => {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
-          {/* Large Lumi Title in Center - Blending with background */}
+          {/* Large Lumi Title in Center - More fantasy/magical styling */}
           <div className="text-center mb-8 mt-16 relative">
-            <h1 className="text-8xl md:text-9xl font-title font-black tracking-wider relative">
-              {/* Background shadow text for depth */}
-              <span className="absolute inset-0 text-transparent bg-gradient-to-b from-white/20 to-white/5 bg-clip-text blur-sm">
+            <h1 className="text-8xl md:text-9xl font-title font-bold tracking-wider relative">
+              {/* Mystical glow effect - larger and more prominent */}
+              <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
                 Lumi
               </span>
-              {/* Main text with cosmic gradient */}
-              <span className="relative bg-gradient-to-b from-white via-lumi-aquamarine/80 to-white/60 bg-clip-text text-transparent">
+              {/* Secondary glow for depth */}
+              <span className="absolute inset-0 text-lumi-sunset-gold/30 blur-xl transform scale-105">
                 Lumi
               </span>
-              {/* Subtle glow effect */}
-              <span className="absolute inset-0 text-lumi-aquamarine/30 blur-lg">
+              {/* Main text with warm, inviting gradient */}
+              <span className="relative bg-gradient-to-b from-amber-100 via-orange-100 to-rose-100 bg-clip-text text-transparent drop-shadow-lg">
                 Lumi
               </span>
             </h1>
@@ -82,12 +82,12 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-title font-semibold text-white mb-6 leading-tight tracking-wide">
+            <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
               Your Daily
               <br />
-              <span className="text-lumi-aquamarine font-bold">Reflection Companion</span>
+              <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans font-light">
+            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Lumi is an AI-powered journaling companion that listens to your thoughts, 
               asks meaningful questions, and helps you build a consistent reflection practice.
             </p>
@@ -112,7 +112,7 @@ const Landing = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/90 font-sans font-light">
+                  <p className="text-white/90 font-sans">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -126,7 +126,7 @@ const Landing = () => {
               <h3 className="text-2xl font-title font-medium text-white mb-4 tracking-wide">
                 Ready to Begin?
               </h3>
-              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans font-light">
+              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
                 Join thousands who are building meaningful reflection practices with Lumi.
               </p>
               <Button 
