@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Stars, Sparkles, Moon } from "lucide-react";
+import { Stars, Moon, TreePine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Landing = () => {
@@ -82,7 +82,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
             <div className="text-center space-y-2">
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <Stars className="w-5 h-5 text-purple-300" />
+                <Stars className="w-5 h-5 text-amber-300" />
               </div>
               <h3 className="font-medium text-white drop-shadow-lg text-sm">Daily calls</h3>
               <p className="text-xs text-white/80 drop-shadow-sm">Lumi calls you at your chosen time</p>
@@ -90,7 +90,7 @@ const Landing = () => {
             
             <div className="text-center space-y-2">
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <Sparkles className="w-5 h-5 text-pink-300" />
+                <Moon className="w-5 h-5 text-blue-300" />
               </div>
               <h3 className="font-medium text-white drop-shadow-lg text-sm">AI guidance</h3>
               <p className="text-xs text-white/80 drop-shadow-sm">Personalized prompts that evolve with you</p>
@@ -98,7 +98,7 @@ const Landing = () => {
             
             <div className="text-center space-y-2">
               <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <Moon className="w-5 h-5 text-amber-300" />
+                <TreePine className="w-5 h-5 text-green-300" />
               </div>
               <h3 className="font-medium text-white drop-shadow-lg text-sm">Lasting habits</h3>
               <p className="text-xs text-white/80 drop-shadow-sm">Build reflection into your daily routine</p>
