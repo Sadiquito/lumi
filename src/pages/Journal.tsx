@@ -301,10 +301,12 @@ const Journal = () => {
               </CardContent>
             </Card>
 
-            {/* TTS Feature Demo/Status */}
+            {/* TTS Feature Demo/Status - Enhanced Version */}
             <TTSFeatureGate 
-              text="Welcome to Lumi's voice feature! This is how your AI responses will sound with premium access."
+              text="Welcome to Lumi's enhanced voice feature! This showcases our premium audio experience with voice selection, progress tracking, and advanced controls."
+              variant="enhanced"
               showAlert={true} 
+              showVoiceSelector={true}
             />
           </div>
 

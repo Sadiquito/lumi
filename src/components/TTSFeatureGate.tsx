@@ -11,8 +11,9 @@ interface TTSFeatureGateProps {
   text?: string;
   children?: React.ReactNode;
   showAlert?: boolean;
-  variant?: 'default' | 'compact' | 'icon-only';
+  variant?: 'default' | 'compact' | 'icon-only' | 'enhanced';
   autoPlay?: boolean;
+  showVoiceSelector?: boolean;
 }
 
 const TTSFeatureGate: React.FC<TTSFeatureGateProps> = ({ 
@@ -20,7 +21,8 @@ const TTSFeatureGate: React.FC<TTSFeatureGateProps> = ({
   children, 
   showAlert = true,
   variant = 'default',
-  autoPlay = false
+  autoPlay = false,
+  showVoiceSelector = false
 }) => {
   const { trialStatus } = useAuth();
   const { canUseTTS, isTrialExpired, daysRemaining } = trialStatus;
@@ -34,6 +36,7 @@ const TTSFeatureGate: React.FC<TTSFeatureGateProps> = ({
           text={text} 
           variant={variant}
           autoPlay={autoPlay}
+          showVoiceSelector={showVoiceSelector}
         />
         {children}
       </div>
