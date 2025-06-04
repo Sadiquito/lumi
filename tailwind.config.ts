@@ -21,6 +21,7 @@ export default {
 			fontFamily: {
 				sans: ['Nunito', 'system-ui', 'sans-serif'],
 				hero: ['Raleway', 'system-ui', 'sans-serif'],
+				title: ['Agetya', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
