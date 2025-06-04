@@ -25,13 +25,13 @@ const Landing = () => {
     },
     {
       icon: <Heart className="w-6 h-6" />,
-      title: "Empathetic AI Companion",
-      description: "Lumi listens without judgment and responds with care"
+      title: "Thoughtful Inspiration",
+      description: "Lumi provides guidance when you don't know what to say"
     },
     {
       icon: <Clock className="w-6 h-6" />,
       title: "Daily Consistency",
-      description: "Build a sustainable reflection practice that grows with you"
+      description: "Build a sustainable daily practice that grows with you"
     }
   ];
 
@@ -88,14 +88,14 @@ const Landing = () => {
               <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              Lumi is an AI-powered journaling companion that listens to your thoughts, 
-              asks meaningful questions, and helps you build a consistent reflection practice.
+              Lumi is a powerful journaling companion that listens to your thoughts, 
+              offers thoughtful guidance, and helps you build a consistent reflection practice.
             </p>
             <Button 
               onClick={() => navigate('/auth')}
               className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl font-sans"
             >
-              Start Your Journey
+              Step In
             </Button>
           </div>
 
