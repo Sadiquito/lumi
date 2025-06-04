@@ -81,7 +81,7 @@ export class AudioRecorder {
 
   async startRecording(): Promise<boolean> {
     try {
-      if (!await this.checkBrowserSupport()) {
+      if (!await AudioRecorder.checkBrowserSupport()) {
         throw new Error('Browser does not support audio recording');
       }
 
