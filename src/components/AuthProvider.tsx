@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { useQuery } from '@tanstack/react-query';
 
 interface AuthContextType {
   user: User | null;
@@ -42,9 +42,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  
-  // Get trial status using the existing hook
-  const trialStatus = useTrialStatus();
+
+  // Fetch user data and trial status using React Query
+  const { data: userData, isLoading: userLoading } = useQuery({
+    queryKey: ['user-data', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('subscription_status, trial_start_date')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check if trial is expired
+  const { data: isTrialExpired, isLoading: trialExpiredLoading } = useQuery({
+    queryKey: ['trial-expired', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      
+      const { data, error } = await supabase
+        .rpc('is_trial_expired', { user_id: user.id });
+      
+      if (error) throw error;
+      return data || false;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Get days remaining in trial
+  const { data: daysRemaining, isLoading: daysRemainingLoading } = useQuery({
+    queryKey: ['trial-days-remaining', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      
+      const { data, error } = await supabase
+        .rpc('get_trial_days_remaining', { user_id: user.id });
+      
+      if (error) throw error;
+      return data || 0;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check if user has premium access
+  const { data: hasPremiumAccess, isLoading: premiumAccessLoading } = useQuery({
+    queryKey: ['premium-access', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      
+      const { data, error } = await supabase
+        .rpc('has_premium_access', { user_id: user.id });
+      
+      if (error) throw error;
+      return data || false;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check TTS access
+  const { data: canUseTTS, isLoading: ttsLoading } = useQuery({
+    queryKey: ['can-use-tts', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      
+      const { data, error } = await supabase
+        .rpc('can_use_tts', { user_id: user.id });
+      
+      if (error) throw error;
+      return data || false;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check AI advice access
+  const { data: canUseAIAdvice, isLoading: aiAdviceLoading } = useQuery({
+    queryKey: ['can-use-ai-advice', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      
+      const { data, error } = await supabase
+        .rpc('can_use_ai_advice', { user_id: user.id });
+      
+      if (error) throw error;
+      return data || false;
+    },
+    enabled: !!user?.id,
+  });
+
+  const trialStatusLoading = userLoading || trialExpiredLoading || daysRemainingLoading || 
+                           premiumAccessLoading || ttsLoading || aiAdviceLoading;
+
+  const trialStatus = {
+    isTrialExpired: isTrialExpired || false,
+    daysRemaining: daysRemaining || 0,
+    hasPremiumAccess: hasPremiumAccess || false,
+    canUseTTS: canUseTTS || false,
+    canUseAIAdvice: canUseAIAdvice || false,
+    subscriptionStatus: userData?.subscription_status || 'trial',
+    trialStartDate: userData?.trial_start_date || null,
+    isLoading: trialStatusLoading,
+  };
 
   useEffect(() => {
     // Set up auth state listener first
