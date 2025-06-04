@@ -88,11 +88,9 @@ const Landing = () => {
               <span className="text-lumi-aquamarine font-semibold">Reflection Companion</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              (Journaling is fucking good for you, but it also fucking sucks. We make it fucking fun. Interested?)
-            </p>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              Lumi is a powerful journaling companion that listens to your thoughts, 
-              offers thoughtful guidance, and helps you build a consistent reflection practice.
+              Journaling is fucking good for you, but it also fucking sucks. Lumi makes it fucking fun. 
+              <br />
+              How's that sound?
             </p>
             <Button 
               onClick={() => navigate('/auth')}
