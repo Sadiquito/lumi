@@ -29,7 +29,7 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: '#5E4B3B',
+					DEFAULT: '#FF6B6B',
 					foreground: '#FFFFFF'
 				},
 				secondary: {
@@ -37,7 +37,7 @@ export default {
 					foreground: 'hsl(var(--secondary-foreground))'
 				},
 				accent: {
-					DEFAULT: '#88BDBC',
+					DEFAULT: '#FF6B6B',
 					foreground: '#FFFFFF'
 				},
 				destructive: {
@@ -57,17 +57,17 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				lumi: {
-					wood: '#5E4B3B',
-					aqua: '#88BDBC',
-					cream: '#FAF7F2',
-					sage: '#A8B5A0',
-					warm: '#F5F1EB'
+					'deep-space': '#121212',
+					'sunset-coral': '#FF6B6B',
+					'sunset-gold': '#FFD93D',
+					'aquamarine': '#4ECDC4',
+					'charcoal': '#1F1F1F'
 				}
 			},
 			backgroundImage: {
-				'warm-gradient': 'linear-gradient(135deg, #FAF7F2 0%, #F5F1EB 100%)',
-				'forest-gradient': 'linear-gradient(135deg, #5E4B3B 0%, #88BDBC 100%)',
-				'cozy-gradient': 'linear-gradient(135deg, #A8B5A0 0%, #88BDBC 100%)'
+				'cosmic-gradient': 'linear-gradient(135deg, #121212 0%, #1F1F1F 100%)',
+				'sunset-gradient': 'linear-gradient(135deg, #FF6B6B 0%, #FFD93D 100%)',
+				'aurora-gradient': 'linear-gradient(135deg, #4ECDC4 0%, #FF6B6B 100%)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
