@@ -17,7 +17,7 @@
 * **Journal Page**: Daily AI-generated advice; on-demand journaling via audio; transcript display with AI prompts interwoven; export options (PDF/Excel); placeholder for physical journal purchase.
 * **Call Settings**: Schedule daily calls; configure retry logic; select phone number and channel (Phone/WhatsApp).
 * **Admin Dashboard**: Internal-only statistics on user activity, system health, and call metrics.
-* **Subscription Management**: Integrated with Stripe; \$35/month or \$350/year.
+* **Subscription Management**: Integrated with Stripe; \$33/month or \$333/year.
 * **AI Personalization**: Adaptive prompts generated from evolving user profiles, incorporating neuroscience, psychology, and spirituality.
 * **Export Engine**: Generate downloadable summaries of journaling history.
 
@@ -62,21 +62,21 @@
 
 ## Development Phases or Milestones
 
-### Phase 1: MVP (3-4 months)
+### Phase 1: MVP (1 month)
 
 * Core journaling flows (landing, journal page, call settings)
 * Twilio call integration
 * AssemblyAI transcription pipeline
 * Supabase backend and authentication
 * Stripe subscription system
+* Personalization state and adaptive prompts
 * Basic RAG pipeline with manual seed content
 
-### Phase 2: V1 Launch (2-3 months)
+### Phase 2: V1 Launch (2 months)
 
 * Admin dashboard
 * Export engine (PDF/Excel)
 * AI persona voice refinement
-* Personalization state and adaptive prompts
 * Initial curated seed content for RAG
 
 ### Phase 3: Expansion (ongoing)
