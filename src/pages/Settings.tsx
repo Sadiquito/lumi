@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Phone, Clock, Settings as SettingsIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Phone, Clock, Settings as SettingsIcon, Crown, AlertTriangle, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,12 +17,14 @@ import { useState, useEffect } from "react";
 import ProfileManagement from "@/components/ProfileManagement";
 import TrialCountdown from "@/components/TrialCountdown";
 import FeatureGate from "@/components/FeatureGate";
+import { useTrialStatus } from "@/hooks/useTrialStatus";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isTrialExpired, daysRemaining, hasPremiumAccess, subscriptionStatus } = useTrialStatus();
   
   const [formData, setFormData] = useState({
     phone_number: '',
@@ -137,10 +140,102 @@ const Settings = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8 space-y-8">
+        {/* Subscription Status Banner */}
+        {isTrialExpired ? (
+          <Alert className="bg-red-500/20 border-red-500/30 backdrop-blur-sm">
+            <AlertTriangle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <strong>Trial Expired:</strong> Upgrade now to restore access to all premium features including daily calls and AI insights.
+                </div>
+                <Button
+                  onClick={() => navigate('/subscription')}
+                  className="ml-4 bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
+                  size="sm"
+                >
+                  <Crown className="w-4 h-4 mr-1" />
+                  Upgrade
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : hasPremiumAccess ? (
+          <Alert className="bg-lumi-aquamarine/20 border-lumi-aquamarine/30 backdrop-blur-sm">
+            <CheckCircle className="h-4 w-4 text-lumi-aquamarine" />
+            <AlertDescription className="text-white">
+              <strong>Premium Active:</strong> You have full access to all Lumi features. Enjoy your unlimited daily calls and AI-powered insights!
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30 backdrop-blur-sm">
+            <Clock className="h-4 w-4 text-lumi-sunset-coral" />
+            <AlertDescription className="text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <strong>Trial Active:</strong> {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} remaining in your free trial.
+                </div>
+                <Button
+                  onClick={() => navigate('/subscription')}
+                  variant="outline"
+                  className="ml-4 border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
+                  size="sm"
+                >
+                  <Crown className="w-4 h-4 mr-1" />
+                  Upgrade
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Profile Management Section */}
         <div>
           <h2 className="text-xl font-title text-white mb-4 tracking-wide">account & profile</h2>
           <ProfileManagement />
+        </div>
+
+        <Separator className="bg-lumi-sunset-coral/10" />
+
+        {/* Subscription Status Card */}
+        <div>
+          <h2 className="text-xl font-title text-white mb-4 tracking-wide">subscription details</h2>
+          <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-white text-lg flex items-center font-title">
+                <Crown className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+                current plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/60 text-sm">Status</Label>
+                  <p className="text-white font-medium">
+                    {subscriptionStatus === 'active' ? 'Premium' : 
+                     isTrialExpired ? 'Expired Trial' : 'Free Trial'}
+                  </p>
+                </div>
+                {!hasPremiumAccess && (
+                  <div>
+                    <Label className="text-white/60 text-sm">Days Remaining</Label>
+                    <p className="text-white font-medium">
+                      {isTrialExpired ? '0' : daysRemaining}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-2">
+                <Button
+                  onClick={() => navigate('/subscription')}
+                  className="w-full bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
+                >
+                  {hasPremiumAccess ? 'Manage Subscription' : 'Upgrade to Premium'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Separator className="bg-lumi-sunset-coral/10" />

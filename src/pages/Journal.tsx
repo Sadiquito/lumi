@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Settings, 
   Crown, 
@@ -9,7 +10,9 @@ import {
   Calendar,
   Clock,
   Phone,
-  User
+  User,
+  AlertTriangle,
+  Zap
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
@@ -18,10 +21,12 @@ import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import TrialCountdown from "@/components/TrialCountdown";
 import FeatureGate from "@/components/FeatureGate";
+import { useTrialStatus } from "@/hooks/useTrialStatus";
 
 const Journal = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isTrialExpired, daysRemaining, hasPremiumAccess } = useTrialStatus();
 
   // Fetch user's conversations
   const { data: conversations, isLoading: conversationsLoading } = useQuery({
@@ -89,7 +94,7 @@ const Journal = () => {
 
   return (
     <div className="min-h-screen bg-cosmic-gradient">
-      {/* Header */}
+      {/* Header with Trial Status */}
       <div className="flex items-center justify-between p-4 md:p-6">
         <div className="flex items-center space-x-3">
           <Avatar className="w-10 h-10 bg-lumi-sunset-coral">
@@ -132,6 +137,46 @@ const Journal = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
+        {/* Trial Status Alert */}
+        {isTrialExpired && (
+          <Alert className="mb-6 bg-red-500/20 border-red-500/30 backdrop-blur-sm">
+            <AlertTriangle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-white">
+              <div className="flex items-center justify-between">
+                <span>Your 7-day free trial has expired. Upgrade now to continue using Lumi's premium features.</span>
+                <Button
+                  onClick={() => navigate('/subscription')}
+                  className="ml-4 bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
+                  size="sm"
+                >
+                  <Crown className="w-4 h-4 mr-1" />
+                  Upgrade Now
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {daysRemaining <= 3 && !isTrialExpired && (
+          <Alert className="mb-6 bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30 backdrop-blur-sm">
+            <Clock className="h-4 w-4 text-lumi-sunset-coral" />
+            <AlertDescription className="text-white">
+              <div className="flex items-center justify-between">
+                <span>Your trial expires in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. Don't lose access to your journaling progress!</span>
+                <Button
+                  onClick={() => navigate('/subscription')}
+                  variant="outline"
+                  className="ml-4 border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
+                  size="sm"
+                >
+                  <Zap className="w-4 h-4 mr-1" />
+                  Secure Access
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -287,6 +332,62 @@ const Journal = () => {
                 </CardContent>
               </Card>
             </FeatureGate>
+
+            {/* Subscription Status Card */}
+            <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-white text-lg flex items-center">
+                  <Crown className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+                  subscription status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {hasPremiumAccess && !isTrialExpired ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm">status:</span>
+                      <span className="text-lumi-aquamarine font-medium text-sm">Premium Active</span>
+                    </div>
+                    <p className="text-white/60 text-xs">
+                      enjoying all lumi features ✨
+                    </p>
+                  </div>
+                ) : isTrialExpired ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm">status:</span>
+                      <span className="text-red-400 font-medium text-sm">Trial Expired</span>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/subscription')}
+                      className="w-full bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
+                      size="sm"
+                    >
+                      <Crown className="w-4 h-4 mr-1" />
+                      upgrade to continue
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/80 text-sm">trial:</span>
+                      <span className="text-lumi-sunset-coral font-medium text-sm">
+                        {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/subscription')}
+                      variant="outline"
+                      className="w-full border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
+                      size="sm"
+                    >
+                      <Zap className="w-4 h-4 mr-1" />
+                      upgrade early
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Profile Quick View */}
             <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
