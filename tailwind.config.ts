@@ -20,9 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Nohemi', 'system-ui', 'sans-serif'],
-				hero: ['Raleway', 'system-ui', 'sans-serif'],
-				title: ['Migra', 'serif'],
+				sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
+				hero: ['Space Grotesk', 'system-ui', 'sans-serif'],
+				title: ['Orbitron', 'monospace'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

@@ -51,7 +51,7 @@ const Landing = () => {
         <div className="flex justify-between items-center p-4 md:p-6">
           <div className="flex items-center">
             <Star className="w-8 h-8 text-lumi-aquamarine mr-2" />
-            <h1 className="text-2xl font-title text-white">Lumi</h1>
+            <h1 className="text-2xl font-title text-white tracking-wide">Lumi</h1>
           </div>
           <Button 
             onClick={() => navigate('/auth')}
@@ -62,21 +62,32 @@ const Landing = () => {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
-          {/* Large Lumi Title in Center */}
-          <div className="text-center mb-8 mt-16">
-            <h1 className="text-8xl md:text-9xl font-title text-white mb-4 tracking-wide">
-              Lumi
+          {/* Large Lumi Title in Center - Blending with background */}
+          <div className="text-center mb-8 mt-16 relative">
+            <h1 className="text-8xl md:text-9xl font-title font-black tracking-wider relative">
+              {/* Background shadow text for depth */}
+              <span className="absolute inset-0 text-transparent bg-gradient-to-b from-white/20 to-white/5 bg-clip-text blur-sm">
+                Lumi
+              </span>
+              {/* Main text with cosmic gradient */}
+              <span className="relative bg-gradient-to-b from-white via-lumi-aquamarine/80 to-white/60 bg-clip-text text-transparent">
+                Lumi
+              </span>
+              {/* Subtle glow effect */}
+              <span className="absolute inset-0 text-lumi-aquamarine/30 blur-lg">
+                Lumi
+              </span>
             </h1>
           </div>
 
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-title text-white mb-6 leading-tight">
+            <h2 className="text-4xl md:text-6xl font-title font-semibold text-white mb-6 leading-tight tracking-wide">
               Your Daily
               <br />
-              <span className="text-lumi-aquamarine">Reflection Companion</span>
+              <span className="text-lumi-aquamarine font-bold">Reflection Companion</span>
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
+            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans font-light">
               Lumi is an AI-powered journaling companion that listens to your thoughts, 
               asks meaningful questions, and helps you build a consistent reflection practice.
             </p>
@@ -96,12 +107,12 @@ const Landing = () => {
                   <div className="text-lumi-aquamarine mb-3">
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-white text-lg font-title">
+                  <CardTitle className="text-white text-lg font-title font-medium tracking-wide">
                     {feature.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/90 font-sans">
+                  <p className="text-white/90 font-sans font-light">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -112,10 +123,10 @@ const Landing = () => {
           {/* CTA Section */}
           <Card className="bg-black/10 backdrop-blur-sm border-white/5 shadow-xl">
             <CardContent className="pt-8 pb-8 text-center">
-              <h3 className="text-2xl font-title text-white mb-4">
+              <h3 className="text-2xl font-title font-medium text-white mb-4 tracking-wide">
                 Ready to Begin?
               </h3>
-              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
+              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans font-light">
                 Join thousands who are building meaningful reflection practices with Lumi.
               </p>
               <Button 
