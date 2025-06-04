@@ -65,7 +65,7 @@ const Landing = () => {
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="w-full border-white/40 text-white hover:bg-white/15 backdrop-blur-sm py-2.5 text-base font-medium rounded-xl"
+                      className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:border-white/80 backdrop-blur-sm py-2.5 text-base font-medium rounded-xl transition-all duration-200"
                       onClick={() => navigate('/journal')}
                     >
                       Sign in
