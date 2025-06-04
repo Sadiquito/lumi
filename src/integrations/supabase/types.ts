@@ -9,159 +9,144 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      call_logs: {
+      conversations: {
         Row: {
-          actual_call_time: string | null
-          call_status: string
-          callback_attempt: number | null
+          ai_response: string
           created_at: string
-          duration_seconds: number | null
           id: string
-          recording_url: string | null
-          scheduled_time: string
-          updated_at: string
+          transcript: string
           user_id: string
         }
         Insert: {
-          actual_call_time?: string | null
-          call_status?: string
-          callback_attempt?: number | null
+          ai_response: string
           created_at?: string
-          duration_seconds?: number | null
           id?: string
-          recording_url?: string | null
-          scheduled_time: string
-          updated_at?: string
+          transcript: string
           user_id: string
         }
         Update: {
-          actual_call_time?: string | null
-          call_status?: string
-          callback_attempt?: number | null
+          ai_response?: string
           created_at?: string
-          duration_seconds?: number | null
           id?: string
-          recording_url?: string | null
-          scheduled_time?: string
-          updated_at?: string
+          transcript?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      call_schedules: {
+      daily_advice: {
         Row: {
-          call_time: string
+          advice_text: string
           created_at: string
-          day_of_week: number
           id: string
-          is_active: boolean
-          updated_at: string
           user_id: string
         }
         Insert: {
-          call_time: string
+          advice_text: string
           created_at?: string
-          day_of_week: number
           id?: string
-          is_active?: boolean
-          updated_at?: string
           user_id: string
         }
         Update: {
-          call_time?: string
+          advice_text?: string
           created_at?: string
-          day_of_week?: number
           id?: string
-          is_active?: boolean
-          updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_advice_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      call_settings: {
+      personalization_profiles: {
         Row: {
-          calls_per_week: number
-          created_at: string
-          first_callback_delay_minutes: number
           id: string
-          max_callbacks: number
-          second_callback_delay_minutes: number
-          third_callback_delay_minutes: number
+          psychological_portrait_text: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          calls_per_week?: number
-          created_at?: string
-          first_callback_delay_minutes?: number
           id?: string
-          max_callbacks?: number
-          second_callback_delay_minutes?: number
-          third_callback_delay_minutes?: number
+          psychological_portrait_text?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          calls_per_week?: number
-          created_at?: string
-          first_callback_delay_minutes?: number
           id?: string
-          max_callbacks?: number
-          second_callback_delay_minutes?: number
-          third_callback_delay_minutes?: number
+          psychological_portrait_text?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
-      }
-      journal_entries: {
-        Row: {
-          call_log_id: string | null
-          content: string
-          created_at: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          call_log_id?: string | null
-          content: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          call_log_id?: string | null
-          content?: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personalization_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           created_at: string
           email: string | null
           id: string
-          phone_number: string | null
+          name: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           email?: string | null
           id: string
-          phone_number?: string | null
+          name?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           email?: string | null
           id?: string
-          phone_number?: string | null
+          name?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          subscription_status: string
+          trial_start_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          subscription_status?: string
+          trial_start_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          subscription_status?: string
+          trial_start_date?: string | null
         }
         Relationships: []
       }

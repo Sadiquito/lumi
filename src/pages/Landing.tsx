@@ -1,110 +1,114 @@
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Stars, Moon, TreePine } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mic, Star, Heart, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/AuthProvider";
+import { useEffect } from "react";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Redirect authenticated users to journal
+    if (user) {
+      navigate('/journal');
+    }
+  }, [user, navigate]);
+
+  const features = [
+    {
+      icon: <Mic className="w-6 h-6" />,
+      title: "voice-first journaling",
+      description: "speak naturally about your day, thoughts, and feelings"
+    },
+    {
+      icon: <Heart className="w-6 h-6" />,
+      title: "empathetic ai companion",
+      description: "lumi listens without judgment and responds with care"
+    },
+    {
+      icon: <Clock className="w-6 h-6" />,
+      title: "daily consistency",
+      description: "build a sustainable reflection practice that grows with you"
+    }
+  ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Cosmic Cabin Background Image */}
-      <div className="absolute inset-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: "url('/lovable-uploads/64e09d9e-4a2f-40b0-8df2-f575927a323c.png')"
-          }}
-        />
-        
-        {/* Subtle overlay to ensure text readability while preserving the image beauty */}
-        <div className="absolute inset-0 bg-black/10" />
+    <div className="min-h-screen bg-cosmic-gradient">
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 md:p-6">
+        <div className="flex items-center">
+          <Star className="w-8 h-8 text-lumi-aquamarine mr-2" />
+          <h1 className="text-2xl font-medium text-white">lumi</h1>
+        </div>
+        <Button 
+          onClick={() => navigate('/auth')}
+          className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
+        >
+          get started
+        </Button>
       </div>
 
-      {/* Main Content - Positioned to use the clear cosmic sky areas */}
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header - Positioned in the upper cosmic sky area */}
-        <div className="flex-1 flex flex-col justify-center items-center px-4 pt-12">
-          <div className="animate-fade-in max-w-4xl mx-auto text-center">
-            {/* Brand Header - Positioned in clear sky space */}
-            <div className="mb-8">
-              <h1 className="text-5xl md:text-7xl font-hero font-light text-white mb-3 tracking-tight drop-shadow-2xl">
-                Lumi
-              </h1>
-              <p className="text-lg md:text-xl text-white/95 font-light drop-shadow-lg">
-                Take a moment for yourself, daily
-              </p>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
+        {/* Hero Section */}
+        <div className="text-center mb-16 mt-8">
+          <h2 className="text-4xl md:text-6xl font-light text-white mb-6 leading-tight">
+            your daily
+            <br />
+            <span className="text-lumi-aquamarine">reflection companion</span>
+          </h2>
+          <p className="text-xl text-white/70 mb-8 max-w-2xl mx-auto leading-relaxed">
+            lumi is an ai-powered journaling companion that listens to your thoughts, 
+            asks meaningful questions, and helps you build a consistent reflection practice.
+          </p>
+          <Button 
+            onClick={() => navigate('/auth')}
+            className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl"
+          >
+            start your journey
+          </Button>
+        </div>
 
-            {/* Hero Card - Positioned to float in the cosmic sky */}
-            <div className="flex justify-center mb-12">
-              <Card className="max-w-sm w-full p-6 bg-black/30 backdrop-blur-md border-white/20 shadow-2xl">
-                <div className="space-y-5">
-                  <div className="flex justify-center mb-5">
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center shadow-lg">
-                      <Stars className="w-7 h-7 text-white" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 text-center">
-                    <h2 className="text-xl font-medium text-white">
-                      Your cosmic companion for reflection
-                    </h2>
-                    <p className="text-white/85 leading-relaxed text-sm">
-                      Lumi calls you every day, listens to your thoughts, and helps you build a lasting journaling practice through gentle AI guidance.
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-3">
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2.5 text-base font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                      onClick={() => navigate('/journal')}
-                    >
-                      Start your journey
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:border-white/80 backdrop-blur-sm py-2.5 text-base font-medium rounded-xl transition-all duration-200"
-                      onClick={() => navigate('/journal')}
-                    >
-                      Sign in
-                    </Button>
-                  </div>
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {features.map((feature, index) => (
+            <Card key={index} className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+              <CardHeader>
+                <div className="text-lumi-aquamarine mb-3">
+                  {feature.icon}
                 </div>
-              </Card>
-            </div>
-          </div>
+                <CardTitle className="text-white text-lg">
+                  {feature.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-white/70">
+                  {feature.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Features Preview - Positioned at bottom to complement the forest floor */}
-        <div className="px-4 pb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
-            <div className="text-center space-y-2">
-              <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <Stars className="w-5 h-5 text-amber-300" />
-              </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">Daily calls</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">Lumi calls you at your chosen time</p>
-            </div>
-            
-            <div className="text-center space-y-2">
-              <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <Moon className="w-5 h-5 text-blue-300" />
-              </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">AI guidance</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">Personalized prompts that evolve with you</p>
-            </div>
-            
-            <div className="text-center space-y-2">
-              <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/30">
-                <TreePine className="w-5 h-5 text-green-300" />
-              </div>
-              <h3 className="font-medium text-white drop-shadow-lg text-sm">Lasting habits</h3>
-              <p className="text-xs text-white/80 drop-shadow-sm">Build reflection into your daily routine</p>
-            </div>
-          </div>
-        </div>
+        {/* CTA Section */}
+        <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+          <CardContent className="pt-8 pb-8 text-center">
+            <h3 className="text-2xl font-light text-white mb-4">
+              ready to begin?
+            </h3>
+            <p className="text-white/70 mb-6 max-w-md mx-auto">
+              join thousands who are building meaningful reflection practices with lumi.
+            </p>
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 px-6 text-lg font-medium rounded-xl"
+            >
+              create your account
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
