@@ -273,9 +273,16 @@ const Journal = () => {
                         {conversation.ai_response && (
                           <ConversationFeatureGate feature="ai_insights">
                             <div className="mt-2 pt-2 border-t border-lumi-sunset-coral/10">
-                              <p className="text-white/70 text-xs">
-                                <span className="text-lumi-aquamarine">lumi's insight:</span> {conversation.ai_response}
-                              </p>
+                              <div className="flex items-start justify-between">
+                                <p className="text-white/70 text-xs flex-1">
+                                  <span className="text-lumi-aquamarine">lumi's insight:</span> {conversation.ai_response}
+                                </p>
+                                <TTSFeatureGate 
+                                  text={conversation.ai_response}
+                                  variant="icon-only"
+                                  showAlert={false}
+                                />
+                              </div>
                             </div>
                           </ConversationFeatureGate>
                         )}
@@ -295,7 +302,10 @@ const Journal = () => {
             </Card>
 
             {/* TTS Feature Demo/Status */}
-            <TTSFeatureGate showAlert={true} />
+            <TTSFeatureGate 
+              text="Welcome to Lumi's voice feature! This is how your AI responses will sound with premium access."
+              showAlert={true} 
+            />
           </div>
 
           {/* Sidebar */}
@@ -315,9 +325,16 @@ const Journal = () => {
                     <div className="space-y-4">
                       {dailyAdvice.slice(0, 1).map((advice) => (
                         <div key={advice.id} className="space-y-2">
-                          <p className="text-white/80 text-sm leading-relaxed">
-                            {advice.advice_text}
-                          </p>
+                          <div className="flex items-start justify-between">
+                            <p className="text-white/80 text-sm leading-relaxed flex-1">
+                              {advice.advice_text}
+                            </p>
+                            <TTSFeatureGate 
+                              text={advice.advice_text}
+                              variant="icon-only"
+                              showAlert={false}
+                            />
+                          </div>
                           <p className="text-white/50 text-xs">
                             {format(parseISO(advice.created_at), 'MMM dd')}
                           </p>

@@ -3,23 +3,44 @@ import React from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Crown, Volume2, VolumeX } from 'lucide-react';
+import { Crown, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import TextToSpeech from '@/components/TextToSpeech';
 
 interface TTSFeatureGateProps {
+  text?: string;
   children?: React.ReactNode;
   showAlert?: boolean;
+  variant?: 'default' | 'compact' | 'icon-only';
+  autoPlay?: boolean;
 }
 
 const TTSFeatureGate: React.FC<TTSFeatureGateProps> = ({ 
+  text,
   children, 
-  showAlert = true 
+  showAlert = true,
+  variant = 'default',
+  autoPlay = false
 }) => {
   const { trialStatus } = useAuth();
   const { canUseTTS, isTrialExpired, daysRemaining } = trialStatus;
   const navigate = useNavigate();
 
-  // If user has TTS access, show the children
+  // If user has TTS access and text is provided, show the TTS component
+  if (canUseTTS && text) {
+    return (
+      <div className="flex items-center space-x-2">
+        <TextToSpeech 
+          text={text} 
+          variant={variant}
+          autoPlay={autoPlay}
+        />
+        {children}
+      </div>
+    );
+  }
+
+  // If user has TTS access but no text, show children
   if (canUseTTS) {
     return <>{children}</>;
   }
