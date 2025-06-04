@@ -4,7 +4,7 @@ import { AudioRecorderPermissions } from './AudioRecorderPermissions';
 import { AudioRecorderStateManager } from './AudioRecorderState';
 import { AudioRecorderCore } from './AudioRecorderCore';
 
-export { AudioRecorderConfig, AudioChunk, AudioRecorderState } from './AudioRecorderTypes';
+export type { AudioRecorderConfig, AudioChunk, AudioRecorderState } from './AudioRecorderTypes';
 
 export class AudioRecorder {
   private stateManager: AudioRecorderStateManager;
