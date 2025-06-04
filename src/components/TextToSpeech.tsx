@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Volume2, VolumeX, Pause, Play, Loader2 } from 'lucide-react';
@@ -5,10 +6,12 @@ import { useElevenLabsConfig } from '@/hooks/useElevenLabsConfig';
 import { supabase } from '@/integrations/supabase/client';
 import { DEFAULT_VOICE_ID, ELEVENLABS_MODEL, DEFAULT_VOICE_SETTINGS } from '@/utils/elevenLabsConfig';
 import { useToast } from '@/hooks/use-toast';
+import { useTTSUsageTracking } from '@/hooks/useTTSUsageTracking';
 import AudioProgress from './AudioProgress';
 import AudioControls from './AudioControls';
 import VoiceSelector from './VoiceSelector';
 import TTSErrorBoundary from './TTSErrorBoundary';
+import TTSTrialPreview from './TTSTrialPreview';
 import { useAuth } from './AuthProvider';
 
 interface TextToSpeechProps {
@@ -37,6 +40,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
   const { config, loading: configLoading } = useElevenLabsConfig();
   const { toast } = useToast();
   const { trialStatus } = useAuth();
+  const { trackUsage, canUseToday, getRemainingUsage } = useTTSUsageTracking();
 
   const generateSpeech = async (retryAttempt = 0) => {
     if (!config.isConfigured || !text.trim()) {
@@ -48,9 +52,35 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
       return;
     }
 
+    // Check trial limits before generation
+    if (!trialStatus.canUseTTS) {
+      toast({
+        title: "TTS Access Required",
+        description: "Voice responses require premium access or active trial.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!trialStatus.hasPremiumAccess && !canUseToday()) {
+      const remaining = getRemainingUsage();
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've used all ${remaining.daily} voice responses today. Upgrade for unlimited access.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
+
+      // Track usage before generation
+      const usageTracked = await trackUsage(text, selectedVoice);
+      if (!usageTracked) {
+        throw new Error('Usage tracking failed');
+      }
 
       const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
         body: {
@@ -65,9 +95,8 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
 
       if (data?.audio_url) {
         setAudioUrl(data.audio_url);
-        setRetryCount(0); // Reset retry count on success
+        setRetryCount(0);
         
-        // Auto-play if requested
         if (autoPlay) {
           setTimeout(() => handlePlay(), 100);
         }
@@ -79,7 +108,6 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate speech';
       setError(errorMessage);
       
-      // Implement retry logic for network issues
       if (retryAttempt < 2 && (errorMessage.includes('network') || errorMessage.includes('timeout'))) {
         console.log(`Retrying TTS generation, attempt ${retryAttempt + 1}`);
         setTimeout(() => generateSpeech(retryAttempt + 1), 1000 * (retryAttempt + 1));
@@ -133,7 +161,6 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
     generateSpeech();
   };
 
-  // Clean up audio URL when component unmounts
   useEffect(() => {
     return () => {
       if (audioUrl) {
@@ -144,6 +171,16 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
 
   if (configLoading || !config.isConfigured) {
     return null;
+  }
+
+  // Show trial preview for users without TTS access
+  if (!trialStatus.canUseTTS) {
+    return <TTSTrialPreview text={text} className={className} />;
+  }
+
+  // Show trial preview for trial users who have reached daily limit
+  if (!trialStatus.hasPremiumAccess && !canUseToday()) {
+    return <TTSTrialPreview text={text} className={className} />;
   }
 
   const renderEnhancedVersion = () => (

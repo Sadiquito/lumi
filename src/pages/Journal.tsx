@@ -24,6 +24,7 @@ import ConversationFeatureGate from "@/components/ConversationFeatureGate";
 import TTSFeatureGate from "@/components/TTSFeatureGate";
 import AudioRecordingFeature from "@/components/AudioRecordingFeature";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
+import TTSTestingPanel from "@/components/TTSTestingPanel";
 
 const Journal = () => {
   const navigate = useNavigate();
@@ -301,13 +302,20 @@ const Journal = () => {
               </CardContent>
             </Card>
 
-            {/* TTS Feature Demo/Status - Enhanced Version */}
+            {/* TTS Enhanced Demo - Updated for trial integration */}
             <TTSFeatureGate 
-              text="Welcome to Lumi's enhanced voice feature! This showcases our premium audio experience with voice selection, progress tracking, and advanced controls."
+              text="Welcome to Lumi's enhanced voice feature! This showcases our premium audio experience with voice selection, progress tracking, and advanced controls. Upgrade to unlock unlimited voice responses."
               variant="enhanced"
               showAlert={true} 
               showVoiceSelector={true}
             />
+
+            {/* TTS Testing Panel - Development/Admin Feature */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-8">
+                <TTSTestingPanel />
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
