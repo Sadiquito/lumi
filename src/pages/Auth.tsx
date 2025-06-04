@@ -4,28 +4,37 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import PasswordReset from "@/components/PasswordReset";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
   // Check if this is a password reset redirect
   const isPasswordReset = searchParams.get('reset') === 'true';
+
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user && !isPasswordReset) {
+      navigate('/journal', { replace: true });
+    }
+  }, [user, navigate, isPasswordReset]);
 
   useEffect(() => {
     if (isPasswordReset) {
@@ -35,14 +44,49 @@ const Auth = () => {
       if (accessToken) {
         setShowPasswordReset(false);
         setIsSignUp(false);
-        // Show password update form
       }
     }
   }, [isPasswordReset]);
 
+  // Form validation
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+
+    if (!email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (!password.trim()) {
+      errors.password = "Password is required";
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+
+    if (isSignUp && !name.trim()) {
+      errors.name = "Name is required";
+    }
+
+    if (isPasswordReset && !newPassword.trim()) {
+      errors.newPassword = "New password is required";
+    } else if (isPasswordReset && newPassword.length < 6) {
+      errors.newPassword = "Password must be at least 6 characters";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
+    setFormErrors({});
 
     try {
       // Handle password update for reset flow
@@ -62,7 +106,7 @@ const Auth = () => {
             title: "Password updated successfully",
             description: "Your password has been updated.",
           });
-          navigate('/journal');
+          navigate('/journal', { replace: true });
         }
         return;
       }
@@ -70,18 +114,12 @@ const Auth = () => {
       // Regular sign in/up flow
       let result;
       if (isSignUp) {
-        result = await signUp(email, password, name);
+        result = await signUp(email.trim(), password, name.trim());
       } else {
-        result = await signIn(email, password);
+        result = await signIn(email.trim(), password);
       }
 
-      if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error.message,
-          variant: "destructive",
-        });
-      } else {
+      if (!result.error) {
         if (isSignUp) {
           toast({
             title: "Welcome to Lumi!",
@@ -93,11 +131,12 @@ const Auth = () => {
             description: "You've successfully signed in.",
           });
         }
-        navigate('/journal');
+        navigate('/journal', { replace: true });
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast({
-        title: "Error",
+        title: "Unexpected Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
@@ -119,7 +158,7 @@ const Auth = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-medium text-white font-sans">
+          <h1 className="text-2xl font-medium text-white font-title">
             reset password
           </h1>
         </div>
@@ -143,7 +182,7 @@ const Auth = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-2xl font-medium text-white font-sans">
+        <h1 className="text-2xl font-medium text-white font-title">
           {isPasswordReset ? "update password" : isSignUp ? "join lumi" : "welcome back"}
         </h1>
       </div>
@@ -170,15 +209,29 @@ const Auth = () => {
               {isPasswordReset && (
                 <div className="space-y-2">
                   <Label className="text-white/80 font-sans">new password</Label>
-                  <Input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
-                    placeholder="your new password"
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40 pr-10"
+                      placeholder="your new password"
+                      required
+                      minLength={6}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 text-white/60 hover:text-white"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {formErrors.newPassword && (
+                    <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.newPassword}</p>
+                  )}
                 </div>
               )}
 
@@ -196,6 +249,9 @@ const Auth = () => {
                         placeholder="your name"
                         required
                       />
+                      {formErrors.name && (
+                        <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.name}</p>
+                      )}
                     </div>
                   )}
                   
@@ -209,19 +265,36 @@ const Auth = () => {
                       placeholder="your@email.com"
                       required
                     />
+                    {formErrors.email && (
+                      <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.email}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
                     <Label className="text-white/80 font-sans">password</Label>
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
-                      placeholder="your password"
-                      required
-                      minLength={6}
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40 pr-10"
+                        placeholder="your password"
+                        required
+                        minLength={6}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 text-white/60 hover:text-white"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    {formErrors.password && (
+                      <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.password}</p>
+                    )}
                   </div>
                 </>
               )}
@@ -239,7 +312,10 @@ const Auth = () => {
               <div className="mt-6 space-y-2 text-center">
                 <Button
                   variant="link"
-                  onClick={() => setIsSignUp(!isSignUp)}
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setFormErrors({});
+                  }}
                   className="text-lumi-aquamarine hover:text-lumi-aquamarine/80 p-0 h-auto block mx-auto font-sans"
                 >
                   {isSignUp 
