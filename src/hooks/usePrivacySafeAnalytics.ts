@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuditLogger } from "./useAdminAuditLogger";
 
-interface AnonymizedUserData {
-  user_hash: string;
+interface PrivacySafeActivityData {
   activity_date: string;
   activity_type: string;
+  total_users: number;
   total_activities: number;
 }
 
@@ -29,14 +29,14 @@ interface AnonymizedHealthData {
 export const usePrivacySafeAnalytics = (isAdmin: boolean) => {
   const { logDataAccess } = useAdminAuditLogger();
 
-  // Privacy-safe user activity (no personal identifiers, only aggregated data)
-  const { data: anonymizedUserActivity, isLoading: isLoadingActivity } = useQuery({
+  // Privacy-safe user activity (using existing daily user activity function)
+  const { data: privacySafeUserActivity, isLoading: isLoadingActivity } = useQuery({
     queryKey: ['privacy-safe-user-activity'],
-    queryFn: async (): Promise<AnonymizedUserData[]> => {
-      logDataAccess('anonymized_user_activity');
+    queryFn: async (): Promise<PrivacySafeActivityData[]> => {
+      logDataAccess('privacy_safe_user_activity');
       
-      // Get aggregated data without user identification
-      const { data, error } = await supabase.rpc('get_anonymized_user_activity');
+      // Use existing function for aggregated data
+      const { data, error } = await supabase.rpc('get_daily_user_activity');
       if (error) throw error;
       return data || [];
     },
@@ -44,14 +44,14 @@ export const usePrivacySafeAnalytics = (isAdmin: boolean) => {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  // Privacy-safe conversion data (aggregated only)
+  // Privacy-safe conversion data (using existing function)
   const { data: privacySafeConversions, isLoading: isLoadingConversions } = useQuery({
     queryKey: ['privacy-safe-conversions'],
     queryFn: async (): Promise<PrivacySafeConversionData[]> => {
       logDataAccess('privacy_safe_conversions');
       
-      // Get conversion stats without any personal data
-      const { data, error } = await supabase.rpc('get_privacy_safe_conversions');
+      // Use existing trial conversion stats function
+      const { data, error } = await supabase.rpc('get_trial_conversion_stats');
       if (error) throw error;
       return data || [];
     },
@@ -76,10 +76,10 @@ export const usePrivacySafeAnalytics = (isAdmin: boolean) => {
   // Enhanced activity tracking (privacy-safe)
   const trackAnonymizedActivity = async (activityType: string) => {
     try {
-      // Only track activity type, no user identification
-      await supabase.rpc('track_anonymized_activity', { 
+      // Track activity without user identification using existing function
+      await supabase.rpc('track_user_activity', { 
         activity_type: activityType,
-        // Explicitly no user_id passed for admin analytics
+        // No user_id passed for admin analytics tracking
       });
     } catch (error) {
       console.error('Error tracking anonymized activity:', error);
@@ -87,7 +87,7 @@ export const usePrivacySafeAnalytics = (isAdmin: boolean) => {
   };
 
   return {
-    anonymizedUserActivity: anonymizedUserActivity || [],
+    privacySafeUserActivity: privacySafeUserActivity || [],
     privacySafeConversions: privacySafeConversions || [],
     systemHealth: systemHealth || [],
     isLoadingActivity,

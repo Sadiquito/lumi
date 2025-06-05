@@ -19,7 +19,7 @@ const AdminDashboard: React.FC = () => {
   
   // Use privacy-safe analytics instead of regular analytics
   const { 
-    anonymizedUserActivity, 
+    privacySafeUserActivity, 
     privacySafeConversions, 
     systemHealth,
     isLoadingActivity,
@@ -71,9 +71,9 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Metrics Overview - Using anonymized data */}
+        {/* Metrics Overview - Using privacy-safe data */}
         <MetricsOverview 
-          userActivity={anonymizedUserActivity}
+          userActivity={privacySafeUserActivity}
           trialConversions={privacySafeConversions}
           systemHealth={systemHealth}
           isLoading={isLoading}
@@ -89,10 +89,10 @@ const AdminDashboard: React.FC = () => {
             />
           </div>
 
-          {/* User Activity Chart - Anonymized */}
+          {/* User Activity Chart - Privacy-safe */}
           <div className="lg:col-span-1">
             <UserActivityChart 
-              activityData={anonymizedUserActivity}
+              activityData={privacySafeUserActivity}
               isLoading={isLoadingActivity}
             />
           </div>

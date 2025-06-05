@@ -17,9 +17,9 @@ const MetricsOverview: React.FC<MetricsOverviewProps> = ({
   isLoading
 }) => {
   // Calculate key metrics
-  const totalActiveUsers = userActivity.reduce((sum, activity) => sum + activity.total_users, 0);
-  const totalActivities = userActivity.reduce((sum, activity) => sum + activity.total_activities, 0);
-  const totalConversions = trialConversions.reduce((sum, conversion) => sum + conversion.conversion_count, 0);
+  const totalActiveUsers = userActivity.reduce((sum, activity) => sum + (activity.total_users || 0), 0);
+  const totalActivities = userActivity.reduce((sum, activity) => sum + (activity.total_activities || 0), 0);
+  const totalConversions = trialConversions.reduce((sum, conversion) => sum + (conversion.conversion_count || 0), 0);
   const avgConversionTime = trialConversions.length > 0 
     ? trialConversions.reduce((sum, conversion) => sum + (conversion.avg_days_to_conversion || 0), 0) / trialConversions.length
     : 0;

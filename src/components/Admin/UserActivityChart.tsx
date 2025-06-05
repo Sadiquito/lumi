@@ -32,8 +32,8 @@ const UserActivityChart: React.FC<UserActivityChartProps> = ({
       });
       
       const existing = dateMap.get(date) || { date, users: 0, activities: 0 };
-      existing.users += item.total_users;
-      existing.activities += item.total_activities;
+      existing.users += item.total_users || 0;
+      existing.activities += item.total_activities || 0;
       dateMap.set(date, existing);
     });
     

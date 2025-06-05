@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          resource: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           ai_response: string
@@ -325,6 +352,15 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      get_anonymized_user_activity: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          user_hash: string
+          activity_date: string
+          activity_type: string
+          total_activities: number
+        }[]
+      }
       get_daily_user_activity: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
@@ -332,6 +368,15 @@ export type Database = {
           activity_type: string
           total_users: number
           total_activities: number
+        }[]
+      }
+      get_privacy_safe_conversions: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          conversion_date: string
+          conversion_type: string
+          conversion_count: number
+          avg_days_to_conversion: number
         }[]
       }
       get_system_health_metrics: {
@@ -373,6 +418,10 @@ export type Database = {
       is_trial_expired: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      track_anonymized_activity: {
+        Args: { activity_type: string }
+        Returns: undefined
       }
       track_user_activity: {
         Args: { activity_type: string; user_id?: string }

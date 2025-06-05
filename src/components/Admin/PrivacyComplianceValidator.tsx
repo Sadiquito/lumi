@@ -136,7 +136,7 @@ export const PrivacyComplianceValidator: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <h4 className="font-medium text-lumi-charcoal">{check.name}</h4>
                     {check.id === 'transcript_blocking' && (
-                      <EyeOff className="w-4 h-4 text-lumi-charcoal/60" title="Content Protected" />
+                      <EyeOff className="w-4 h-4 text-lumi-charcoal/60" />
                     )}
                   </div>
                   <p className="text-sm text-lumi-charcoal/70 mt-1">{check.description}</p>
