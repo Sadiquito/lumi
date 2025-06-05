@@ -85,9 +85,11 @@ export const useAudioRecordingFeature = ({
       return;
     }
 
-    const started = await coreStartRecording();
-    if (started) {
+    try {
+      await coreStartRecording();
       startListening();
+    } catch (error) {
+      console.error('Failed to start recording:', error);
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useConversationState } from '@/hooks/useConversationState';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
@@ -71,7 +70,7 @@ export const useAudioConversationFlow = ({
 
     setIsTranscribing(true);
     setTranscriptionProgress(0);
-    setRetryCount(0);
+    setRetryCount(() => 0);
     
     try {
       const transcript = await transcribeAudio(
