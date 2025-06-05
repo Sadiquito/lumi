@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Crown, Zap, User } from 'lucide-react';
+import { Crown, Zap, User, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthProvider';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
@@ -13,6 +13,7 @@ import PsychologicalPortrait from '@/components/PsychologicalPortrait';
 import ConversationFeatureGate from '@/components/ConversationFeatureGate';
 import AdviceCard from './AdviceCard';
 import AdviceHistoryDialog from './AdviceHistoryDialog';
+import ExportButton from '@/components/Export/ExportButton';
 
 // Type for advice with proper personalization level typing
 interface AdviceWithPersonalization {
@@ -157,6 +158,26 @@ const JournalSidebar: React.FC = () => {
           </Card>
         )}
       </FeatureGate>
+
+      {/* Export Section */}
+      <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-white text-lg flex items-center">
+            <Download className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+            export data
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-white/70 text-sm mb-4">
+            download your conversations and wisdom insights
+          </p>
+          <ExportButton 
+            variant="default"
+            className="w-full bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white border-0"
+            showText={true}
+          />
+        </CardContent>
+      </Card>
 
       {/* Subscription Status Card */}
       <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">

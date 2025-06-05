@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Calendar, MessageCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import ConversationThread from './ConversationThread';
+import ExportButton from '@/components/Export/ExportButton';
 
 interface ConversationCardProps {
   conversation: {
@@ -31,9 +31,17 @@ const ConversationCard: React.FC<ConversationCardProps> = ({ conversation }) => 
             <MessageCircle className="w-4 h-4 mr-2" />
             conversation
           </div>
-          <div className="flex items-center text-white/60 text-xs">
-            <Calendar className="w-3 h-3 mr-1" />
-            {formatDate(conversation.created_at)}
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center text-white/60 text-xs">
+              <Calendar className="w-3 h-3 mr-1" />
+              {formatDate(conversation.created_at)}
+            </div>
+            <ExportButton 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6" 
+              showText={false}
+            />
           </div>
         </div>
       </CardHeader>
