@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useConversationState } from '@/hooks/useConversationState';
+import { useConversationSession } from '@/hooks/useConversationSession';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAudioRecordingState } from '@/hooks/useAudioRecordingState';
 import { useAudioRecordingHandlers } from '@/hooks/useAudioRecordingHandlers';
@@ -50,6 +51,48 @@ export const useAudioRecordingFeature = ({
   const { transcribeAudio } = useAudioTranscription();
   const { generateAIResponse } = useAIResponse();
 
+  // Session Management
+  const {
+    session,
+    sessionState,
+    startSession,
+    endSession,
+    pauseSession,
+    resumeSession,
+    updateActivity,
+    getSessionDuration,
+    isSessionActive,
+  } = useConversationSession({
+    onSessionStart: (session) => {
+      console.log('Conversation session started:', session.id);
+      toast({
+        title: "Session started",
+        description: "Ready for conversation",
+      });
+    },
+    onSessionEnd: (session, reason) => {
+      console.log('Conversation session ended:', session.id, reason);
+      if (reason === 'timeout') {
+        toast({
+          title: "Session ended",
+          description: "Session timed out due to inactivity",
+          variant: "destructive",
+        });
+      }
+      // Clean up any active recording or processing
+      if (state.isRecording) {
+        stopRecording();
+      }
+      goIdle();
+    },
+    onSessionTimeout: (session) => {
+      toast({
+        title: "Session timeout warning",
+        description: "Session will end soon due to inactivity",
+      });
+    }
+  });
+
   const {
     state: conversationState,
     startListening,
@@ -65,6 +108,10 @@ export const useAudioRecordingFeature = ({
   } = useConversationState({
     onStateChange: (newState, previousState) => {
       console.log(`Conversation state: ${previousState} → ${newState}`);
+      // Update session activity when conversation state changes
+      if (isSessionActive) {
+        updateActivity();
+      }
     },
     onTimeout: handleTimeoutError,
     onError: handleConversationError
@@ -129,6 +176,16 @@ export const useAudioRecordingFeature = ({
       return;
     }
 
+    if (!isSessionActive) {
+      toast({
+        title: "No active session",
+        description: "Please start a conversation session first.",
+        variant: "destructive",
+      });
+      goIdle();
+      return;
+    }
+
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     setRetryCount(0);
@@ -153,6 +210,9 @@ export const useAudioRecordingFeature = ({
           audioQuality
         } as AudioQualityMetadata
       });
+
+      // Update session activity
+      updateActivity();
 
       onTranscriptionComplete?.(transcript);
       
@@ -197,6 +257,9 @@ export const useAudioRecordingFeature = ({
         type: 'text'
       });
 
+      // Update session activity
+      updateActivity();
+
       startSpeaking();
       onAIResponse?.(response);
       
@@ -214,6 +277,16 @@ export const useAudioRecordingFeature = ({
   };
 
   const handleStartRecording = async () => {
+    // Ensure session is active before recording
+    if (!isSessionActive) {
+      toast({
+        title: "Start a session first",
+        description: "Please start a conversation session before recording.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!isSupported) {
       toast({
         title: "Audio not supported",
@@ -315,6 +388,16 @@ export const useAudioRecordingFeature = ({
     networkStatus,
     retryCount,
     conversationData,
+    
+    // Session management
+    session,
+    sessionState,
+    startSession,
+    endSession,
+    pauseSession,
+    resumeSession,
+    getSessionDuration,
+    isSessionActive,
     
     // Conversation states
     isIdle,
