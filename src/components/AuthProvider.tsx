@@ -78,6 +78,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: trialError,
   };
 
+  // Activity tracking function
+  const trackActivity = async (activityType: string) => {
+    if (user?.id) {
+      try {
+        await supabase.rpc('track_user_activity', { activity_type: activityType });
+      } catch (error) {
+        console.error('Error tracking activity:', error);
+      }
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -88,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle different auth events
+        // Handle different auth events and track activity
         if (event === 'SIGNED_OUT') {
           // Clear any cached data when user signs out
           localStorage.removeItem('lumi-user-preferences');
@@ -96,12 +107,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('Token refreshed successfully');
         } else if (event === 'SIGNED_IN') {
           console.log('User signed in successfully');
-          // Ensure trial start date is set for existing users
-          if (session?.user) {
-            setTimeout(() => {
+          // Track login activity
+          setTimeout(() => {
+            if (session?.user) {
+              trackActivity('login');
               ensureTrialStartDate(session.user.id);
-            }, 0);
-          }
+            }
+          }, 0);
         }
       }
     );

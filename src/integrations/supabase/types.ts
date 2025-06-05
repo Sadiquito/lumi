@@ -129,6 +129,99 @@ export type Database = {
         }
         Relationships: []
       }
+      system_health: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          metric_date: string
+          metric_hour: number
+          metric_name: string
+          metric_value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_date?: string
+          metric_hour?: number
+          metric_name: string
+          metric_value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_date?: string
+          metric_hour?: number
+          metric_name?: string
+          metric_value?: number
+        }
+        Relationships: []
+      }
+      trial_conversions: {
+        Row: {
+          conversion_date: string | null
+          conversion_type: string | null
+          created_at: string
+          days_to_conversion: number | null
+          id: string
+          metadata: Json | null
+          trial_start_date: string
+          user_id: string
+        }
+        Insert: {
+          conversion_date?: string | null
+          conversion_type?: string | null
+          created_at?: string
+          days_to_conversion?: number | null
+          id?: string
+          metadata?: Json | null
+          trial_start_date: string
+          user_id: string
+        }
+        Update: {
+          conversion_date?: string | null
+          conversion_type?: string | null
+          created_at?: string
+          days_to_conversion?: number | null
+          id?: string
+          metadata?: Json | null
+          trial_start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_activity: {
+        Row: {
+          activity_count: number
+          activity_date: string
+          activity_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          activity_count?: number
+          activity_date?: string
+          activity_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          activity_count?: number
+          activity_date?: string
+          activity_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           call_time: string | null
@@ -164,6 +257,30 @@ export type Database = {
           privacy_settings?: Json | null
           retry_enabled?: boolean | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -208,21 +325,62 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      get_daily_user_activity: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          activity_date: string
+          activity_type: string
+          total_users: number
+          total_activities: number
+        }[]
+      }
+      get_system_health_metrics: {
+        Args: { metric_name?: string; start_date?: string; end_date?: string }
+        Returns: {
+          metric_name: string
+          metric_date: string
+          avg_value: number
+          min_value: number
+          max_value: number
+          data_points: number
+        }[]
+      }
+      get_trial_conversion_stats: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          conversion_date: string
+          conversion_type: string
+          conversion_count: number
+          avg_days_to_conversion: number
+        }[]
+      }
       get_trial_days_remaining: {
         Args: { user_id: string }
         Returns: number
       }
+      has_admin_role: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       has_premium_access: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_trial_expired: {
         Args: { user_id: string }
         Returns: boolean
       }
+      track_user_activity: {
+        Args: { activity_type: string; user_id?: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -337,6 +495,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
