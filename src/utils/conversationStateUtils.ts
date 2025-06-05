@@ -3,18 +3,16 @@ import { ConversationConfig } from '@/types/conversationState';
 
 export const DEFAULT_CONVERSATION_CONFIG: ConversationConfig = {
   timeouts: {
-    listening: 10000, // 10 seconds
-    processing: 30000, // 30 seconds
-    speaking: 60000, // 1 minute
-    idle: 300000, // 5 minutes
+    listening: 30000, // 30 seconds
+    processing: 15000, // 15 seconds
+    speaking: 0, // No timeout - determined by speech length
+    idle: 0, // No timeout
+    waiting_for_user: 60000, // 1 minute
+    waiting_for_ai: 10000, // 10 seconds
   },
-  maxHistorySize: 100,
+  maxHistorySize: 50,
   autoTransitions: true,
+  strictTurnEnforcement: true,
 };
 
-export function generateSessionId(): string {
-  return `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Re-export from transitions for backward compatibility
 export { canTransition } from './conversationStateTransitions';

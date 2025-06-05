@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { ConversationState, ConversationConfig, UseConversationStateProps } from '@/types/conversationState';
-import { DEFAULT_CONVERSATION_CONFIG, canTransition } from '@/utils/conversationStateUtils';
+import { DEFAULT_CONVERSATION_CONFIG } from '@/utils/conversationStateUtils';
 import { useConversationStateCore } from './useConversationStateCore';
 import { useConversationStateTimeouts } from './useConversationStateTimeouts';
 import { useConversationMessages } from './useConversationMessages';
@@ -12,20 +12,23 @@ export const useConversationState = ({
   onStateChange,
   onTimeout,
   onError,
+  onTurnViolation,
 }: UseConversationStateProps = {}) => {
   const config: ConversationConfig = { ...DEFAULT_CONVERSATION_CONFIG, ...customConfig };
   
   const {
     stateData,
-    stateHistory,
     transitionTo,
     getStateDuration,
     stateStartTimeRef,
-    setStateHistory,
+    canUserStartTurn,
+    canAIStartTurn,
+    getCurrentTurnOwner,
   } = useConversationStateCore({
     config,
     onStateChange,
     onError,
+    onTurnViolation,
   });
 
   const {
@@ -69,17 +72,37 @@ export const useConversationState = ({
     return newMessage;
   }, [addMessage, messages, context.sessionId, triggerAnalysis]);
 
-  // State transition methods
+  // Enhanced state transition methods with turn validation
   const startListening = useCallback(() => {
+    if (!canUserStartTurn()) {
+      console.warn('Cannot start listening - not user\'s turn');
+      return false;
+    }
     return transitionTo('listening', 'user_initiated');
-  }, [transitionTo]);
+  }, [transitionTo, canUserStartTurn]);
 
   const startProcessing = useCallback(() => {
+    if (!canAIStartTurn()) {
+      console.warn('Cannot start processing - not AI\'s turn');
+      return false;
+    }
     return transitionTo('processing', 'audio_received');
-  }, [transitionTo]);
+  }, [transitionTo, canAIStartTurn]);
 
   const startSpeaking = useCallback(() => {
+    if (!canAIStartTurn()) {
+      console.warn('Cannot start speaking - not AI\'s turn');
+      return false;
+    }
     return transitionTo('speaking', 'response_ready');
+  }, [transitionTo, canAIStartTurn]);
+
+  const waitForUser = useCallback(() => {
+    return transitionTo('waiting_for_user', 'awaiting_user_input');
+  }, [transitionTo]);
+
+  const waitForAI = useCallback(() => {
+    return transitionTo('waiting_for_ai', 'awaiting_ai_response');
   }, [transitionTo]);
 
   const goIdle = useCallback(() => {
@@ -87,17 +110,16 @@ export const useConversationState = ({
   }, [transitionTo]);
 
   const isTransitionAllowed = useCallback((toState: ConversationState): boolean => {
-    return canTransition(stateData.currentState, toState);
-  }, [stateData.currentState]);
+    return stateData.canTransitionTo.includes(toState);
+  }, [stateData.canTransitionTo]);
 
   const clearHistoryWithContext = useCallback(() => {
     clearHistory();
-    setStateHistory([]);
     setContext(prev => ({
       ...prev,
       totalDuration: 0,
     }));
-  }, [clearHistory, setStateHistory, setContext]);
+  }, [clearHistory, setContext]);
 
   return {
     // Current state
@@ -106,7 +128,6 @@ export const useConversationState = ({
     
     // History and context
     messages,
-    stateHistory,
     context,
     
     // State transitions
@@ -114,11 +135,18 @@ export const useConversationState = ({
     startListening,
     startProcessing,
     startSpeaking,
+    waitForUser,
+    waitForAI,
     goIdle,
     
     // Message management with analysis integration
     addMessage: addMessageWithAnalysis,
     clearHistory: clearHistoryWithContext,
+    
+    // Turn management
+    canUserStartTurn,
+    canAIStartTurn,
+    getCurrentTurnOwner,
     
     // Utilities
     getStateDuration,
@@ -129,6 +157,8 @@ export const useConversationState = ({
     isListening: stateData.currentState === 'listening',
     isProcessing: stateData.currentState === 'processing',
     isSpeaking: stateData.currentState === 'speaking',
+    isWaitingForUser: stateData.currentState === 'waiting_for_user',
+    isWaitingForAI: stateData.currentState === 'waiting_for_ai',
   };
 };
 

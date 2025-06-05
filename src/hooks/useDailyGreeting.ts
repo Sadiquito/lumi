@@ -29,15 +29,18 @@ export const useDailyGreeting = () => {
       if (!user?.id) return null;
       
       const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('daily_greetings')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', `${today}T00:00:00.000Z`)
-        .lt('created_at', `${today}T23:59:59.999Z`)
-        .maybeSingle();
       
-      if (error) throw error;
+      // Use a raw query to avoid TypeScript issues with the new table
+      const { data, error } = await supabase.rpc('get_daily_greeting', {
+        user_id: user.id,
+        target_date: today
+      });
+      
+      if (error) {
+        console.error('Error fetching daily greeting:', error);
+        return null;
+      }
+      
       return data as GreetingData | null;
     },
     enabled: !!user?.id,

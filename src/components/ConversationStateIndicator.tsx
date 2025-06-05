@@ -2,8 +2,8 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mic, Loader2, Volume2, Coffee, Brain, MessageSquare } from 'lucide-react';
-import { ConversationState } from '@/types/conversation';
+import { Mic, Loader2, Volume2, Coffee, Brain, MessageSquare, Clock, User } from 'lucide-react';
+import { ConversationState } from '@/types/conversationState';
 import { cn } from '@/lib/utils';
 import WaveformIndicator from './WaveformIndicator';
 
@@ -21,7 +21,8 @@ const stateConfig = {
     color: 'bg-gray-500',
     description: 'Ready for conversation',
     bgClass: 'bg-gray-500/10',
-    borderClass: 'border-gray-500/20'
+    borderClass: 'border-gray-500/20',
+    turnOwner: 'none'
   },
   listening: {
     icon: Mic,
@@ -29,7 +30,8 @@ const stateConfig = {
     color: 'bg-green-500',
     description: 'Recording your voice',
     bgClass: 'bg-green-500/10',
-    borderClass: 'border-green-500/20'
+    borderClass: 'border-green-500/20',
+    turnOwner: 'user'
   },
   processing: {
     icon: Brain,
@@ -37,7 +39,8 @@ const stateConfig = {
     color: 'bg-blue-500',
     description: 'Understanding your message',
     bgClass: 'bg-blue-500/10',
-    borderClass: 'border-blue-500/20'
+    borderClass: 'border-blue-500/20',
+    turnOwner: 'ai'
   },
   speaking: {
     icon: Volume2,
@@ -45,7 +48,26 @@ const stateConfig = {
     color: 'bg-purple-500',
     description: 'Lumi is responding',
     bgClass: 'bg-purple-500/10',
-    borderClass: 'border-purple-500/20'
+    borderClass: 'border-purple-500/20',
+    turnOwner: 'ai'
+  },
+  waiting_for_user: {
+    icon: User,
+    label: 'Your Turn',
+    color: 'bg-lumi-aquamarine',
+    description: 'Waiting for you to speak',
+    bgClass: 'bg-lumi-aquamarine/10',
+    borderClass: 'border-lumi-aquamarine/20',
+    turnOwner: 'user'
+  },
+  waiting_for_ai: {
+    icon: Clock,
+    label: 'Lumi\'s Turn',
+    color: 'bg-lumi-sunset-coral',
+    description: 'Waiting for Lumi to respond',
+    bgClass: 'bg-lumi-sunset-coral/10',
+    borderClass: 'border-lumi-sunset-coral/20',
+    turnOwner: 'ai'
   },
 };
 
@@ -96,10 +118,43 @@ const ConversationStateIndicator: React.FC<ConversationStateIndicatorProps> = ({
             <span className="text-sm text-white/80">Lumi is speaking...</span>
           </div>
         );
+
+      case 'waiting_for_user':
+        return (
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-lumi-aquamarine rounded-full animate-pulse" />
+            <span className="text-sm text-white/80">Your turn to speak</span>
+          </div>
+        );
+
+      case 'waiting_for_ai':
+        return (
+          <div className="flex items-center space-x-3">
+            <div className="w-3 h-3 bg-lumi-sunset-coral rounded-full animate-pulse" />
+            <span className="text-sm text-white/80">Lumi is thinking...</span>
+          </div>
+        );
       
       default:
         return null;
     }
+  };
+
+  const getTurnBadge = () => {
+    const turnOwner = config.turnOwner;
+    if (turnOwner === 'none') return null;
+    
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "text-xs border-white/20 text-white ml-2",
+          turnOwner === 'user' ? "bg-lumi-aquamarine/20" : "bg-lumi-sunset-coral/20"
+        )}
+      >
+        {turnOwner === 'user' ? 'Your Turn' : 'Lumi\'s Turn'}
+      </Badge>
+    );
   };
 
   return (
@@ -115,7 +170,7 @@ const ConversationStateIndicator: React.FC<ConversationStateIndicatorProps> = ({
             <div className={cn(
               'p-2 rounded-full',
               config.color,
-              state === 'processing' && 'animate-pulse',
+              (state === 'processing' || state === 'waiting_for_ai') && 'animate-pulse',
               state === 'listening' && 'animate-pulse'
             )}>
               <Icon className={cn(
@@ -129,6 +184,7 @@ const ConversationStateIndicator: React.FC<ConversationStateIndicatorProps> = ({
                 <Badge variant="outline" className="text-xs border-white/20 text-white">
                   {config.label}
                 </Badge>
+                {getTurnBadge()}
                 {duration !== undefined && (
                   <span className="text-xs text-white/60">
                     {formatDuration(duration)}

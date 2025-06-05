@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useConversationState } from '@/hooks/useConversationState';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
@@ -32,19 +33,36 @@ export const useAudioConversationFlow = ({
     startListening,
     startProcessing,
     startSpeaking,
+    waitForUser,
+    waitForAI,
     goIdle,
     addMessage,
     getStateDuration,
     isIdle,
     isListening,
     isProcessing,
-    isSpeaking
+    isSpeaking,
+    isWaitingForUser,
+    isWaitingForAI,
+    canUserStartTurn,
+    canAIStartTurn,
   } = useConversationState({
+    config: {
+      strictTurnEnforcement: true,
+    },
     onStateChange: (newState, previousState) => {
       console.log(`Conversation state: ${previousState} → ${newState}`);
     },
     onTimeout: handleTimeoutError,
-    onError: handleConversationError
+    onError: handleConversationError,
+    onTurnViolation: (attemptedState, currentTurnOwner) => {
+      console.warn(`Turn violation: Attempted to transition to ${attemptedState} while ${currentTurnOwner} has control`);
+      toast({
+        title: "Turn violation",
+        description: `Cannot perform action - it's ${currentTurnOwner === 'user' ? 'your' : 'Lumi\'s'} turn`,
+        variant: "destructive",
+      });
+    }
   });
 
   const handleTranscription = useCallback(async (audioBlob: Blob, duration: number, audioQuality: string, networkStatus: string, isSessionActive: boolean, updateActivity: () => void, retryCount: number, setRetryCount: (fn: (prev: number) => number) => void) => {
@@ -68,9 +86,18 @@ export const useAudioConversationFlow = ({
       return;
     }
 
+    if (!canAIStartTurn()) {
+      toast({
+        title: "Processing not allowed",
+        description: "Cannot process audio at this time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsTranscribing(true);
     setTranscriptionProgress(0);
-    setRetryCount(() => 0);
+    setRetryCount((prev) => 0);
     
     try {
       const transcript = await transcribeAudio(
@@ -98,7 +125,8 @@ export const useAudioConversationFlow = ({
 
       onTranscriptionComplete?.(transcript);
       
-      // Start AI thinking process
+      // Transition to waiting for AI, then start thinking
+      waitForAI();
       await handleAIThinking(transcript, updateActivity);
       
     } catch (error) {
@@ -117,9 +145,20 @@ export const useAudioConversationFlow = ({
       setIsTranscribing(false);
       setTranscriptionProgress(0);
     }
-  }, [transcribeAudio, onTranscriptionComplete, onFallbackToText, addMessage, goIdle, toast]);
+  }, [transcribeAudio, onTranscriptionComplete, onFallbackToText, addMessage, goIdle, toast, canAIStartTurn, waitForAI]);
 
   const handleAIThinking = useCallback(async (userInput: string, updateActivity: () => void) => {
+    if (!canAIStartTurn()) {
+      toast({
+        title: "AI cannot respond",
+        description: "AI is not allowed to respond at this time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    startProcessing();
+
     try {
       const response = await generateAIResponse(userInput, setThinkingProgress);
       
@@ -155,7 +194,7 @@ export const useAudioConversationFlow = ({
     } finally {
       setThinkingProgress(0);
     }
-  }, [generateAIResponse, storeConversation, addMessage, startSpeaking, onAIResponse, toast, goIdle]);
+  }, [generateAIResponse, storeConversation, addMessage, startSpeaking, onAIResponse, toast, goIdle, canAIStartTurn, startProcessing]);
 
   // Handle speech completion by listening for when TTS finishes
   useEffect(() => {
@@ -163,12 +202,12 @@ export const useAudioConversationFlow = ({
       const estimatedDuration = aiResponse.length * 50;
       const timeout = setTimeout(() => {
         setAiResponse('');
-        goIdle();
+        waitForUser(); // Explicitly transition to waiting for user
       }, Math.max(estimatedDuration, 3000));
 
       return () => clearTimeout(timeout);
     }
-  }, [isSpeaking, aiResponse, goIdle, setAiResponse]);
+  }, [isSpeaking, aiResponse, waitForUser, setAiResponse]);
 
   return {
     // States
@@ -184,6 +223,12 @@ export const useAudioConversationFlow = ({
     isListening,
     isProcessing,
     isSpeaking,
+    isWaitingForUser,
+    isWaitingForAI,
+    
+    // Turn management
+    canUserStartTurn,
+    canAIStartTurn,
     
     // Actions
     startListening,
