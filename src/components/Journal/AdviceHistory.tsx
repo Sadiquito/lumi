@@ -18,6 +18,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import AdviceCard from './AdviceCard';
 
+interface AdviceWithPersonalization {
+  id: string;
+  advice_text: string;
+  created_at: string;
+  personalization_level: 'minimal' | 'moderate' | 'full';
+  metadata?: any;
+  user_id: string;
+}
+
 const AdviceHistory: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +47,7 @@ const AdviceHistory: React.FC = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as AdviceWithPersonalization[];
     },
     enabled: !!user?.id,
   });

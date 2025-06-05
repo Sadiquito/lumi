@@ -46,18 +46,24 @@ export type Database = {
           advice_text: string
           created_at: string
           id: string
+          metadata: Json | null
+          personalization_level: string | null
           user_id: string
         }
         Insert: {
           advice_text: string
           created_at?: string
           id?: string
+          metadata?: Json | null
+          personalization_level?: string | null
           user_id: string
         }
         Update: {
           advice_text?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
+          personalization_level?: string | null
           user_id?: string
         }
         Relationships: [
