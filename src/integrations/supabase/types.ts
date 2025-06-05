@@ -36,6 +36,42 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_summaries: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          duration_minutes: number
+          emotional_tone: string
+          id: string
+          key_insights: string[] | null
+          message_count: number
+          metadata: Json | null
+          summary_text: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          duration_minutes?: number
+          emotional_tone: string
+          id?: string
+          key_insights?: string[] | null
+          message_count?: number
+          metadata?: Json | null
+          summary_text: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          duration_minutes?: number
+          emotional_tone?: string
+          id?: string
+          key_insights?: string[] | null
+          message_count?: number
+          metadata?: Json | null
+          summary_text?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           ai_response: string

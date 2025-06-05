@@ -89,18 +89,19 @@ export const useConversationSummary = () => {
 
   const getSummary = useCallback(async (conversationId: string): Promise<ConversationSummary | null> => {
     try {
-      const { data, error } = await supabase
+      // Use type assertion to work around TypeScript limitations
+      const { data, error } = await (supabase as any)
         .from('conversation_summaries')
         .select('*')
         .eq('conversation_id', conversationId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching summary:', error);
         return null;
       }
 
-      return data || null;
+      return data as ConversationSummary | null;
     } catch (error) {
       console.error('Error fetching summary:', error);
       return null;
