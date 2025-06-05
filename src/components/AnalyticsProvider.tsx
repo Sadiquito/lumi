@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSystemHealthMonitor } from '@/hooks/useSystemHealthMonitor';
+import { useAdminAuditLogger } from '@/hooks/useAdminAuditLogger';
 
 interface AnalyticsContextType {
   trackConversation: (length: number) => Promise<void>;
@@ -35,6 +36,7 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
     trackActivity,
   } = useAnalytics(false);
   const { trackError } = useSystemHealthMonitor();
+  const { logSystemAction } = useAdminAuditLogger();
 
   // Track page views and session activity
   useEffect(() => {
@@ -43,15 +45,36 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
     }
   }, [isAuthenticated, user, trackActivity]);
 
-  // Track errors globally
+  // Enhanced error tracking with privacy compliance
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       trackError('javascript_error');
+      
+      // Log admin-specific errors for security monitoring
+      if (window.location.pathname.startsWith('/admin')) {
+        logSystemAction('admin_error_encountered', {
+          error_type: 'javascript_error',
+          page: window.location.pathname,
+          timestamp: new Date().toISOString(),
+          // No personal data included
+        });
+      }
+      
       console.error('Global error tracked:', event.error);
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       trackError('promise_rejection');
+      
+      // Log admin-specific promise rejections
+      if (window.location.pathname.startsWith('/admin')) {
+        logSystemAction('admin_promise_rejection', {
+          error_type: 'promise_rejection',
+          page: window.location.pathname,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      
       console.error('Unhandled promise rejection tracked:', event.reason);
     };
 
@@ -62,10 +85,26 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
-  }, [trackError]);
+  }, [trackError, logSystemAction]);
+
+  // Privacy-compliant conversation tracking
+  const privacyCompliantTrackConversation = async (length: number) => {
+    // Only track aggregated metrics, no content
+    await trackConversation(length);
+    
+    // Additional privacy audit for admin monitoring
+    if (user) {
+      logSystemAction('conversation_tracked', {
+        metric_type: 'conversation_length',
+        value_range: length > 100 ? 'long' : 'short',
+        timestamp: new Date().toISOString(),
+        // No actual content or user identification
+      });
+    }
+  };
 
   const value = {
-    trackConversation,
+    trackConversation: privacyCompliantTrackConversation,
     trackFeatureUsage,
     trackPersonalizationEvent,
     trackTrialConversion,

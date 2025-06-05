@@ -1,28 +1,40 @@
 
 import React from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { useAnalytics } from '@/hooks/useAnalytics';
+import { usePrivacySafeAnalytics } from '@/hooks/usePrivacySafeAnalytics';
 import { useAdminSessionMonitor } from '@/hooks/useAdminSessionMonitor';
+import { useAdminAuditLogger } from '@/hooks/useAdminAuditLogger';
 import AdminDashboardLayout from '@/components/Admin/AdminDashboardLayout';
 import MetricsOverview from '@/components/Admin/MetricsOverview';
 import SystemHealthPanel from '@/components/Admin/SystemHealthPanel';
 import UserActivityChart from '@/components/Admin/UserActivityChart';
 import TrialConversionMetrics from '@/components/Admin/TrialConversionMetrics';
 import AdminSessionIndicator from '@/components/Admin/AdminSessionIndicator';
+import { PrivacyComplianceValidator } from '@/components/Admin/PrivacyComplianceValidator';
+import { AdminActivityMonitor } from '@/components/Admin/AdminActivityMonitor';
 
 const AdminDashboard: React.FC = () => {
   const { isAdminAuthenticated, isLoadingAdminAuth } = useAdminAuth();
+  const { logPageAccess } = useAdminAuditLogger();
+  
+  // Use privacy-safe analytics instead of regular analytics
   const { 
-    userActivity, 
-    trialConversions, 
+    anonymizedUserActivity, 
+    privacySafeConversions, 
     systemHealth,
     isLoadingActivity,
     isLoadingConversions,
     isLoadingHealth
-  } = useAnalytics(isAdminAuthenticated);
+  } = usePrivacySafeAnalytics(isAdminAuthenticated);
 
-  // Initialize session monitoring
+  // Initialize session monitoring and audit logging
   useAdminSessionMonitor();
+  
+  React.useEffect(() => {
+    if (isAdminAuthenticated) {
+      logPageAccess('admin_dashboard');
+    }
+  }, [isAdminAuthenticated, logPageAccess]);
 
   if (isLoadingAdminAuth) {
     return (
@@ -44,15 +56,25 @@ const AdminDashboard: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-lumi-charcoal">Admin Dashboard</h1>
-            <p className="text-lumi-charcoal/60 mt-1">Monitor system health and user analytics</p>
+            <p className="text-lumi-charcoal/60 mt-1">Privacy-compliant system monitoring</p>
           </div>
           <AdminSessionIndicator />
         </div>
 
-        {/* Metrics Overview */}
+        {/* Privacy & Security Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <PrivacyComplianceValidator />
+          </div>
+          <div className="lg:col-span-1">
+            <AdminActivityMonitor />
+          </div>
+        </div>
+
+        {/* Metrics Overview - Using anonymized data */}
         <MetricsOverview 
-          userActivity={userActivity}
-          trialConversions={trialConversions}
+          userActivity={anonymizedUserActivity}
+          trialConversions={privacySafeConversions}
           systemHealth={systemHealth}
           isLoading={isLoading}
         />
@@ -67,18 +89,18 @@ const AdminDashboard: React.FC = () => {
             />
           </div>
 
-          {/* User Activity Chart */}
+          {/* User Activity Chart - Anonymized */}
           <div className="lg:col-span-1">
             <UserActivityChart 
-              activityData={userActivity}
+              activityData={anonymizedUserActivity}
               isLoading={isLoadingActivity}
             />
           </div>
         </div>
 
-        {/* Trial Conversion Metrics */}
+        {/* Trial Conversion Metrics - Privacy Safe */}
         <TrialConversionMetrics 
-          conversionData={trialConversions}
+          conversionData={privacySafeConversions}
           isLoading={isLoadingConversions}
         />
       </div>
