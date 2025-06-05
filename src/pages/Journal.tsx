@@ -3,25 +3,37 @@ import React from 'react';
 import AudioRecordingFeature from '@/components/AudioRecordingFeature';
 import TTSFeatureGate from '@/components/TTSFeatureGate';
 import TTSTestingPanel from '@/components/TTSTestingPanel';
-import JournalHeader from '@/components/Journal/JournalHeader';
-import TrialStatusAlerts from '@/components/Journal/TrialStatusAlerts';
+import EnhancedJournalHeader from '@/components/Journal/EnhancedJournalHeader';
 import TodaysCheckIn from '@/components/Journal/TodaysCheckIn';
 import RecentConversations from '@/components/Journal/RecentConversations';
 import JournalSidebar from '@/components/Journal/JournalSidebar';
+import EnhancedTrialCountdown from '@/components/EnhancedTrialCountdown';
+import TrialFeatureLimitation from '@/components/TrialFeatureLimitation';
+import { useAuth } from '@/components/AuthProvider';
 
 const Journal = () => {
+  const { trialStatus } = useAuth();
+  const { daysRemaining, isTrialExpired } = trialStatus;
+
   return (
     <div className="min-h-screen bg-cosmic-gradient">
-      {/* Header with Trial Status */}
-      <JournalHeader />
+      {/* Enhanced Header with Trial Status */}
+      <EnhancedJournalHeader />
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
-        {/* Trial Status Alert */}
-        <TrialStatusAlerts />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Trial Progress Card - prominent for urgent situations */}
+            {(isTrialExpired || daysRemaining <= 3) && (
+              <EnhancedTrialCountdown 
+                variant="progress"
+                showProgress={true}
+                showUpgradeButton={true}
+                className="mb-6"
+              />
+            )}
+
             {/* Today's Call Status */}
             <TodaysCheckIn />
 
@@ -35,12 +47,27 @@ const Journal = () => {
             {/* Recent Conversations with Privacy-Aware Analysis */}
             <RecentConversations />
 
-            {/* TTS Enhanced Demo - Updated for trial integration */}
-            <TTSFeatureGate 
-              text="Welcome to Lumi's enhanced voice feature! This showcases our premium audio experience with voice selection, progress tracking, and advanced controls. Upgrade to unlock unlimited voice responses."
-              variant="enhanced"
-              showAlert={true} 
-              showVoiceSelector={true}
+            {/* TTS Enhanced Demo with Trial Limitation */}
+            <div className="space-y-4">
+              <TrialFeatureLimitation 
+                feature="tts"
+                variant="alert"
+                customMessage="Voice responses showcase Lumi's premium audio experience with voice selection and advanced controls."
+              />
+              
+              <TTSFeatureGate 
+                text="Welcome to Lumi's enhanced voice feature! This showcases our premium audio experience with voice selection, progress tracking, and advanced controls. Upgrade to unlock unlimited voice responses."
+                variant="enhanced"
+                showAlert={false} 
+                showVoiceSelector={true}
+              />
+            </div>
+
+            {/* Export Feature Limitation */}
+            <TrialFeatureLimitation 
+              feature="export"
+              variant="card"
+              customMessage="Export your conversations and insights in PDF, text, or markdown formats. Keep your reflection journey with you forever."
             />
 
             {/* TTS Testing Panel - Development/Admin Feature */}
