@@ -5,13 +5,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, AlertTriangle, Send, Keyboard } from 'lucide-react';
+import { Mic, AlertTriangle, Send, Keyboard, Crown } from 'lucide-react';
 import { useAudioRecordingFeature } from '@/hooks/useAudioRecordingFeature';
+import { useAudioUsageTracking } from '@/hooks/useAudioUsageTracking';
 import ConversationStateIndicator from './ConversationStateIndicator';
 import AudioRecordingSpeakingState from './AudioRecordingSpeakingState';
 import AudioRecordingProcessingState from './AudioRecordingProcessingState';
 import AudioRecordingListeningState from './AudioRecordingListeningState';
 import AudioRecordingIdleState from './AudioRecordingIdleState';
+import MobileAudioControls from './MobileAudioControls';
+import AudioTrialUsageIndicator from './AudioTrialUsageIndicator';
+import { useNavigate } from 'react-router-dom';
 
 interface AudioRecordingFeatureProps {
   onTranscriptionComplete?: (transcript: string) => void;
@@ -26,9 +30,20 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
   disabled = false,
   maxDuration
 }) => {
+  const navigate = useNavigate();
   const [showTextFallback, setShowTextFallback] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [isSubmittingText, setIsSubmittingText] = useState(false);
+
+  const { 
+    canTranscribeToday, 
+    getMaxRecordingDuration, 
+    trackTranscription,
+    getRemainingUsage 
+  } = useAudioUsageTracking();
+
+  const trialMaxDuration = getMaxRecordingDuration();
+  const effectiveMaxDuration = maxDuration || trialMaxDuration;
 
   const {
     conversationState,
@@ -54,10 +69,14 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     resumeRecording,
     getStateDuration
   } = useAudioRecordingFeature({
-    onTranscriptionComplete,
+    onTranscriptionComplete: (transcript) => {
+      // Track usage when transcription completes
+      trackTranscription(duration, transcript);
+      onTranscriptionComplete?.(transcript);
+    },
     onAIResponse,
-    disabled,
-    maxDuration,
+    disabled: disabled || !canTranscribeToday(),
+    maxDuration: effectiveMaxDuration,
     onFallbackToText: () => setShowTextFallback(true)
   });
 
@@ -68,9 +87,11 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
   };
 
   const getMaxDurationDisplay = () => {
-    const limit = maxDuration || (trialStatus.hasPremiumAccess ? undefined : 60);
+    const limit = effectiveMaxDuration;
     return limit ? formatDuration(limit) : '∞';
   };
+
+  const remaining = getRemainingUsage();
 
   const handleTextSubmit = async () => {
     if (!textInput.trim()) return;
@@ -96,6 +117,31 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     }
   };
 
+  // Check if user is blocked by trial limits
+  if (!canTranscribeToday() && !trialStatus.hasPremiumAccess) {
+    return (
+      <div className="space-y-4">
+        <AudioTrialUsageIndicator variant="detailed" />
+        <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30">
+          <AlertTriangle className="h-4 w-4 text-lumi-sunset-coral" />
+          <AlertDescription className="text-white">
+            <div className="flex items-center justify-between">
+              <span>You've reached your daily voice transcription limit.</span>
+              <Button
+                onClick={() => navigate('/subscription')}
+                size="sm"
+                className="bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
+              >
+                <Crown className="w-3 h-3 mr-1" />
+                Upgrade for Unlimited
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (!isSupported) {
     return (
       <Alert className="bg-red-500/20 border-red-500/30">
@@ -109,6 +155,11 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Trial usage indicator */}
+      {!trialStatus.hasPremiumAccess && (
+        <AudioTrialUsageIndicator variant="compact" />
+      )}
+
       {/* Conversation State Indicator */}
       <ConversationStateIndicator
         state={conversationState}
@@ -180,7 +231,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
                   variant="outline"
                   size="sm"
                   className="border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
-                  disabled={!isSupported || networkStatus === 'offline'}
+                  disabled={!isSupported || networkStatus === 'offline' || !canTranscribeToday()}
                 >
                   <Mic className="w-4 h-4 mr-1" />
                   Try Voice
@@ -225,13 +276,18 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
               {(isIdle || isListening) && !isProcessing && !isSpeaking && (
                 <>
                   {isListening ? (
-                    <AudioRecordingListeningState
-                      audioLevel={audioLevel}
+                    // Use mobile-optimized controls for listening state
+                    <MobileAudioControls
+                      isRecording={isListening}
+                      isPaused={state.isPaused}
                       duration={duration}
-                      onPause={pauseRecording}
-                      onStop={handleStopRecording}
-                      audioQuality={audioQuality}
-                      maxDuration={maxDuration || (trialStatus.hasPremiumAccess ? undefined : 60)}
+                      audioLevel={audioLevel}
+                      maxDuration={effectiveMaxDuration}
+                      onStartRecording={handleStartRecording}
+                      onStopRecording={handleStopRecording}
+                      onPauseRecording={pauseRecording}
+                      onResumeRecording={resumeRecording}
+                      disabled={disabled}
                     />
                   ) : (
                     <AudioRecordingIdleState
@@ -256,6 +312,11 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
                   {state.isPaused ? "Paused" : "Recording..."}
                 </span>
               </div>
+              {!trialStatus.hasPremiumAccess && (
+                <div className="text-xs text-white/50 mt-1">
+                  {remaining.daily} transcription{remaining.daily !== 1 ? 's' : ''} remaining today
+                </div>
+              )}
             </div>
           )}
         </CardContent>

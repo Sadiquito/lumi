@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Keyboard, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAudioKeyboardControls } from '@/components/ui/audio';
 
 interface AudioRecordingIdleStateProps {
   disabled: boolean;
@@ -20,10 +20,20 @@ const AudioRecordingIdleState: React.FC<AudioRecordingIdleStateProps> = ({
   networkStatus = 'online',
   isSupported = true
 }) => {
+  const { shortcuts } = useAudioKeyboardControls({
+    isRecording: false,
+    isPaused: false,
+    onStartRecording,
+    onStopRecording: () => {},
+    onPauseRecording: () => {},
+    onResumeRecording: () => {},
+    disabled
+  });
+
   const canUseAudio = isSupported && networkStatus === 'online' && !disabled;
 
   return (
-    <div className="text-center space-y-4">
+    <div className="text-center space-y-6">
       <div className="space-y-3">
         <h3 className="text-white text-xl font-medium">
           Ready to listen
@@ -103,6 +113,23 @@ const AudioRecordingIdleState: React.FC<AudioRecordingIdleStateProps> = ({
         <p className="text-white/50 text-xs">
           💡 For best results: Speak clearly, ensure good internet connection, and allow microphone access
         </p>
+      </div>
+
+      {/* Keyboard shortcuts info */}
+      <div className="pt-4 border-t border-lumi-sunset-coral/10">
+        <div className="text-xs text-white/50 space-y-1">
+          <p className="font-medium mb-2">Keyboard shortcuts:</p>
+          {shortcuts.space && (
+            <div className="flex items-center justify-between">
+              <span>Spacebar:</span>
+              <span>{shortcuts.space}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <span>Tab:</span>
+            <span>Navigate controls</span>
+          </div>
+        </div>
       </div>
     </div>
   );
