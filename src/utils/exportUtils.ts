@@ -22,8 +22,8 @@ export interface ExportOptions {
   includeConversations: boolean;
   includeAdvice: boolean;
   dateRange?: {
-    start: Date;
-    end: Date;
+    start?: Date;
+    end?: Date;
   };
   title?: string;
 }
