@@ -1,32 +1,35 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import React, { useEffect, useRef, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  Settings, 
-  Crown, 
   MessageCircle, 
+  Clock, 
+  Mic, 
+  Square, 
+  Volume2, 
+  VolumeX, 
+  Send,
+  Lightbulb,
   Calendar,
-  Clock,
-  Phone,
-  User,
-  AlertTriangle,
-  Zap
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
-import TrialCountdown from "@/components/TrialCountdown";
-import FeatureGate from "@/components/FeatureGate";
-import ConversationFeatureGate from "@/components/ConversationFeatureGate";
-import TTSFeatureGate from "@/components/TTSFeatureGate";
-import AudioRecordingFeature from "@/components/AudioRecordingFeature";
-import { useTrialStatus } from "@/hooks/useTrialStatus";
-import TTSTestingPanel from "@/components/TTSTestingPanel";
-import PsychologicalPortrait from "@/components/PsychologicalPortrait";
-import DailyAdviceGenerator from "@/components/DailyAdviceGenerator";
+  TrendingUp,
+  FileText,
+  Sparkles,
+  Brain,
+  User
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { useAuth } from '@/components/AuthProvider';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import ConversationFeatureGate from '@/components/ConversationFeatureGate';
+import ConversationStateIndicator from '@/components/ConversationStateIndicator';
+import AudioRecordingFeature from '@/components/AudioRecordingFeature';
+import FeatureGate from '@/components/FeatureGate';
+import DailyAdviceGenerator from '@/components/DailyAdviceGenerator';
+import PortraitManagement from '@/components/PortraitManagement';
 
 const Journal = () => {
   const navigate = useNavigate();
