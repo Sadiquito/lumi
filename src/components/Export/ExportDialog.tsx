@@ -33,7 +33,9 @@ import {
   exportToText, 
   exportToMarkdown, 
   downloadTextFile,
-  type ExportOptions 
+  type ExportOptions,
+  type ConversationExportData,
+  type AdviceExportData
 } from '@/utils/exportUtils';
 
 interface ExportDialogProps {
@@ -82,7 +84,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ trigger }) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data || []) as ConversationExportData[];
     },
     enabled: !!user?.id && open,
   });
@@ -109,7 +111,14 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ trigger }) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Transform data to match AdviceExportData interface with proper type casting
+      return (data || []).map(item => ({
+        id: item.id,
+        advice_text: item.advice_text,
+        created_at: item.created_at,
+        personalization_level: (item.personalization_level as 'minimal' | 'moderate' | 'full') || 'moderate'
+      })) as AdviceExportData[];
     },
     enabled: !!user?.id && open,
   });
