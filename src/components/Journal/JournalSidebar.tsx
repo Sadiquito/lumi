@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,16 @@ import PsychologicalPortrait from '@/components/PsychologicalPortrait';
 import ConversationFeatureGate from '@/components/ConversationFeatureGate';
 import AdviceCard from './AdviceCard';
 import AdviceHistoryDialog from './AdviceHistoryDialog';
+
+// Type for advice with proper personalization level typing
+interface AdviceWithPersonalization {
+  id: string;
+  advice_text: string;
+  created_at: string;
+  personalization_level: 'minimal' | 'moderate' | 'full';
+  metadata?: any;
+  user_id: string;
+}
 
 const JournalSidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +43,12 @@ const JournalSidebar: React.FC = () => {
         .limit(3);
       
       if (error) throw error;
-      return data || [];
+      
+      // Transform data to ensure proper typing
+      return (data || []).map(advice => ({
+        ...advice,
+        personalization_level: (advice.personalization_level as 'minimal' | 'moderate' | 'full') || 'moderate'
+      })) as AdviceWithPersonalization[];
     },
     enabled: !!user?.id,
   });
