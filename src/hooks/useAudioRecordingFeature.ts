@@ -8,7 +8,7 @@ import { useAudioRecordingHandlers } from '@/hooks/useAudioRecordingHandlers';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useAIResponse } from '@/hooks/useAIResponse';
 import { useToast } from '@/hooks/use-toast';
-import { ConversationData, UseAudioRecordingFeatureProps } from '@/types/audioRecording';
+import { ConversationData, UseAudioRecordingFeatureProps, AudioQualityMetadata } from '@/types/audioRecording';
 
 export const useAudioRecordingFeature = ({
   onTranscriptionComplete,
@@ -151,7 +151,7 @@ export const useAudioRecordingFeature = ({
           audioUrl: URL.createObjectURL(audioBlob),
           confidence: 0.8,
           audioQuality
-        }
+        } as AudioQualityMetadata
       });
 
       onTranscriptionComplete?.(transcript);
