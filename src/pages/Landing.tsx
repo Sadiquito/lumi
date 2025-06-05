@@ -83,12 +83,12 @@ const Landing = () => {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              your superintelligent
+              superintelligent
               <br />
-              <span className="text-lumi-aquamarine font-semibold">companion</span>
+              <span className="text-lumi-aquamarine font-semibold">journaling</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              Reclaim your life, one moment at a time.
+              
             </p>
             <Button 
               onClick={() => navigate('/auth')}
