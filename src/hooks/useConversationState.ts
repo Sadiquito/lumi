@@ -1,6 +1,6 @@
 
 import { useCallback } from 'react';
-import { ConversationConfig, UseConversationStateProps } from '@/types/conversationState';
+import { ConversationState, ConversationConfig, UseConversationStateProps } from '@/types/conversationState';
 import { DEFAULT_CONVERSATION_CONFIG, canTransition } from '@/utils/conversationStateUtils';
 import { useConversationStateCore } from './useConversationStateCore';
 import { useConversationStateTimeouts } from './useConversationStateTimeouts';
