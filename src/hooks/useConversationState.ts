@@ -5,6 +5,7 @@ import { DEFAULT_CONVERSATION_CONFIG, canTransition } from '@/utils/conversation
 import { useConversationStateCore } from './useConversationStateCore';
 import { useConversationStateTimeouts } from './useConversationStateTimeouts';
 import { useConversationMessages } from './useConversationMessages';
+import { useConversationAnalysis } from './useConversationAnalysis';
 
 export const useConversationState = ({
   config: customConfig,
@@ -37,6 +38,8 @@ export const useConversationState = ({
     maxHistorySize: config.maxHistorySize,
   });
 
+  const { triggerAnalysis } = useConversationAnalysis();
+
   useConversationStateTimeouts({
     currentState: stateData.currentState,
     config,
@@ -44,6 +47,27 @@ export const useConversationState = ({
     onTimeout,
     transitionTo,
   });
+
+  // Enhanced addMessage to trigger analysis when AI responds
+  const addMessageWithAnalysis = useCallback((message: Omit<any, 'id' | 'timestamp'>) => {
+    const newMessage = addMessage(message);
+    
+    // If this is an AI message and we have a previous user message, trigger analysis
+    if (message.speaker === 'ai' && messages.length > 0) {
+      const lastUserMessage = [...messages].reverse().find(m => m.speaker === 'user');
+      if (lastUserMessage) {
+        const conversationId = context.sessionId;
+        console.log('Triggering analysis for conversation:', conversationId);
+        
+        // Trigger analysis in background
+        setTimeout(() => {
+          triggerAnalysis(conversationId, lastUserMessage.content, message.content);
+        }, 100);
+      }
+    }
+    
+    return newMessage;
+  }, [addMessage, messages, context.sessionId, triggerAnalysis]);
 
   // State transition methods
   const startListening = useCallback(() => {
@@ -92,8 +116,8 @@ export const useConversationState = ({
     startSpeaking,
     goIdle,
     
-    // Message management
-    addMessage,
+    // Message management with analysis integration
+    addMessage: addMessageWithAnalysis,
     clearHistory: clearHistoryWithContext,
     
     // Utilities

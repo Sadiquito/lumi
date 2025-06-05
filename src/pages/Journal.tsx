@@ -25,6 +25,8 @@ import TTSFeatureGate from "@/components/TTSFeatureGate";
 import AudioRecordingFeature from "@/components/AudioRecordingFeature";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import TTSTestingPanel from "@/components/TTSTestingPanel";
+import PsychologicalPortrait from "@/components/PsychologicalPortrait";
+import DailyAdviceGenerator from "@/components/DailyAdviceGenerator";
 
 const Journal = () => {
   const navigate = useNavigate();
@@ -320,6 +322,16 @@ const Journal = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Psychological Portrait */}
+            <FeatureGate feature="ai_insights">
+              <PsychologicalPortrait variant="summary" />
+            </FeatureGate>
+
+            {/* Daily Advice Generator */}
+            <FeatureGate feature="ai_advice">
+              <DailyAdviceGenerator />
+            </FeatureGate>
+
             {/* Daily Wisdom */}
             <FeatureGate feature="ai_advice">
               <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">

@@ -1,8 +1,13 @@
 
+import { useConversationAnalysis } from './useConversationAnalysis';
+
 export const useAIResponse = () => {
+  const { triggerAnalysis } = useConversationAnalysis();
+
   const generateAIResponse = async (
     userInput: string,
-    setThinkingProgress: (value: number | ((prev: number) => number)) => void
+    setThinkingProgress: (value: number | ((prev: number) => number)) => void,
+    conversationId?: string
   ): Promise<string> => {
     setThinkingProgress(0);
     
@@ -15,6 +20,16 @@ export const useAIResponse = () => {
     
     clearInterval(thinkingInterval);
     setThinkingProgress(100);
+
+    // Trigger conversation analysis after AI response is generated
+    if (conversationId && userInput && mockResponse) {
+      console.log('Triggering conversation analysis for conversation:', conversationId);
+      
+      // Use setTimeout to avoid blocking the response
+      setTimeout(() => {
+        triggerAnalysis(conversationId, userInput, mockResponse);
+      }, 100);
+    }
     
     return mockResponse;
   };

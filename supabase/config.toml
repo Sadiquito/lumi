@@ -29,5 +29,8 @@ verify_jwt = true
 [functions.analyze-conversation]
 verify_jwt = true
 
+[functions.generate-daily-advice]
+verify_jwt = true
+
 [edge-runtime]
 inspector_port = 8083
