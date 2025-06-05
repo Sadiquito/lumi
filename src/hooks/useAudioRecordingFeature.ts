@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
 import { useConversationState } from '@/hooks/useConversationState';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseAudioRecordingFeatureProps {
   onTranscriptionComplete?: (transcript: string) => void;
