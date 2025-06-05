@@ -83,9 +83,9 @@ const Landing = () => {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              your daily
+              take a moment to regroup
               <br />
-              <span className="text-lumi-aquamarine font-semibold">reflection companion</span>
+              <span className="text-lumi-aquamarine font-semibold">once a day</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Journaling is fucking good for you, but it also fucking sucks. 
