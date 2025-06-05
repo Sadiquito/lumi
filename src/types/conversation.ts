@@ -21,7 +21,14 @@ export interface ConversationContext {
   topics: string[];
 }
 
-export type ConversationState = 'idle' | 'listening' | 'processing' | 'speaking';
+// Import the enhanced conversation state types
+export type ConversationState = 
+  | 'idle' 
+  | 'listening' 
+  | 'processing' 
+  | 'speaking'
+  | 'waiting_for_user'
+  | 'waiting_for_ai';
 
 export interface ConversationStateData {
   currentState: ConversationState;
@@ -38,6 +45,8 @@ export interface StateTransition {
   timestamp: Date;
   duration: number;
   reason?: string;
+  turnOwner: 'user' | 'ai' | 'none';
+  isValid: boolean;
 }
 
 export interface ConversationConfig {
@@ -46,6 +55,8 @@ export interface ConversationConfig {
     processing: number;
     speaking: number;
     idle: number;
+    waiting_for_user: number;
+    waiting_for_ai: number;
   };
   maxHistorySize: number;
   autoTransitions: boolean;

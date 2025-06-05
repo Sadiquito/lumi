@@ -1,7 +1,6 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { ConversationState, ConversationStateData, ConversationConfig } from '@/types/conversationState';
-import { StateTransition } from '@/types/conversation';
+import { ConversationState, ConversationStateData, ConversationConfig, StateTransition } from '@/types/conversationState';
 import { validateStateTransition, getAllowedTransitions, getTurnOwner } from '@/utils/conversationStateTransitions';
 import { calculateStateDuration } from '@/utils/conversationStateTimeouts';
 
