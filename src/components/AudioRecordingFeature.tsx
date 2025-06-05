@@ -215,10 +215,20 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     // Processing state will be set in onRecordingComplete callback
   };
 
-  const handleSpeechComplete = () => {
-    setAiResponse('');
-    goIdle();
-  };
+  // Handle speech completion by listening for when TTS finishes
+  useEffect(() => {
+    if (isSpeaking && aiResponse) {
+      // Set a timeout to transition back to idle after TTS should be complete
+      // This is a simple approach - in a real app you'd want to listen to actual TTS events
+      const estimatedDuration = aiResponse.length * 50; // Rough estimate: 50ms per character
+      const timeout = setTimeout(() => {
+        setAiResponse('');
+        goIdle();
+      }, Math.max(estimatedDuration, 3000)); // Minimum 3 seconds
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isSpeaking, aiResponse, goIdle]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -322,7 +332,6 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
                     text={aiResponse}
                     variant="enhanced"
                     autoPlay={true}
-                    onComplete={handleSpeechComplete}
                   />
                 </div>
               )}
