@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Keyboard, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAudioKeyboardControls } from '@/components/ui/audio';
+import { useAudioKeyboardControls } from '@/hooks/useAudioKeyboardControls';
 
 interface AudioRecordingIdleStateProps {
   disabled: boolean;
