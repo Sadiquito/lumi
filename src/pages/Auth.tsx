@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import PasswordReset from "@/components/PasswordReset";
 import { supabase } from "@/integrations/supabase/client";
+import SocialAuthButtons from "@/components/SocialAuthButtons";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -204,6 +205,21 @@ const Auth = () => {
             </p>
           </CardHeader>
           <CardContent>
+            {/* Social Auth Buttons - Only show for regular auth flows */}
+            {!isPasswordReset && (
+              <>
+                <SocialAuthButtons isSignUp={isSignUp} />
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/20"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-lumi-charcoal/80 px-3 text-white/60 font-sans">or continue with email</span>
+                  </div>
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Password reset form */}
               {isPasswordReset && (
