@@ -8,7 +8,7 @@ export const useAudioTranscription = () => {
   const transcribeAudio = async (
     audioBlob: Blob,
     retryCount: number,
-    setTranscriptionProgress: (value: number) => void,
+    setTranscriptionProgress: (value: number | ((prev: number) => number)) => void,
     onFallbackToText?: () => void
   ): Promise<string> => {
     const attemptTranscription = async (attempt: number): Promise<string> => {

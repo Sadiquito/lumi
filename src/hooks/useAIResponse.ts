@@ -2,7 +2,7 @@
 export const useAIResponse = () => {
   const generateAIResponse = async (
     userInput: string,
-    setThinkingProgress: (value: number) => void
+    setThinkingProgress: (value: number | ((prev: number) => number)) => void
   ): Promise<string> => {
     setThinkingProgress(0);
     
