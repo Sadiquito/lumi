@@ -22,7 +22,7 @@ export const useDailyGreeting = () => {
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Check if greeting was already generated today
+  // Check if greeting was already generated today using edge function
   const { data: todaysGreeting, isLoading } = useQuery({
     queryKey: ['daily-greeting', user?.id],
     queryFn: async () => {
@@ -30,20 +30,19 @@ export const useDailyGreeting = () => {
       
       const today = new Date().toISOString().split('T')[0];
       
-      // Query the daily_greetings table directly
-      const { data, error } = await supabase
-        .from('daily_greetings')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', `${today}T00:00:00.000Z`)
-        .lt('created_at', `${today}T23:59:59.999Z`)
-        .maybeSingle();
-      
+      // Use the edge function to fetch daily greeting
+      const { data, error } = await supabase.functions.invoke('get-daily-greeting', {
+        body: { 
+          user_id: user.id,
+          target_date: today 
+        },
+      });
+
       if (error) {
         console.error('Error fetching daily greeting:', error);
         return null;
       }
-      
+
       return data as GreetingData | null;
     },
     enabled: !!user?.id,
