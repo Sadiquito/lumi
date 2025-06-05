@@ -1,84 +1,81 @@
 
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { MessageCircle, Sparkles, Brain } from 'lucide-react';
+import AudioRecordingFeature from '@/components/AudioRecordingFeature';
+import DailyAdviceGenerator from '@/components/DailyAdviceGenerator';
+import DailyGreetingAutoStart from '@/components/DailyGreetingAutoStart';
 import { useAuth } from '@/components/AuthProvider';
-import { supabase } from '@/integrations/supabase/client';
-import FeatureGate from '@/components/FeatureGate';
 
 const TodaysCheckIn: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const [showAudioRecording, setShowAudioRecording] = useState(false);
+  const [conversationStarted, setConversationStarted] = useState(false);
 
-  // Fetch user preferences
-  const { data: preferences } = useQuery({
-    queryKey: ['user-preferences', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
+  const handleStartConversation = () => {
+    setShowAudioRecording(true);
+    setConversationStarted(true);
+  };
+
+  const handleTranscriptionComplete = (transcript: string) => {
+    console.log('Transcription completed:', transcript);
+  };
+
+  const handleAIResponse = (response: string) => {
+    console.log('AI response:', response);
+  };
 
   return (
-    <FeatureGate feature="premium">
+    <div className="space-y-6">
+      {/* Daily Greeting Auto-Start */}
+      {!conversationStarted && (
+        <DailyGreetingAutoStart
+          onStartConversation={handleStartConversation}
+          autoPlay={true}
+        />
+      )}
+
+      {/* Main Check-in Card */}
       <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center">
-            <Phone className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+          <CardTitle className="text-white text-xl flex items-center">
+            <MessageCircle className="w-6 h-6 mr-3 text-lumi-aquamarine" />
             today's check-in
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {preferences ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-white/80">scheduled for:</span>
-                <span className="text-white font-medium flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {preferences.call_time || '07:30'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/80">method:</span>
-                <span className="text-white font-medium">
-                  {preferences.preferred_channel === 'whatsapp' ? 'WhatsApp' : 'Phone call'}
-                </span>
-              </div>
-              <div className="mt-4 p-3 bg-lumi-deep-space/30 rounded-lg">
-                <p className="text-white/70 text-sm">
-                  i'll reach out to you today at {preferences.call_time}. 
-                  looking forward to our conversation!
-                </p>
-              </div>
-            </div>
+        <CardContent className="space-y-6">
+          {/* Audio Recording Interface */}
+          {showAudioRecording ? (
+            <AudioRecordingFeature
+              onTranscriptionComplete={handleTranscriptionComplete}
+              onAIResponse={handleAIResponse}
+              maxDuration={300} // 5 minutes for check-ins
+            />
           ) : (
-            <div className="text-center py-4">
-              <p className="text-white/70 mb-3">
-                let's set up your daily check-in time
-              </p>
-              <Button
-                onClick={() => navigate('/settings')}
-                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
-              >
-                configure settings
-              </Button>
+            <div className="text-center space-y-4">
+              <div className="bg-lumi-deep-space/40 rounded-lg p-6 border border-lumi-aquamarine/10">
+                <Brain className="w-12 h-12 text-lumi-aquamarine mx-auto mb-4" />
+                <h3 className="text-white text-lg font-medium mb-2">ready to chat with lumi?</h3>
+                <p className="text-white/70 mb-4">
+                  share what's on your mind today. i'm here to listen and understand.
+                </p>
+                <Button
+                  onClick={handleStartConversation}
+                  className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  start conversation
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
-    </FeatureGate>
+
+      {/* Daily Wisdom Generator */}
+      <DailyAdviceGenerator />
+    </div>
   );
 };
 
