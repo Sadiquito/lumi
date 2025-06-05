@@ -64,7 +64,7 @@ const Landing = () => {
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
           {/* Large Lumi Title in Center - More fantasy/magical styling */}
           <div className="text-center mb-8 mt-16 relative">
-            <h1 className="text-8xl md:text-9xl font-title font-bold tracking-wider relative">
+            <h1 className="text-6xl md:text-7xl font-title font-bold tracking-wider relative">
               {/* Mystical glow effect - larger and more prominent */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
                 lumi
@@ -82,7 +82,7 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
+            <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
               superintelligent
               <br />
               <span className="text-lumi-aquamarine font-semibold">journaling</span>
