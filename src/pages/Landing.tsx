@@ -88,9 +88,7 @@ const Landing = () => {
               <span className="text-lumi-aquamarine font-semibold">companion</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              Write your story, one day at a time.
-            </p>
-             Reclaim your life, one moment at a time.
+              Reclaim your life, one moment at a time.
             </p>
             <Button 
               onClick={() => navigate('/auth')}
