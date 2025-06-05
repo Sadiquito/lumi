@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Mic, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Mic, AlertTriangle, Send, Keyboard } from 'lucide-react';
 import { useAudioRecordingFeature } from '@/hooks/useAudioRecordingFeature';
 import ConversationStateIndicator from './ConversationStateIndicator';
 import AudioRecordingSpeakingState from './AudioRecordingSpeakingState';
@@ -24,6 +26,10 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
   disabled = false,
   maxDuration
 }) => {
+  const [showTextFallback, setShowTextFallback] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [isSubmittingText, setIsSubmittingText] = useState(false);
+
   const {
     conversationState,
     isTranscribing,
@@ -35,6 +41,9 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     audioLevel,
     duration,
     trialStatus,
+    audioQuality,
+    networkStatus,
+    retryCount,
     isIdle,
     isListening,
     isProcessing,
@@ -48,7 +57,8 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     onTranscriptionComplete,
     onAIResponse,
     disabled,
-    maxDuration
+    maxDuration,
+    onFallbackToText: () => setShowTextFallback(true)
   });
 
   const formatDuration = (seconds: number): string => {
@@ -62,12 +72,36 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     return limit ? formatDuration(limit) : '∞';
   };
 
+  const handleTextSubmit = async () => {
+    if (!textInput.trim()) return;
+    
+    setIsSubmittingText(true);
+    try {
+      // Simulate processing text input
+      onTranscriptionComplete?.(textInput);
+      
+      // Generate AI response (this would typically call the same AI service)
+      const mockResponse = `Thank you for sharing that with me. Based on what you've written about "${textInput.slice(0, 50)}...", I'd like to explore this further with you.`;
+      
+      setTimeout(() => {
+        onAIResponse?.(mockResponse);
+        setTextInput('');
+        setShowTextFallback(false);
+        setIsSubmittingText(false);
+      }, 2000);
+      
+    } catch (error) {
+      setIsSubmittingText(false);
+      console.error('Text processing error:', error);
+    }
+  };
+
   if (!isSupported) {
     return (
       <Alert className="bg-red-500/20 border-red-500/30">
         <AlertTriangle className="h-4 w-4 text-red-400" />
         <AlertDescription className="text-white">
-          Audio recording is not supported in this browser. Please try using Chrome, Firefox, or Safari.
+          Audio recording is not supported in this browser. Please use the text input below or try using Chrome, Firefox, or Safari.
         </AlertDescription>
       </Alert>
     );
@@ -85,14 +119,28 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
         <CardHeader>
           <CardTitle className="text-white text-lg flex items-center justify-between">
             <div className="flex items-center">
-              <Mic className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-              voice conversation
+              {showTextFallback ? (
+                <Keyboard className="w-5 h-5 mr-2 text-lumi-sunset-coral" />
+              ) : (
+                <Mic className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+              )}
+              {showTextFallback ? 'text conversation' : 'voice conversation'}
             </div>
             <div className="flex items-center space-x-2">
+              {networkStatus === 'offline' && (
+                <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
+                  Offline
+                </Badge>
+              )}
               {isListening && (
                 <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></div>
                   REC
+                </Badge>
+              )}
+              {retryCount > 0 && (
+                <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                  Retry {retryCount}
                 </Badge>
               )}
               <Badge variant="outline" className="bg-lumi-deep-space/30 text-white/70 border-lumi-sunset-coral/20">
@@ -103,7 +151,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Permission Alert */}
-          {!state.hasPermission && !state.error && (
+          {!showTextFallback && !state.hasPermission && !state.error && (
             <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30">
               <Mic className="h-4 w-4 text-lumi-sunset-coral" />
               <AlertDescription className="text-white">
@@ -122,41 +170,85 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
             </Alert>
           )}
 
-          {/* Lumi is Speaking State */}
-          {isSpeaking && (
-            <AudioRecordingSpeakingState aiResponse={aiResponse} />
+          {/* Text Fallback Input */}
+          {showTextFallback && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-white text-lg font-medium">Text Input</h3>
+                <Button
+                  onClick={() => setShowTextFallback(false)}
+                  variant="outline"
+                  size="sm"
+                  className="border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
+                  disabled={!isSupported || networkStatus === 'offline'}
+                >
+                  <Mic className="w-4 h-4 mr-1" />
+                  Try Voice
+                </Button>
+              </div>
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Type your message here..."
+                className="bg-lumi-deep-space/40 border-lumi-sunset-coral/20 text-white placeholder-white/50 min-h-[100px]"
+                disabled={isSubmittingText}
+              />
+              <Button
+                onClick={handleTextSubmit}
+                disabled={!textInput.trim() || isSubmittingText}
+                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white w-full"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {isSubmittingText ? 'Processing...' : 'Send Message'}
+              </Button>
+            </div>
           )}
 
-          {/* Processing State */}
-          {isProcessing && (
-            <AudioRecordingProcessingState
-              isTranscribing={isTranscribing}
-              transcriptionProgress={transcriptionProgress}
-              thinkingProgress={thinkingProgress}
-            />
-          )}
-
-          {/* Your Turn to Speak State */}
-          {(isIdle || isListening) && !isProcessing && !isSpeaking && (
+          {/* Voice Interface States */}
+          {!showTextFallback && (
             <>
-              {isListening ? (
-                <AudioRecordingListeningState
-                  audioLevel={audioLevel}
-                  duration={duration}
-                  onPause={pauseRecording}
-                  onStop={handleStopRecording}
+              {/* Lumi is Speaking State */}
+              {isSpeaking && (
+                <AudioRecordingSpeakingState aiResponse={aiResponse} />
+              )}
+
+              {/* Processing State */}
+              {isProcessing && (
+                <AudioRecordingProcessingState
+                  isTranscribing={isTranscribing}
+                  transcriptionProgress={transcriptionProgress}
+                  thinkingProgress={thinkingProgress}
                 />
-              ) : (
-                <AudioRecordingIdleState
-                  disabled={disabled}
-                  onStartRecording={handleStartRecording}
-                />
+              )}
+
+              {/* Your Turn to Speak State */}
+              {(isIdle || isListening) && !isProcessing && !isSpeaking && (
+                <>
+                  {isListening ? (
+                    <AudioRecordingListeningState
+                      audioLevel={audioLevel}
+                      duration={duration}
+                      onPause={pauseRecording}
+                      onStop={handleStopRecording}
+                      audioQuality={audioQuality}
+                      maxDuration={maxDuration || (trialStatus.hasPremiumAccess ? undefined : 60)}
+                    />
+                  ) : (
+                    <AudioRecordingIdleState
+                      disabled={disabled}
+                      onStartRecording={handleStartRecording}
+                      onFallbackToText={() => setShowTextFallback(true)}
+                      networkStatus={networkStatus}
+                      isSupported={isSupported}
+                    />
+                  )}
+                </>
               )}
             </>
           )}
 
           {/* Recording Info */}
-          {(isListening || state.isPaused) && (
+          {(isListening || state.isPaused) && !showTextFallback && (
             <div className="pt-2 border-t border-lumi-sunset-coral/10">
               <div className="flex items-center justify-between text-xs text-white/60">
                 <span>Duration: {formatDuration(duration)}</span>
