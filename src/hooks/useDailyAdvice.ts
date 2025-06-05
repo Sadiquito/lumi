@@ -27,13 +27,21 @@ export const useDailyAdvice = () => {
       
       if (error) throw error;
       
-      const settings = (data?.privacy_settings as PrivacySettings) || {
-        psychological_analysis_consent: true,
-        personalization_level: 'moderate',
-        data_retention_days: 365
-      };
-      
-      return settings;
+      try {
+        const settings = (data?.privacy_settings as unknown as PrivacySettings) || {
+          psychological_analysis_consent: true,
+          personalization_level: 'moderate',
+          data_retention_days: 365
+        };
+        
+        return settings;
+      } catch {
+        return {
+          psychological_analysis_consent: true,
+          personalization_level: 'moderate',
+          data_retention_days: 365
+        };
+      }
     },
     enabled: !!user?.id,
   });

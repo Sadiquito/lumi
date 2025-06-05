@@ -39,11 +39,21 @@ const PrivacyConsentManager: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const privacySettings: PrivacySettings = (preferences?.privacy_settings as PrivacySettings) || {
-    psychological_analysis_consent: true,
-    personalization_level: 'moderate',
-    data_retention_days: 365
-  };
+  const privacySettings: PrivacySettings = (() => {
+    try {
+      return (preferences?.privacy_settings as unknown as PrivacySettings) || {
+        psychological_analysis_consent: true,
+        personalization_level: 'moderate',
+        data_retention_days: 365
+      };
+    } catch {
+      return {
+        psychological_analysis_consent: true,
+        personalization_level: 'moderate',
+        data_retention_days: 365
+      };
+    }
+  })();
 
   // Update privacy settings mutation
   const updatePrivacySettings = useMutation({
@@ -54,7 +64,7 @@ const PrivacyConsentManager: React.FC = () => {
         .from('user_preferences')
         .upsert({
           user_id: user.id,
-          privacy_settings: newSettings,
+          privacy_settings: newSettings as any,
           updated_at: new Date().toISOString(),
         });
 
