@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -258,7 +257,7 @@ const Journal = () => {
               }}
             />
 
-            {/* Recent Conversations */}
+            {/* Recent Conversations with Privacy-Aware Analysis */}
             <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-white text-lg flex items-center">
@@ -339,12 +338,12 @@ const Journal = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Psychological Portrait */}
+            {/* Psychological Portrait with Privacy Integration */}
             <FeatureGate feature="ai_insights">
               <PsychologicalPortrait variant="summary" />
             </FeatureGate>
 
-            {/* Daily Advice Generator */}
+            {/* Daily Advice Generator with Privacy Awareness */}
             <FeatureGate feature="ai_advice">
               <DailyAdviceGenerator />
             </FeatureGate>

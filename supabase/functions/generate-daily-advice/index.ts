@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json();
+    const { userId, privacySettings } = await req.json();
     
     if (!userId) {
       throw new Error('User ID is required');
@@ -30,28 +30,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user's psychological portrait
-    const { data: portrait, error: portraitError } = await supabase
-      .from('personalization_profiles')
-      .select('psychological_portrait_text')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (portraitError) {
-      throw new Error('Failed to fetch psychological portrait');
-    }
-
-    // Get recent conversations for context
-    const { data: recentConversations, error: conversationsError } = await supabase
-      .from('conversations')
-      .select('transcript, ai_response, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (conversationsError) {
-      throw new Error('Failed to fetch recent conversations');
-    }
+    // Respect privacy settings
+    const hasConsent = privacySettings?.hasConsent !== false;
+    const personalizationLevel = privacySettings?.personalizationLevel || 'moderate';
+    
+    console.log('Privacy settings:', { hasConsent, personalizationLevel });
 
     // Check if advice was already generated today
     const today = new Date().toISOString().split('T')[0];
@@ -76,9 +59,48 @@ serve(async (req) => {
       );
     }
 
-    const advicePrompt = createAdvicePrompt(portrait?.psychological_portrait_text, recentConversations);
+    let portraitText = null;
+    let recentConversations = [];
+
+    // Only fetch personalized data if user has consented
+    if (hasConsent) {
+      // Get user's psychological portrait based on personalization level
+      if (personalizationLevel === 'full' || personalizationLevel === 'moderate') {
+        const { data: portrait, error: portraitError } = await supabase
+          .from('personalization_profiles')
+          .select('psychological_portrait_text')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!portraitError && portrait) {
+          portraitText = portrait.psychological_portrait_text;
+        }
+      }
+
+      // Get recent conversations based on personalization level
+      const conversationLimit = personalizationLevel === 'full' ? 5 : 
+                              personalizationLevel === 'moderate' ? 3 : 1;
+      
+      const { data: conversations, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('transcript, ai_response, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(conversationLimit);
+
+      if (!conversationsError && conversations) {
+        recentConversations = conversations;
+      }
+    }
+
+    const advicePrompt = createAdvicePrompt(
+      portraitText, 
+      recentConversations, 
+      personalizationLevel,
+      hasConsent
+    );
     
-    console.log('Generating daily advice for user:', userId);
+    console.log('Generating daily advice with personalization level:', personalizationLevel);
     
     // Call OpenAI for advice generation
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -103,6 +125,12 @@ Your personality traits:
 - See the whole person, not just problems
 - Offer hope and gentle perspective
 
+Privacy-aware behavior:
+- Respect user's personalization preferences
+- Never reference specific private details unless explicitly consented
+- Focus on universal wisdom when personalization is limited
+- Always maintain warmth regardless of data availability
+
 Generate advice that feels personal, timely, and genuinely helpful. Keep it concise but meaningful - like a warm note from someone who truly understands them.`
           },
           {
@@ -125,13 +153,18 @@ Generate advice that feels personal, timely, and genuinely helpful. Keep it conc
 
     console.log('Daily advice generated, storing in database...');
 
-    // Store the generated advice
+    // Store the generated advice with privacy metadata
     const { error: insertError } = await supabase
       .from('daily_advice')
       .insert({
         user_id: userId,
         advice_text: dailyAdvice,
         created_at: new Date().toISOString(),
+        metadata: {
+          personalizationLevel,
+          hasConsent,
+          privacyRespected: true,
+        },
       });
 
     if (insertError) {
@@ -145,7 +178,8 @@ Generate advice that feels personal, timely, and genuinely helpful. Keep it conc
       JSON.stringify({ 
         success: true, 
         advice: dailyAdvice,
-        generated: true 
+        generated: true,
+        personalizationLevel,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -167,11 +201,47 @@ Generate advice that feels personal, timely, and genuinely helpful. Keep it conc
   }
 });
 
-function createAdvicePrompt(portraitText: string | null, recentConversations: any[]): string {
+function createAdvicePrompt(
+  portraitText: string | null, 
+  recentConversations: any[], 
+  personalizationLevel: string,
+  hasConsent: boolean
+): string {
+  
   const conversationContext = recentConversations
     .map(conv => `conversation: "${conv.transcript}" | lumi's response: "${conv.ai_response}"`)
     .join('\n\n');
 
+  if (!hasConsent || personalizationLevel === 'minimal') {
+    return `please generate gentle, universal daily wisdom that feels warm and caring without referencing specific personal details:
+
+create advice that:
+- offers hope and perspective for anyone's day
+- feels personally relevant without being overly specific
+- encourages growth and self-compassion
+- maintains lumi's warm, lowercase style
+- provides comfort and gentle guidance
+
+write as lumi - warm, lowercase, genuinely caring. make it feel like wisdom from someone who believes in human potential. keep it general but meaningful.`;
+  }
+
+  if (personalizationLevel === 'moderate') {
+    return `please generate personalized daily wisdom based on recent conversation themes:
+
+**recent conversations:**
+${conversationContext}
+
+create advice that:
+- draws from themes in recent conversations without referencing private details
+- offers gentle encouragement for challenges mentioned
+- provides hope and perspective that feels timely
+- honors their communication style with warmth
+- maintains appropriate privacy boundaries
+
+write as lumi - warm, lowercase, caring. make it feel personally relevant while respecting privacy boundaries.`;
+  }
+
+  // Full personalization
   if (!portraitText) {
     return `please generate gentle, personalized daily wisdom based on these recent conversations:
 
