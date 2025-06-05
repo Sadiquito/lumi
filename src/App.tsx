@@ -6,11 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/AuthProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/Admin/AdminRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Journal from "./pages/Journal";
 import Settings from "./pages/Settings";
 import Subscription from "./pages/Subscription";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,11 @@ const App = () => (
               <ProtectedRoute>
                 <Subscription />
               </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>
