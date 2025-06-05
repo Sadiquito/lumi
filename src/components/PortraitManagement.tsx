@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ const PortraitManagement: React.FC = () => {
   // Mock timeline data - in real implementation, this would come from the database
   const mockTimeline = portrait ? [
     {
-      date: portrait.created_at || new Date().toISOString(),
+      date: portrait.updated_at || new Date().toISOString(),
       version: 1,
       summary: "initial psychological understanding established through early conversations",
       keyInsights: [
@@ -52,7 +51,6 @@ const PortraitManagement: React.FC = () => {
     
     const exportData = {
       psychological_portrait: portrait.psychological_portrait_text,
-      created_at: portrait.created_at,
       updated_at: portrait.updated_at,
       exported_at: new Date().toISOString()
     };
