@@ -20,7 +20,11 @@ export const useDailyAdvice = () => {
         .maybeSingle();
       
       if (error) throw error;
-      return data?.privacy_settings;
+      return data?.privacy_settings || {
+        psychological_analysis_consent: true,
+        personalization_level: 'moderate',
+        data_retention_days: 365
+      };
     },
     enabled: !!user?.id,
   });

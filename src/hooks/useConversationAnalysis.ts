@@ -9,6 +9,12 @@ interface UseConversationAnalysisProps {
   respectPrivacySettings?: boolean;
 }
 
+interface AnalysisData {
+  conversationId: string;
+  transcript: string;
+  aiResponse: string;
+}
+
 export const useConversationAnalysis = ({ 
   enabled = true, 
   respectPrivacySettings = true 
@@ -56,18 +62,14 @@ export const useConversationAnalysis = ({
     try {
       console.log('Triggering conversation analysis for:', conversationId);
       
-      // Add privacy-aware metadata to the analysis
-      analyzeConversation({
+      // Create analysis data object without metadata
+      const analysisData: AnalysisData = {
         conversationId,
         transcript,
-        aiResponse,
-        metadata: {
-          userId: user.id,
-          timestamp: new Date().toISOString(),
-          privacyConsent: respectPrivacySettings,
-          analysisVersion: '1.0'
-        }
-      });
+        aiResponse
+      };
+
+      analyzeConversation(analysisData);
 
       // Optional: Notify user about analysis
       if (process.env.NODE_ENV === 'development') {

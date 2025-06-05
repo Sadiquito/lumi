@@ -1,48 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Shield, 
-  Eye, 
-  Brain, 
-  Clock, 
-  Info, 
-  Settings,
-  FileText,
-  Trash2
-} from 'lucide-react';
+import { Shield, Lock, Eye, Database, Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-
-interface PrivacySettings {
-  psychological_analysis_consent: boolean;
-  data_retention_days: number;
-  personalization_level: 'minimal' | 'moderate' | 'full';
-  share_insights_for_improvement: boolean;
-  auto_delete_conversations: boolean;
-}
 
 const PrivacyConsentManager: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [localSettings, setLocalSettings] = useState<PrivacySettings>({
-    psychological_analysis_consent: false,
-    data_retention_days: 365,
-    personalization_level: 'moderate',
-    share_insights_for_improvement: false,
-    auto_delete_conversations: false,
-  });
 
-  // Fetch current privacy settings
-  const { data: privacySettings, isLoading } = useQuery({
-    queryKey: ['privacy-settings', user?.id],
+  // Fetch user privacy settings
+  const { data: preferences, isLoading } = useQuery({
+    queryKey: ['user-preferences', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
@@ -53,29 +29,34 @@ const PrivacyConsentManager: React.FC = () => {
         .maybeSingle();
       
       if (error) throw error;
-      return data?.privacy_settings || localSettings;
+      return data;
     },
     enabled: !!user?.id,
   });
 
-  // Update privacy settings
+  const privacySettings = preferences?.privacy_settings || {
+    psychological_analysis_consent: true,
+    personalization_level: 'moderate',
+    data_retention_days: 365
+  };
+
+  // Update privacy settings mutation
   const updatePrivacySettings = useMutation({
-    mutationFn: async (newSettings: Partial<PrivacySettings>) => {
+    mutationFn: async (newSettings: any) => {
       if (!user?.id) throw new Error('User not authenticated');
-      
+
       const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: user.id,
-          privacy_settings: { ...localSettings, ...newSettings },
+          privacy_settings: newSettings,
           updated_at: new Date().toISOString(),
         });
-      
+
       if (error) throw error;
-      return newSettings;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['privacy-settings', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-preferences', user?.id] });
       toast({
         title: "Privacy Settings Updated",
         description: "Your privacy preferences have been saved.",
@@ -90,16 +71,28 @@ const PrivacyConsentManager: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    if (privacySettings) {
-      setLocalSettings(privacySettings);
-    }
-  }, [privacySettings]);
+  const handleConsentChange = (consent: boolean) => {
+    const newSettings = {
+      ...privacySettings,
+      psychological_analysis_consent: consent
+    };
+    updatePrivacySettings.mutate(newSettings);
+  };
 
-  const handleSettingChange = (key: keyof PrivacySettings, value: any) => {
-    const newSettings = { ...localSettings, [key]: value };
-    setLocalSettings(newSettings);
-    updatePrivacySettings.mutate({ [key]: value });
+  const handlePersonalizationChange = (level: string) => {
+    const newSettings = {
+      ...privacySettings,
+      personalization_level: level
+    };
+    updatePrivacySettings.mutate(newSettings);
+  };
+
+  const handleRetentionChange = (days: number) => {
+    const newSettings = {
+      ...privacySettings,
+      data_retention_days: days
+    };
+    updatePrivacySettings.mutate(newSettings);
   };
 
   if (isLoading) {
@@ -116,205 +109,111 @@ const PrivacyConsentManager: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Consent Overview */}
-      <Card className="bg-lumi-charcoal/80 border-lumi-sunset-coral/20">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center">
-            <Shield className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-            privacy & consent
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert className="bg-lumi-deep-space/30 border-lumi-aquamarine/20">
-            <Info className="h-4 w-4 text-lumi-aquamarine" />
-            <AlertDescription className="text-white/80">
-              lumi uses psychological analysis to provide personalized guidance. you have full control 
-              over how your data is used and stored. all insights remain private and are never shared 
-              with third parties.
-            </AlertDescription>
-          </Alert>
-          
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-white text-sm font-medium">psychological analysis</span>
-                <p className="text-white/60 text-xs">
-                  allow lumi to analyze conversations for personalized insights
-                </p>
-              </div>
-              <Switch
-                checked={localSettings.psychological_analysis_consent}
-                onCheckedChange={(checked) => 
-                  handleSettingChange('psychological_analysis_consent', checked)
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-white text-sm font-medium">improve lumi's understanding</span>
-                <p className="text-white/60 text-xs">
-                  anonymously share insights to help improve lumi for everyone
-                </p>
-              </div>
-              <Switch
-                checked={localSettings.share_insights_for_improvement}
-                onCheckedChange={(checked) => 
-                  handleSettingChange('share_insights_for_improvement', checked)
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-white text-sm font-medium">auto-delete old conversations</span>
-                <p className="text-white/60 text-xs">
-                  automatically remove conversations after retention period
-                </p>
-              </div>
-              <Switch
-                checked={localSettings.auto_delete_conversations}
-                onCheckedChange={(checked) => 
-                  handleSettingChange('auto_delete_conversations', checked)
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Personalization Level */}
-      <Card className="bg-lumi-charcoal/80 border-lumi-sunset-coral/20">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center">
-            <Brain className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-            personalization level
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-3">
-            {[
-              {
-                level: 'minimal' as const,
-                title: 'minimal personalization',
-                description: 'basic conversation memory only',
-                badge: 'privacy focused'
-              },
-              {
-                level: 'moderate' as const,
-                title: 'moderate personalization',
-                description: 'conversation patterns and general insights',
-                badge: 'recommended'
-              },
-              {
-                level: 'full' as const,
-                title: 'full personalization',
-                description: 'deep psychological understanding and growth tracking',
-                badge: 'comprehensive'
-              }
-            ].map((option) => (
-              <div
-                key={option.level}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  localSettings.personalization_level === option.level
-                    ? 'border-lumi-aquamarine bg-lumi-aquamarine/10'
-                    : 'border-white/20 hover:border-white/40'
-                }`}
-                onClick={() => handleSettingChange('personalization_level', option.level)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-white text-sm font-medium">{option.title}</span>
-                      <Badge variant="outline" className="text-xs border-white/20 text-white/60">
-                        {option.badge}
-                      </Badge>
-                    </div>
-                    <p className="text-white/60 text-xs">{option.description}</p>
-                  </div>
-                  <div className={`w-4 h-4 rounded-full border-2 ${
-                    localSettings.personalization_level === option.level
-                      ? 'border-lumi-aquamarine bg-lumi-aquamarine'
-                      : 'border-white/40'
-                  }`} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data Retention */}
-      <Card className="bg-lumi-charcoal/80 border-lumi-sunset-coral/20">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-            data retention
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Card className="bg-lumi-charcoal/80 border-lumi-sunset-coral/20">
+      <CardHeader>
+        <CardTitle className="text-white text-lg flex items-center">
+          <Shield className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+          privacy & personalization
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Psychological Analysis Consent */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-white text-sm">current retention period:</span>
-            <span className="text-lumi-aquamarine font-medium">
-              {localSettings.data_retention_days} days
-            </span>
+            <div className="space-y-1">
+              <h4 className="text-white font-medium">psychological insights</h4>
+              <p className="text-white/60 text-sm">allow lumi to analyze conversations for deeper understanding</p>
+            </div>
+            <Switch
+              checked={privacySettings.psychological_analysis_consent}
+              onCheckedChange={handleConsentChange}
+              disabled={updatePrivacySettings.isPending}
+            />
           </div>
-          
-          <div className="grid grid-cols-3 gap-2">
-            {[90, 365, 730].map((days) => (
-              <Button
-                key={days}
-                variant={localSettings.data_retention_days === days ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleSettingChange('data_retention_days', days)}
-                className={
-                  localSettings.data_retention_days === days
-                    ? "bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
-                    : "border-white/20 text-white/70 hover:bg-white/10"
-                }
-              >
-                {days === 90 ? '3 months' : days === 365 ? '1 year' : '2 years'}
-              </Button>
-            ))}
-          </div>
-          
-          <p className="text-white/60 text-xs">
-            conversations and insights older than this period will be automatically deleted
-          </p>
-        </CardContent>
-      </Card>
+          <Badge 
+            variant="outline" 
+            className={`text-xs ${privacySettings.psychological_analysis_consent 
+              ? 'border-green-500/30 text-green-400' 
+              : 'border-red-500/30 text-red-400'}`}
+          >
+            {privacySettings.psychological_analysis_consent ? 'enabled' : 'disabled'}
+          </Badge>
+        </div>
 
-      {/* Privacy Information */}
-      <Card className="bg-lumi-charcoal/80 border-lumi-sunset-coral/20">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-            your data rights
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ul className="text-white/70 text-sm space-y-2">
-            <li className="flex items-start">
-              <div className="w-1.5 h-1.5 rounded-full bg-lumi-aquamarine mt-2 mr-2 flex-shrink-0" />
-              <span>you can export all your data at any time from the portrait management page</span>
-            </li>
-            <li className="flex items-start">
-              <div className="w-1.5 h-1.5 rounded-full bg-lumi-aquamarine mt-2 mr-2 flex-shrink-0" />
-              <span>you can delete your psychological portrait and start fresh whenever you want</span>
-            </li>
-            <li className="flex items-start">
-              <div className="w-1.5 h-1.5 rounded-full bg-lumi-aquamarine mt-2 mr-2 flex-shrink-0" />
-              <span>all data is encrypted and stored securely - never shared with third parties</span>
-            </li>
-            <li className="flex items-start">
-              <div className="w-1.5 h-1.5 rounded-full bg-lumi-aquamarine mt-2 mr-2 flex-shrink-0" />
-              <span>you can withdraw consent for analysis at any time without losing access to lumi</span>
-            </li>
+        {/* Personalization Level */}
+        {privacySettings.psychological_analysis_consent && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-white font-medium flex items-center">
+                <Eye className="w-4 h-4 mr-2" />
+                personalization level
+              </h4>
+              <p className="text-white/60 text-sm">choose how much personal data informs lumi's responses</p>
+            </div>
+            <Select 
+              value={privacySettings.personalization_level} 
+              onValueChange={handlePersonalizationChange}
+              disabled={updatePrivacySettings.isPending}
+            >
+              <SelectTrigger className="bg-lumi-deep-space/30 border-white/20 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-lumi-charcoal border-white/20">
+                <SelectItem value="minimal" className="text-white">
+                  minimal - general advice only
+                </SelectItem>
+                <SelectItem value="moderate" className="text-white">
+                  moderate - themed insights
+                </SelectItem>
+                <SelectItem value="full" className="text-white">
+                  full - complete personalization
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Data Retention */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <h4 className="text-white font-medium flex items-center">
+              <Database className="w-4 h-4 mr-2" />
+              data retention
+            </h4>
+            <p className="text-white/60 text-sm">how long to keep your psychological profile</p>
+          </div>
+          <Select 
+            value={privacySettings.data_retention_days.toString()} 
+            onValueChange={(value) => handleRetentionChange(parseInt(value))}
+            disabled={updatePrivacySettings.isPending}
+          >
+            <SelectTrigger className="bg-lumi-deep-space/30 border-white/20 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-lumi-charcoal border-white/20">
+              <SelectItem value="30" className="text-white">30 days</SelectItem>
+              <SelectItem value="90" className="text-white">90 days</SelectItem>
+              <SelectItem value="365" className="text-white">1 year</SelectItem>
+              <SelectItem value="999999" className="text-white">indefinitely</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Privacy Summary */}
+        <div className="pt-4 border-t border-lumi-sunset-coral/10">
+          <div className="flex items-center space-x-2 mb-2">
+            <Lock className="w-4 h-4 text-lumi-aquamarine" />
+            <span className="text-white/80 text-sm">your data is protected</span>
+          </div>
+          <ul className="text-white/60 text-xs space-y-1">
+            <li>• all data is encrypted and stored securely</li>
+            <li>• you can modify these settings anytime</li>
+            <li>• deleting your account removes all data permanently</li>
+            <li>• we never share your personal insights with third parties</li>
           </ul>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
