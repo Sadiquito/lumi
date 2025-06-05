@@ -7,29 +7,26 @@ import JournalHeader from '@/components/Journal/JournalHeader';
 import TodaysCheckIn from '@/components/Journal/TodaysCheckIn';
 import RecentConversations from '@/components/Journal/RecentConversations';
 import ConversationThread from '@/components/Journal/ConversationThread';
-import JournalSidebar from '@/components/Journal/JournalSidebar';
 import TrialStatusAlerts from '@/components/Journal/TrialStatusAlerts';
 import ActivityTracker from '@/components/Admin/ActivityTracker';
 
 const Journal: React.FC = () => {
   const { user, trialStatus } = useAuth();
   const { trackConversation, trackFeatureUsage } = useAnalyticsTracking();
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
 
   // Track journal page visit
   useEffect(() => {
     trackFeatureUsage('journal_page');
   }, [trackFeatureUsage]);
 
-  const handleConversationSelect = (conversationId: string) => {
-    setSelectedConversationId(conversationId);
-    setIsSidebarOpen(false);
+  const handleConversationSelect = (conversation: any) => {
+    setSelectedConversation(conversation);
     trackFeatureUsage('conversation_select');
   };
 
   const handleNewConversation = () => {
-    setSelectedConversationId(null);
+    setSelectedConversation(null);
     trackFeatureUsage('new_conversation');
   };
 
@@ -48,28 +45,15 @@ const Journal: React.FC = () => {
         <TrialStatusAlerts />
         
         <div className="flex h-screen">
-          {/* Sidebar */}
-          <JournalSidebar
-            isOpen={isSidebarOpen}
-            onClose={() => setIsSidebarOpen(false)}
-            selectedConversationId={selectedConversationId}
-            onConversationSelect={handleConversationSelect}
-            onNewConversation={handleNewConversation}
-          />
-
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <JournalHeader 
-              onToggleSidebar={() => setIsSidebarOpen(true)}
-              selectedConversationId={selectedConversationId}
-            />
+            <JournalHeader />
             
             <div className="flex-1 overflow-auto p-6">
-              {selectedConversationId ? (
+              {selectedConversation ? (
                 <FeatureTracker feature="conversation_thread" trackOnMount>
                   <ConversationThread 
-                    conversationId={selectedConversationId}
-                    onConversationComplete={handleConversationComplete}
+                    conversation={selectedConversation}
                   />
                 </FeatureTracker>
               ) : (
@@ -79,9 +63,7 @@ const Journal: React.FC = () => {
                   </FeatureTracker>
                   
                   <FeatureTracker feature="recent_conversations" trackOnMount>
-                    <RecentConversations 
-                      onConversationSelect={handleConversationSelect}
-                    />
+                    <RecentConversations />
                   </FeatureTracker>
                 </div>
               )}

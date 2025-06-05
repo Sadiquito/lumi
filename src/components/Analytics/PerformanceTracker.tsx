@@ -11,7 +11,16 @@ export const PerformanceTracker: React.FC = () => {
     
     window.fetch = async (...args) => {
       const startTime = Date.now();
-      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      
+      // Extract URL correctly based on argument type
+      let url: string;
+      if (typeof args[0] === 'string') {
+        url = args[0];
+      } else if (args[0] instanceof Request) {
+        url = args[0].url;
+      } else {
+        url = args[0].toString();
+      }
       
       try {
         const response = await originalFetch(...args);
