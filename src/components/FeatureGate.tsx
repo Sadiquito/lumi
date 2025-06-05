@@ -7,7 +7,7 @@ import { Crown, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface FeatureGateProps {
-  feature: 'tts' | 'ai_advice' | 'premium';
+  feature: 'tts' | 'ai_advice' | 'ai_insights' | 'premium';
   children: React.ReactNode;
   fallback?: React.ReactNode;
   showUpgradePrompt?: boolean;
@@ -30,6 +30,8 @@ const FeatureGate: React.FC<FeatureGateProps> = ({
         return canUseTTS;
       case 'ai_advice':
         return canUseAIAdvice;
+      case 'ai_insights':
+        return canUseAIAdvice; // AI insights use same access as AI advice
       case 'premium':
         return hasPremiumAccess;
       default:
