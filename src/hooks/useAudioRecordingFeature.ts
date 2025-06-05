@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
@@ -83,38 +82,65 @@ export const useAudioRecordingFeature = ({
     setTranscriptionProgress(0);
     
     try {
-      // Simulate transcription progress
+      // Convert blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      // Progress simulation
       const progressInterval = setInterval(() => {
         setTranscriptionProgress(prev => Math.min(prev + 10, 70));
       }, 200);
 
-      // Simulate transcription for now
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Starting Whisper transcription...');
+      
+      // Call Whisper transcription edge function
+      const { data, error } = await supabase.functions.invoke('whisper-transcription', {
+        body: {
+          audio: base64Audio,
+          language: 'en' // Can be made configurable
+        }
+      });
+
       clearInterval(progressInterval);
       setTranscriptionProgress(100);
+
+      if (error) {
+        throw new Error(error.message || 'Transcription failed');
+      }
+
+      const transcript = data?.text || '';
+      const confidence = data?.confidence || 0;
       
-      const mockTranscript = "This is a sample transcription from your voice recording. The WebRTC audio capture is now working with real microphone input.";
-      
+      console.log('Transcription completed:', { transcript, confidence });
+
+      if (!transcript.trim()) {
+        throw new Error('No speech detected in audio');
+      }
+
       // Add user message to conversation
       addMessage({
-        content: mockTranscript,
+        content: transcript,
         speaker: 'user',
         type: 'audio',
         metadata: {
           duration: duration,
-          audioUrl: URL.createObjectURL(audioBlob)
+          audioUrl: URL.createObjectURL(audioBlob),
+          confidence: confidence
         }
       });
 
-      onTranscriptionComplete?.(mockTranscript);
+      onTranscriptionComplete?.(transcript);
       
       // Start AI thinking process
-      await handleAIThinking(mockTranscript);
+      await handleAIThinking(transcript);
       
     } catch (error) {
+      console.error('Transcription error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Could not transcribe your audio';
+      
       toast({
         title: "Transcription failed",
-        description: "Could not transcribe your audio. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       goIdle();

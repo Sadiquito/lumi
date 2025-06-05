@@ -2,6 +2,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Pause, Square } from 'lucide-react';
+import MicrophoneLevelIndicator from './MicrophoneLevelIndicator';
+import WaveformIndicator from './WaveformIndicator';
 
 interface AudioRecordingListeningStateProps {
   audioLevel: number;
@@ -24,18 +26,28 @@ const AudioRecordingListeningState: React.FC<AudioRecordingListeningStateProps> 
 
   return (
     <div className="text-center space-y-4">
+      {/* Waveform Visualization */}
+      <div className="flex justify-center">
+        <WaveformIndicator 
+          isActive={audioLevel > 0.1} 
+          barCount={7}
+          color="aquamarine"
+          className="mb-2"
+        />
+      </div>
+
       {/* Audio Level Indicator */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-white/70">
           <span>audio level:</span>
           <span>{formatDuration(duration)}</span>
         </div>
-        <div className="w-full bg-lumi-charcoal rounded-full h-3">
-          <div 
-            className="bg-gradient-to-r from-lumi-aquamarine to-lumi-sunset-coral h-3 rounded-full transition-all duration-100"
-            style={{ width: `${Math.min(100, audioLevel * 100)}%` }}
-          />
-        </div>
+        <MicrophoneLevelIndicator
+          level={audioLevel}
+          isActive={true}
+          showIcon={false}
+          size="md"
+        />
       </div>
 
       <p className="text-white text-lg font-medium">
