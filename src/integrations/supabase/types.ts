@@ -131,6 +131,7 @@ export type Database = {
           max_retries: number | null
           phone_number: string | null
           preferred_channel: string | null
+          privacy_settings: Json | null
           retry_enabled: boolean | null
           updated_at: string
           user_id: string
@@ -142,6 +143,7 @@ export type Database = {
           max_retries?: number | null
           phone_number?: string | null
           preferred_channel?: string | null
+          privacy_settings?: Json | null
           retry_enabled?: boolean | null
           updated_at?: string
           user_id: string
@@ -153,6 +155,7 @@ export type Database = {
           max_retries?: number | null
           phone_number?: string | null
           preferred_channel?: string | null
+          privacy_settings?: Json | null
           retry_enabled?: boolean | null
           updated_at?: string
           user_id?: string

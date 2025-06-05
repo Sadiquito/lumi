@@ -1,15 +1,20 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Eye, Database, Clock } from 'lucide-react';
+import { Shield, Lock, Eye, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+interface PrivacySettings {
+  psychological_analysis_consent: boolean;
+  personalization_level: 'minimal' | 'moderate' | 'full';
+  data_retention_days: number;
+}
 
 const PrivacyConsentManager: React.FC = () => {
   const { user } = useAuth();
@@ -34,7 +39,7 @@ const PrivacyConsentManager: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const privacySettings = preferences?.privacy_settings || {
+  const privacySettings: PrivacySettings = (preferences?.privacy_settings as PrivacySettings) || {
     psychological_analysis_consent: true,
     personalization_level: 'moderate',
     data_retention_days: 365
@@ -42,7 +47,7 @@ const PrivacyConsentManager: React.FC = () => {
 
   // Update privacy settings mutation
   const updatePrivacySettings = useMutation({
-    mutationFn: async (newSettings: any) => {
+    mutationFn: async (newSettings: PrivacySettings) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { error } = await supabase
@@ -72,7 +77,7 @@ const PrivacyConsentManager: React.FC = () => {
   });
 
   const handleConsentChange = (consent: boolean) => {
-    const newSettings = {
+    const newSettings: PrivacySettings = {
       ...privacySettings,
       psychological_analysis_consent: consent
     };
@@ -80,15 +85,15 @@ const PrivacyConsentManager: React.FC = () => {
   };
 
   const handlePersonalizationChange = (level: string) => {
-    const newSettings = {
+    const newSettings: PrivacySettings = {
       ...privacySettings,
-      personalization_level: level
+      personalization_level: level as 'minimal' | 'moderate' | 'full'
     };
     updatePrivacySettings.mutate(newSettings);
   };
 
   const handleRetentionChange = (days: number) => {
-    const newSettings = {
+    const newSettings: PrivacySettings = {
       ...privacySettings,
       data_retention_days: days
     };

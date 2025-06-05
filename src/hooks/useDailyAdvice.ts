@@ -3,6 +3,12 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
+interface PrivacySettings {
+  psychological_analysis_consent: boolean;
+  personalization_level: 'minimal' | 'moderate' | 'full';
+  data_retention_days: number;
+}
+
 export const useDailyAdvice = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -20,11 +26,14 @@ export const useDailyAdvice = () => {
         .maybeSingle();
       
       if (error) throw error;
-      return data?.privacy_settings || {
+      
+      const settings = (data?.privacy_settings as PrivacySettings) || {
         psychological_analysis_consent: true,
         personalization_level: 'moderate',
         data_retention_days: 365
       };
+      
+      return settings;
     },
     enabled: !!user?.id,
   });
