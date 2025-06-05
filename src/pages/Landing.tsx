@@ -83,16 +83,14 @@ const Landing = () => {
           {/* Hero Section */}
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              take a moment to regroup
+              your superintelligent
               <br />
-              <span className="text-lumi-aquamarine font-semibold">once a day</span>
+              <span className="text-lumi-aquamarine font-semibold">companion</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              Journaling is fucking good for you, but it also fucking sucks. 
-              <br />
-              Lumi makes it fucking fun. 
-              <br />
-              How's that for a sales pitch? Now join us.
+              Write your story, one day at a time.
+            </p>
+             Reclaim your life, one moment at a time.
             </p>
             <Button 
               onClick={() => navigate('/auth')}
