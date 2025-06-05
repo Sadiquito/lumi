@@ -94,7 +94,7 @@ const Landing = () => {
               onClick={() => navigate('/auth')}
               className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl font-sans"
             >
-              Step In
+              Begin Your Journey
             </Button>
           </div>
 
