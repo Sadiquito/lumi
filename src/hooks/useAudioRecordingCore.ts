@@ -11,7 +11,7 @@ export const useAudioRecordingCore = ({
   onFallbackToText
 }: Pick<UseAudioRecordingFeatureProps, 'maxDuration' | 'onFallbackToText'>) => {
   const { toast } = useToast();
-  const { trialStatus } = useAuth();
+  // Removed trial status - all users have full access
 
   const {
     recordedBlob,
@@ -189,9 +189,7 @@ export const useAudioRecordingCore = ({
         });
         toast({
           title: "Recording started",
-          description: trialStatus.hasPremiumAccess 
-            ? "Recording in progress..."
-            : "Recording started (60 second limit for trial users)",
+          description: "Recording in progress...",
         });
       } else {
         throw new Error('Failed to start recording');
@@ -260,6 +258,6 @@ export const useAudioRecordingCore = ({
     resumeRecording,
     
     // Meta
-    trialStatus,
+    // trialStatus removed
   };
 };

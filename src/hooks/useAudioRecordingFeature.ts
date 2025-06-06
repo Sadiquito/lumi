@@ -43,7 +43,7 @@ export const useAudioRecordingFeature = ({
     handleStopRecording: coreStopRecording,
     pauseRecording,
     resumeRecording,
-    trialStatus,
+    // trialStatus removed
   } = useAudioRecordingCore({
     maxDuration,
     onFallbackToText
@@ -188,7 +188,7 @@ export const useAudioRecordingFeature = ({
     state: enhancedAudioRecorder,
     audioLevel,
     duration,
-    trialStatus,
+    // trialStatus removed
     audioQuality,
     networkStatus,
     retryCount,

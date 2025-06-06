@@ -21,7 +21,7 @@ export const useTextToSpeech = ({ text, autoPlay = false, selectedVoice = DEFAUL
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
-  const { trialStatus } = useAuth();
+  // Removed trial status - all users have full TTS access
   const { trackUsage, canUseToday } = useTTSUsageTracking();
 
   const generateSpeech = async (retryAttempt = 0) => {
@@ -34,24 +34,7 @@ export const useTextToSpeech = ({ text, autoPlay = false, selectedVoice = DEFAUL
       return;
     }
 
-    // Check trial limits before generation
-    if (!trialStatus.canUseTTS) {
-      toast({
-        title: "TTS Access Required",
-        description: "Voice responses require premium access or active trial.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!trialStatus.hasPremiumAccess && !canUseToday()) {
-      toast({
-        title: "Daily Limit Reached",
-        description: "You've used all voice responses today. Upgrade for unlimited access.",
-        variant: "destructive"
-      });
-      return;
-    }
+    // All users have unlimited TTS access - no checks needed
 
     try {
       setIsLoading(true);

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { User, Settings, Lock, Mail } from "lucide-react";
-import { useAuth } from './AuthProvider';
+import { useAuth } from './SimpleAuthProvider';
 import { useToast } from '@/hooks/use-toast';
 
 const ProfileManagement = () => {

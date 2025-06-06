@@ -19,7 +19,7 @@ const DailyGreetingAutoStart: React.FC<DailyGreetingAutoStartProps> = ({
   onStartConversation,
   autoPlay = false
 }) => {
-  const { user, trialStatus } = useAuth();
+  const { user } = useAuth();
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
   
   const {
@@ -85,7 +85,7 @@ const DailyGreetingAutoStart: React.FC<DailyGreetingAutoStartProps> = ({
     return null;
   }
 
-  const shouldAutoPlay = autoPlay && !hasPlayedToday && trialStatus.canUseTTS;
+  const shouldAutoPlay = autoPlay && !hasPlayedToday;
 
   return (
     <Card className="bg-gradient-to-r from-lumi-charcoal/80 to-lumi-deep-space/80 backdrop-blur-sm border-lumi-aquamarine/20 shadow-lg">

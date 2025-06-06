@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureTrialStartDate } from '@/utils/trialUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -33,9 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Handle successful sign in
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in successfully');
-          setTimeout(() => {
-            ensureTrialStartDate(session.user.id);
-          }, 0);
         }
       }
     );
@@ -52,9 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session?.user ?? null);
           
           if (session?.user) {
-            setTimeout(() => {
-              ensureTrialStartDate(session.user.id);
-            }, 0);
+            console.log('Session loaded for user:', session.user.id);
           }
         }
       } catch (error) {

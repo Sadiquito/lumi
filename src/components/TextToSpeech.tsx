@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { useElevenLabsConfig } from '@/hooks/useElevenLabsConfig';
 import { DEFAULT_VOICE_ID } from '@/utils/elevenLabsConfig';
-import { useAuth } from './AuthProvider';
+
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import TTSTrialPreview from './TTSTrialPreview';
+
 import TTSEnhancedVariant from './TTSEnhancedVariant';
 import TTSIconOnlyVariant from './TTSIconOnlyVariant';
 import TTSCompactVariant from './TTSCompactVariant';
@@ -28,7 +28,6 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
   const [selectedVoice, setSelectedVoice] = useState<string>(DEFAULT_VOICE_ID);
   
   const { config, loading: configLoading } = useElevenLabsConfig();
-  const { trialStatus } = useAuth();
   
   const {
     isPlaying,
@@ -51,10 +50,7 @@ const TextToSpeech: React.FC<TextToSpeechProps> = ({
     return null;
   }
 
-  // Show trial preview for users without TTS access
-  if (!trialStatus.canUseTTS) {
-    return <TTSTrialPreview text={text} className={className} />;
-  }
+  // All users now have TTS access
 
   const commonProps = {
     text,

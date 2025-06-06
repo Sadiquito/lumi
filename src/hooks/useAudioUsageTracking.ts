@@ -10,9 +10,7 @@ interface AudioUsageStats {
   lastUsed: string | null;
 }
 
-const TRIAL_DAILY_TRANSCRIPTION_LIMIT = 10;
-const TRIAL_WEEKLY_TRANSCRIPTION_LIMIT = 50;
-const TRIAL_MAX_DURATION = 60; // seconds
+// No limits - all users have unlimited access
 
 export const useAudioUsageTracking = () => {
   const [usage, setUsage] = useState<AudioUsageStats>({
@@ -22,7 +20,7 @@ export const useAudioUsageTracking = () => {
     lastUsed: null
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { user, trialStatus } = useAuth();
+  const { user } = useAuth();
 
   const fetchUsage = async () => {
     if (!user?.id) return;
@@ -76,21 +74,15 @@ export const useAudioUsageTracking = () => {
   };
 
   const canTranscribeToday = () => {
-    if (trialStatus.hasPremiumAccess) return true;
-    return usage.dailyTranscriptions < TRIAL_DAILY_TRANSCRIPTION_LIMIT;
+    return true; // All users have unlimited access
   };
 
   const getMaxRecordingDuration = () => {
-    if (trialStatus.hasPremiumAccess) return undefined; // unlimited
-    return TRIAL_MAX_DURATION;
+    return undefined; // unlimited for all users
   };
 
   const getRemainingUsage = () => {
-    if (trialStatus.hasPremiumAccess) return { daily: Infinity, weekly: Infinity };
-    return {
-      daily: Math.max(0, TRIAL_DAILY_TRANSCRIPTION_LIMIT - usage.dailyTranscriptions),
-      weekly: Math.max(0, TRIAL_WEEKLY_TRANSCRIPTION_LIMIT - usage.weeklyTranscriptions)
-    };
+    return { daily: Infinity, weekly: Infinity }; // unlimited for all users
   };
 
   useEffect(() => {
@@ -106,9 +98,9 @@ export const useAudioUsageTracking = () => {
     getRemainingUsage,
     refreshUsage: fetchUsage,
     limits: {
-      dailyLimit: TRIAL_DAILY_TRANSCRIPTION_LIMIT,
-      weeklyLimit: TRIAL_WEEKLY_TRANSCRIPTION_LIMIT,
-      maxDuration: TRIAL_MAX_DURATION
+      dailyLimit: Infinity,
+      weeklyLimit: Infinity,
+      maxDuration: undefined
     }
   };
 };

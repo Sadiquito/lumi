@@ -13,7 +13,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import AdviceCard from './AdviceCard';

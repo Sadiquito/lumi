@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: AudioRecorderConfig = {
 };
 
 export const useAudioRecorder = (config: UseAudioRecorderConfig = {}): UseAudioRecorderReturn => {
-  const { trialStatus } = useAuth();
+  // Removed trial status - all users have full access
   const [state, setState] = useState<AudioRecorderState>({
     isRecording: false,
     isPaused: false,
@@ -44,8 +44,8 @@ export const useAudioRecorder = (config: UseAudioRecorderConfig = {}): UseAudioR
   const recorderRef = useRef<AudioRecorder | null>(null);
   const audioChunksRef = useRef<AudioChunk[]>([]);
 
-  // Determine max duration based on trial status
-  const maxDuration = config.maxDuration || (trialStatus.hasPremiumAccess ? undefined : 60);
+  // No max duration limit - all users have unlimited recording
+  const maxDuration = config.maxDuration;
 
   const recorderConfig: AudioRecorderConfig = {
     ...DEFAULT_CONFIG,
@@ -96,12 +96,7 @@ export const useAudioRecorder = (config: UseAudioRecorderConfig = {}): UseAudioR
       return false;
     }
 
-    // Check trial limits
-    if (!trialStatus.hasPremiumAccess && maxDuration && maxDuration > 60) {
-      const error = 'Recording duration limited to 60 seconds for trial users';
-      config.onError?.(error);
-      return false;
-    }
+    // No trial limits - all users have full access
 
     if (!recorderRef.current) {
       recorderRef.current = new AudioRecorder(
@@ -113,7 +108,7 @@ export const useAudioRecorder = (config: UseAudioRecorderConfig = {}): UseAudioR
 
     audioChunksRef.current = [];
     return await recorderRef.current.startRecording();
-  }, [isSupported, trialStatus.hasPremiumAccess, maxDuration, recorderConfig, handleStateChange, handleAudioData, config]);
+  }, [isSupported, maxDuration, recorderConfig, handleStateChange, handleAudioData, config]);
 
   const stopRecording = useCallback(() => {
     if (!recorderRef.current) return;

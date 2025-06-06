@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
+
 import TTSErrorBoundary from './TTSErrorBoundary';
 import AudioControls from './AudioControls';
 import AudioProgress from './AudioProgress';
@@ -39,12 +39,10 @@ const TTSEnhancedVariant: React.FC<TTSEnhancedVariantProps> = ({
   showVoiceSelector = false,
   className = ''
 }) => {
-  const { trialStatus } = useAuth();
-
   return (
     <TTSErrorBoundary fallbackText={text} onRetry={onRetry}>
       <div className={`space-y-4 p-4 bg-lumi-charcoal/40 rounded-lg border border-lumi-sunset-coral/20 ${className}`}>
-        {showVoiceSelector && trialStatus.canUseTTS && (
+        {showVoiceSelector && (
           <VoiceSelector
             selectedVoice={selectedVoice}
             onVoiceChange={onVoiceChange}

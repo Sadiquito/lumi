@@ -14,7 +14,7 @@ import AudioRecordingProcessingState from './AudioRecordingProcessingState';
 import AudioRecordingListeningState from './AudioRecordingListeningState';
 import AudioRecordingIdleState from './AudioRecordingIdleState';
 import MobileAudioControls from './MobileAudioControls';
-import AudioTrialUsageIndicator from './AudioTrialUsageIndicator';
+
 import AudioRecordingErrorBoundary from './AudioRecordingErrorBoundary';
 import { useNavigate } from 'react-router-dom';
 
@@ -56,7 +56,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     state,
     audioLevel,
     duration,
-    trialStatus,
+
     audioQuality,
     networkStatus,
     retryCount,
@@ -130,30 +130,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     }
   };
 
-  // Check if user is blocked by trial limits
-  if (!canTranscribeToday() && !trialStatus.hasPremiumAccess) {
-    return (
-      <div className="space-y-4">
-        <AudioTrialUsageIndicator variant="detailed" />
-        <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30">
-          <AlertTriangle className="h-4 w-4 text-lumi-sunset-coral" />
-          <AlertDescription className="text-white">
-            <div className="flex items-center justify-between">
-              <span>You've reached your daily voice transcription limit.</span>
-              <Button
-                onClick={() => navigate('/subscription')}
-                size="sm"
-                className="bg-lumi-aquamarine hover:bg-lumi-aquamarine/90 text-white"
-              >
-                <Crown className="w-3 h-3 mr-1" />
-                Upgrade for Unlimited
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+
 
   if (!isSupported) {
     return (
@@ -169,10 +146,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
   return (
     <AudioRecordingErrorBoundary onFallbackToText={() => setShowTextFallback(true)}>
       <div className="space-y-4">
-        {/* Trial usage indicator */}
-        {!trialStatus.hasPremiumAccess && (
-          <AudioTrialUsageIndicator variant="compact" />
-        )}
+
 
         {/* Conversation State Indicator */}
         <ConversationStateIndicator
@@ -326,11 +300,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
                     {state.isPaused ? "Paused" : "Recording..."}
                   </span>
                 </div>
-                {!trialStatus.hasPremiumAccess && (
-                  <div className="text-xs text-white/50 mt-1">
-                    {remaining.daily} transcription{remaining.daily !== 1 ? 's' : ''} remaining today
-                  </div>
-                )}
+
               </div>
             )}
           </CardContent>

@@ -10,8 +10,7 @@ interface TTSUsageStats {
   lastUsed: string | null;
 }
 
-const TRIAL_DAILY_LIMIT = 5;
-const TRIAL_WEEKLY_LIMIT = 20;
+// No limits - all users have unlimited TTS access
 
 export const useTTSUsageTracking = () => {
   const [usage, setUsage] = useState<TTSUsageStats>({
@@ -21,7 +20,7 @@ export const useTTSUsageTracking = () => {
     lastUsed: null
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { user, trialStatus } = useAuth();
+  const { user } = useAuth();
 
   const fetchUsage = async () => {
     if (!user?.id) return;
@@ -75,16 +74,11 @@ export const useTTSUsageTracking = () => {
   };
 
   const canUseToday = () => {
-    if (trialStatus.hasPremiumAccess) return true;
-    return usage.dailyUsage < TRIAL_DAILY_LIMIT;
+    return true; // All users have unlimited TTS access
   };
 
   const getRemainingUsage = () => {
-    if (trialStatus.hasPremiumAccess) return { daily: Infinity, weekly: Infinity };
-    return {
-      daily: Math.max(0, TRIAL_DAILY_LIMIT - usage.dailyUsage),
-      weekly: Math.max(0, TRIAL_WEEKLY_LIMIT - usage.weeklyUsage)
-    };
+    return { daily: Infinity, weekly: Infinity }; // unlimited for all users
   };
 
   useEffect(() => {
@@ -99,8 +93,8 @@ export const useTTSUsageTracking = () => {
     getRemainingUsage,
     refreshUsage: fetchUsage,
     limits: {
-      dailyLimit: TRIAL_DAILY_LIMIT,
-      weeklyLimit: TRIAL_WEEKLY_LIMIT
+      dailyLimit: Infinity,
+      weeklyLimit: Infinity
     }
   };
 };
