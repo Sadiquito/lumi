@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Star, Heart, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/components/SimpleAuthProvider";
 import { useEffect } from "react";
 
 const Landing = () => {
