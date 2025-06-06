@@ -71,11 +71,20 @@ export const useAudioRecordingCore = ({
   useEffect(() => {
     if (audioLevel > 0) {
       if (audioLevel < 0.05) {
-        setAudioQuality('poor');
+        setAudioQuality({
+          level: 'poor',
+          signalToNoise: audioLevel
+        });
       } else if (audioLevel < 0.15) {
-        setAudioQuality('low');
+        setAudioQuality({
+          level: 'fair',
+          signalToNoise: audioLevel
+        });
       } else {
-        setAudioQuality('good');
+        setAudioQuality({
+          level: 'good',
+          signalToNoise: audioLevel
+        });
       }
     }
   }, [audioLevel, setAudioQuality]);
@@ -126,7 +135,10 @@ export const useAudioRecordingCore = ({
 
     const started = await startRecording();
     if (started) {
-      setAudioQuality('good');
+      setAudioQuality({
+        level: 'good',
+        signalToNoise: 0.8
+      });
       toast({
         title: "Recording started",
         description: trialStatus.hasPremiumAccess 
@@ -146,7 +158,7 @@ export const useAudioRecordingCore = ({
   };
 
   const handleStopRecording = () => {
-    if (audioQuality === 'poor') {
+    if (audioQuality.level === 'poor') {
       toast({
         title: "Low audio quality detected",
         description: "The recording may not transcribe well. Consider recording again.",

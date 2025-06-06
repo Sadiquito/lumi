@@ -1,7 +1,13 @@
+
 export interface ConversationData {
   id: string;
   transcript: string;
   ai_response: string;
+  audioBlob?: Blob;
+  duration?: number;
+  quality?: AudioQuality;
+  timestamp?: Date;
+  retryCount?: number;
 }
 
 export interface AudioQualityMetadata {

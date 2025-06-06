@@ -1,9 +1,13 @@
 
 import { useState } from 'react';
+import { AudioQuality } from '@/types/audioRecording';
 
 export const useAudioRecordingState = () => {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
-  const [audioQuality, setAudioQuality] = useState<'good' | 'low' | 'poor'>('good');
+  const [audioQuality, setAudioQuality] = useState<AudioQuality>({
+    level: 'good',
+    signalToNoise: 0.8
+  });
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline'>('online');
   const [retryCount, setRetryCount] = useState(0);
 

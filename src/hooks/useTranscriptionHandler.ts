@@ -266,11 +266,12 @@ export const useTranscriptionHandler = ({
         audio_size: audioBlob.size
       });
       
-      // Store conversation data
+      // Store conversation data with all required fields
       const newConversationData: ConversationData = {
         id: crypto.randomUUID(),
         transcript,
         ai_response: '', // Will be filled later
+        audioBlob,
         duration,
         quality: audioQuality,
         timestamp: new Date(),
