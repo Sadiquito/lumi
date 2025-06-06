@@ -118,12 +118,12 @@ async function checkUsageLimits(userId: string): Promise<boolean> {
   }
 }
 
-async function transcribeWithRetry(formData: FormData, maxRetries = 3): Promise<any> {
+async function transcribeWithRetry(formData: FormData, maxRetries = 2): Promise<any> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Transcription attempt ${attempt}/${maxRetries}`);
+      console.log(`Whisper transcription attempt ${attempt}/${maxRetries}`);
       
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -138,25 +138,53 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 3): Promise<
         
         // Handle specific OpenAI errors
         if (response.status === 401) {
-          throw new Error('OpenAI API key is invalid or expired');
+          throw new Error('TRANSCRIPTION_AUTH_ERROR');
         } else if (response.status === 429) {
-          throw new Error('OpenAI API rate limit exceeded. Please try again later');
+          // Rate limited, retry with exponential backoff
+          if (attempt < maxRetries) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          } else {
+            throw new Error('TRANSCRIPTION_RATE_LIMIT');
+          }
         } else if (response.status === 413) {
-          throw new Error('Audio file is too large. Please record shorter messages');
+          throw new Error('TRANSCRIPTION_FILE_TOO_LARGE');
         } else if (response.status >= 500) {
-          throw new Error('OpenAI service is temporarily unavailable. Please try again');
+          // Server error, retry
+          if (attempt < maxRetries) {
+            console.log(`Server error ${response.status}, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            continue;
+          } else {
+            throw new Error('TRANSCRIPTION_SERVER_ERROR');
+          }
         }
         
-        throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
+        throw new Error(`TRANSCRIPTION_API_ERROR: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      if (!result.text || result.text.trim().length === 0) {
+        throw new Error('TRANSCRIPTION_NO_SPEECH');
+      }
+
+      return result;
     } catch (error) {
       lastError = error as Error;
-      console.error(`Attempt ${attempt} failed:`, error);
+      console.error(`Transcription attempt ${attempt} failed:`, error);
+      
+      // Don't retry for certain errors
+      if (error.message.includes('TRANSCRIPTION_AUTH_ERROR') || 
+          error.message.includes('TRANSCRIPTION_FILE_TOO_LARGE') ||
+          error.message.includes('TRANSCRIPTION_NO_SPEECH')) {
+        break;
+      }
       
       if (attempt < maxRetries) {
-        // Exponential backoff: wait 1s, 2s, 4s
+        // Exponential backoff for retryable errors
         const delay = Math.pow(2, attempt - 1) * 1000;
         console.log(`Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -164,7 +192,7 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 3): Promise<
     }
   }
 
-  throw lastError || new Error('All transcription attempts failed');
+  throw lastError || new Error('TRANSCRIPTION_UNKNOWN_ERROR');
 }
 
 serve(async (req) => {
@@ -178,7 +206,8 @@ serve(async (req) => {
       console.error('OpenAI API key not configured');
       return new Response(
         JSON.stringify({ 
-          error: 'Transcription service is temporarily unavailable. Please try text input instead.' 
+          error: 'TRANSCRIPTION_SERVICE_UNAVAILABLE',
+          fallback_message: 'Voice transcription is temporarily unavailable. Please use text input.'
         }),
         {
           status: 503,
@@ -190,14 +219,32 @@ serve(async (req) => {
     // Get user ID from JWT
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      throw new Error('Authentication required');
+      return new Response(
+        JSON.stringify({ 
+          error: 'TRANSCRIPTION_AUTH_REQUIRED',
+          fallback_message: 'Please sign in to use voice features.'
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      throw new Error('Invalid authentication');
+      return new Response(
+        JSON.stringify({ 
+          error: 'TRANSCRIPTION_AUTH_INVALID',
+          fallback_message: 'Please sign in again to use voice features.'
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     // Check usage limits
@@ -205,7 +252,8 @@ serve(async (req) => {
     if (!canUse) {
       return new Response(
         JSON.stringify({ 
-          error: 'Daily transcription limit reached. Upgrade for unlimited access.' 
+          error: 'TRANSCRIPTION_LIMIT_REACHED',
+          fallback_message: 'Daily transcription limit reached. Please use text input or upgrade for unlimited access.'
         }),
         {
           status: 429,
@@ -217,7 +265,16 @@ serve(async (req) => {
     const requestData: TranscriptionRequest = await req.json();
     
     if (!requestData.audio) {
-      throw new Error('No audio data provided');
+      return new Response(
+        JSON.stringify({ 
+          error: 'TRANSCRIPTION_NO_AUDIO',
+          fallback_message: 'No audio data provided. Please try recording again.'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     console.log('Processing audio transcription request...');
@@ -231,12 +288,30 @@ serve(async (req) => {
       audioLength = binaryAudio.length / (16000 * 2); // Estimate duration in seconds
     } catch (error) {
       console.error('Audio processing error:', error);
-      throw new Error('Invalid audio data format');
+      return new Response(
+        JSON.stringify({ 
+          error: 'TRANSCRIPTION_INVALID_AUDIO',
+          fallback_message: 'Invalid audio format. Please try recording again.'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     // Validate audio size
     if (binaryAudio.length > 25 * 1024 * 1024) { // 25MB limit
-      throw new Error('Audio file is too large. Please record shorter messages');
+      return new Response(
+        JSON.stringify({ 
+          error: 'TRANSCRIPTION_FILE_TOO_LARGE',
+          fallback_message: 'Audio file is too large. Please record shorter messages or use text input.'
+        }),
+        { 
+          status: 413, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     // Prepare form data for OpenAI
@@ -256,11 +331,6 @@ serve(async (req) => {
 
     // Transcribe with retry logic
     const result = await transcribeWithRetry(formData);
-
-    // Validate transcription result
-    if (!result.text || result.text.trim().length === 0) {
-      throw new Error('No speech detected in audio. Please speak clearly and try again');
-    }
 
     // Track usage after successful transcription
     await trackTranscriptionUsage(user.id, audioLength);
@@ -284,26 +354,34 @@ serve(async (req) => {
   } catch (error) {
     console.error('Transcription error:', error);
     
-    const errorMessage = error instanceof Error ? error.message : 'Transcription failed';
+    const errorMessage = error instanceof Error ? error.message : 'TRANSCRIPTION_UNKNOWN_ERROR';
     
-    // Provide user-friendly error messages
-    let userMessage = errorMessage;
-    if (errorMessage.includes('rate limit')) {
-      userMessage = 'Service is busy. Please wait a moment and try again';
-    } else if (errorMessage.includes('temporarily unavailable') || errorMessage.includes('timeout')) {
-      userMessage = 'Voice service is temporarily unavailable. Please try text input instead';
-    } else if (errorMessage.includes('Invalid audio') || errorMessage.includes('No speech detected')) {
-      userMessage = errorMessage; // Keep specific audio-related messages
-    } else if (errorMessage.includes('Authentication') || errorMessage.includes('Invalid authentication')) {
-      userMessage = 'Please sign in again to continue';
-    } else {
-      userMessage = 'Voice transcription failed. Please try text input instead';
+    // Map specific errors to user-friendly messages
+    let fallbackMessage = 'Voice transcription failed. Please use text input.';
+    let statusCode = 500;
+    
+    if (errorMessage.includes('TRANSCRIPTION_RATE_LIMIT')) {
+      fallbackMessage = 'Voice service is busy. Please wait a moment and try again, or use text input.';
+      statusCode = 429;
+    } else if (errorMessage.includes('TRANSCRIPTION_SERVER_ERROR')) {
+      fallbackMessage = 'Voice service is temporarily unavailable. Please use text input.';
+      statusCode = 503;
+    } else if (errorMessage.includes('TRANSCRIPTION_NO_SPEECH')) {
+      fallbackMessage = 'No speech detected in audio. Please speak clearly and try again, or use text input.';
+      statusCode = 400;
+    } else if (errorMessage.includes('TRANSCRIPTION_AUTH_ERROR')) {
+      fallbackMessage = 'Voice service authentication failed. Please use text input.';
+      statusCode = 401;
     }
     
     return new Response(
-      JSON.stringify({ error: userMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        fallback_message: fallbackMessage,
+        should_fallback_to_text: true
+      }),
       {
-        status: 500,
+        status: statusCode,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

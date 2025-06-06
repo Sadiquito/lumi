@@ -20,7 +20,9 @@ serve(async (req) => {
       console.error('ElevenLabs API key not configured')
       return new Response(
         JSON.stringify({ 
-          error: 'Voice generation service is temporarily unavailable. The text response is available above.' 
+          error: 'TTS_SERVICE_UNAVAILABLE',
+          fallback_message: 'Voice generation is temporarily unavailable. Text response is available above.',
+          should_fallback_to_text: true
         }),
         { 
           status: 503, 
@@ -39,7 +41,11 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
+        JSON.stringify({ 
+          error: 'TTS_AUTH_REQUIRED',
+          fallback_message: 'Please sign in to use voice features.',
+          should_fallback_to_text: true
+        }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -53,7 +59,11 @@ serve(async (req) => {
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Please sign in again to continue' }),
+        JSON.stringify({ 
+          error: 'TTS_AUTH_INVALID',
+          fallback_message: 'Please sign in again to use voice features.',
+          should_fallback_to_text: true
+        }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -65,7 +75,11 @@ serve(async (req) => {
 
     if (!text || text.trim().length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Text is required for voice generation' }),
+        JSON.stringify({ 
+          error: 'TTS_NO_TEXT',
+          fallback_message: 'No text provided for voice generation.',
+          should_fallback_to_text: true
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -76,7 +90,11 @@ serve(async (req) => {
     // Validate text length
     if (text.length > 5000) {
       return new Response(
-        JSON.stringify({ error: 'Text is too long for voice generation. Please use shorter responses.' }),
+        JSON.stringify({ 
+          error: 'TTS_TEXT_TOO_LONG',
+          fallback_message: 'Text is too long for voice generation. Please use shorter responses.',
+          should_fallback_to_text: true
+        }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -104,9 +122,9 @@ serve(async (req) => {
     // Call ElevenLabs API with retry logic
     let elevenLabsResponse: Response;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 2;
 
-    while (retryCount < maxRetries) {
+    while (retryCount <= maxRetries) {
       try {
         elevenLabsResponse = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
@@ -133,7 +151,11 @@ serve(async (req) => {
         if (elevenLabsResponse.status === 401) {
           console.error('ElevenLabs API key is invalid')
           return new Response(
-            JSON.stringify({ error: 'Voice service authentication failed. Please try text mode.' }),
+            JSON.stringify({ 
+              error: 'TTS_AUTH_ERROR',
+              fallback_message: 'Voice service authentication failed. Text response is available above.',
+              should_fallback_to_text: true
+            }),
             { 
               status: 503, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -141,14 +163,19 @@ serve(async (req) => {
           )
         } else if (elevenLabsResponse.status === 429) {
           // Rate limited, try again after delay
-          retryCount++
           if (retryCount < maxRetries) {
-            console.log(`Rate limited, retrying in ${retryCount * 2} seconds...`)
-            await new Promise(resolve => setTimeout(resolve, retryCount * 2000))
+            const delay = Math.pow(2, retryCount + 1) * 1000; // Exponential backoff
+            console.log(`Rate limited, retrying in ${delay}ms...`)
+            await new Promise(resolve => setTimeout(resolve, delay))
+            retryCount++
             continue
           } else {
             return new Response(
-              JSON.stringify({ error: 'Voice service is busy. Please try again in a moment.' }),
+              JSON.stringify({ 
+                error: 'TTS_RATE_LIMIT',
+                fallback_message: 'Voice service is busy. Text response is available above.',
+                should_fallback_to_text: true
+              }),
               { 
                 status: 429, 
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -157,26 +184,40 @@ serve(async (req) => {
           }
         } else if (elevenLabsResponse.status >= 500) {
           // Server error, retry
-          retryCount++
           if (retryCount < maxRetries) {
             console.log(`Server error ${elevenLabsResponse.status}, retrying...`)
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+            await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000))
+            retryCount++
             continue
+          } else {
+            return new Response(
+              JSON.stringify({ 
+                error: 'TTS_SERVER_ERROR',
+                fallback_message: 'Voice service is temporarily unavailable. Text response is available above.',
+                should_fallback_to_text: true
+              }),
+              { 
+                status: 503, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            )
           }
         }
 
         // If we get here, it's a non-retryable error
         const errorData = await elevenLabsResponse.text()
         console.error('ElevenLabs API error:', errorData)
-        throw new Error(`Voice generation failed: ${elevenLabsResponse.status}`)
+        throw new Error(`TTS_API_ERROR: ${elevenLabsResponse.status}`)
 
       } catch (error) {
-        retryCount++
+        console.error(`ElevenLabs attempt ${retryCount + 1} failed:`, error)
+        
         if (retryCount >= maxRetries) {
-          console.error('All ElevenLabs retry attempts failed:', error)
           return new Response(
             JSON.stringify({ 
-              error: 'Voice generation service is temporarily unavailable. The text response is available above.'
+              error: 'TTS_ALL_ATTEMPTS_FAILED',
+              fallback_message: 'Voice generation failed after multiple attempts. Text response is available above.',
+              should_fallback_to_text: true
             }),
             { 
               status: 503, 
@@ -185,8 +226,11 @@ serve(async (req) => {
           )
         }
         
-        console.log(`Attempt ${retryCount} failed, retrying...`)
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+        // Exponential backoff for network errors
+        const delay = Math.pow(2, retryCount + 1) * 1000
+        console.log(`Network error, retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        retryCount++
       }
     }
 
@@ -194,7 +238,17 @@ serve(async (req) => {
     const audioBuffer = await elevenLabsResponse.arrayBuffer()
     
     if (audioBuffer.byteLength === 0) {
-      throw new Error('Received empty audio response')
+      return new Response(
+        JSON.stringify({ 
+          error: 'TTS_EMPTY_RESPONSE',
+          fallback_message: 'Voice generation returned empty audio. Text response is available above.',
+          should_fallback_to_text: true
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
     }
     
     // Convert to base64 for transport
@@ -210,7 +264,8 @@ serve(async (req) => {
         audio_url: audioDataUrl,
         audio_size: audioBuffer.byteLength,
         voice_id,
-        model_id
+        model_id,
+        fallback: false
       }),
       { 
         status: 200, 
@@ -221,19 +276,23 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in elevenlabs-tts function:', error)
     
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    let userMessage = 'Voice generation failed. The text response is available above.'
+    const errorMessage = error instanceof Error ? error.message : 'TTS_UNKNOWN_ERROR'
+    
+    let fallbackMessage = 'Voice generation failed. Text response is available above.'
     
     if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
-      userMessage = 'Network issue detected. Voice generation is temporarily unavailable.'
-    } else if (errorMessage.includes('Rate limit') || errorMessage.includes('busy')) {
-      userMessage = 'Voice service is busy. Please try again in a moment.'
+      fallbackMessage = 'Network issue detected. Voice generation is temporarily unavailable.'
+    } else if (errorMessage.includes('TTS_RATE_LIMIT') || errorMessage.includes('busy')) {
+      fallbackMessage = 'Voice service is busy. Please try again in a moment.'
+    } else if (errorMessage.includes('TTS_AUTH_ERROR')) {
+      fallbackMessage = 'Voice service authentication failed. Please contact support if this persists.'
     }
     
     return new Response(
       JSON.stringify({ 
-        error: userMessage,
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage,
+        fallback_message: fallbackMessage,
+        should_fallback_to_text: true
       }),
       { 
         status: 500, 

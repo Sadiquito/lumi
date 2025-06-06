@@ -90,7 +90,7 @@ Communication style:
   return messages;
 };
 
-async function generateResponseWithRetry(messages: any[], maxRetries = 3): Promise<any> {
+async function generateResponseWithRetry(messages: any[], maxRetries = 2): Promise<any> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -118,7 +118,7 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 3): Promi
         
         // Handle specific OpenAI errors
         if (response.status === 401) {
-          throw new Error('OpenAI API key is invalid or expired');
+          throw new Error('OPENAI_AUTH_ERROR');
         } else if (response.status === 429) {
           // Rate limited, try again after delay
           if (attempt < maxRetries) {
@@ -127,7 +127,7 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 3): Promi
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           } else {
-            throw new Error('OpenAI API rate limit exceeded. Please try again later');
+            throw new Error('OPENAI_RATE_LIMIT');
           }
         } else if (response.status >= 500) {
           // Server error, retry
@@ -136,18 +136,32 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 3): Promi
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
             continue;
           } else {
-            throw new Error('OpenAI service is temporarily unavailable');
+            throw new Error('OPENAI_SERVER_ERROR');
           }
+        } else if (response.status === 400) {
+          throw new Error('OPENAI_BAD_REQUEST');
         }
         
         console.error('OpenAI API error:', errorData);
-        throw new Error(`OpenAI API error: ${response.status}`);
+        throw new Error(`OPENAI_API_ERROR: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+        throw new Error('OPENAI_INVALID_RESPONSE');
+      }
+
+      return result;
     } catch (error) {
       lastError = error as Error;
-      console.error(`Attempt ${attempt} failed:`, error);
+      console.error(`OpenAI attempt ${attempt} failed:`, error);
+      
+      // Don't retry for certain errors
+      if (error.message.includes('OPENAI_AUTH_ERROR') || 
+          error.message.includes('OPENAI_BAD_REQUEST')) {
+        break;
+      }
       
       if (attempt < maxRetries) {
         // Exponential backoff for network errors
@@ -158,8 +172,20 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 3): Promi
     }
   }
 
-  throw lastError || new Error('All OpenAI API attempts failed');
+  throw lastError || new Error('OPENAI_ALL_ATTEMPTS_FAILED');
 }
+
+const getFallbackResponse = (userMessage?: string): string => {
+  const fallbackResponses = [
+    "i'm having trouble connecting to my AI right now, but i'm still here with you. what's been on your mind lately?",
+    "my systems are experiencing a brief hiccup, but let's continue our conversation. how are you feeling today?",
+    "i'm encountering some technical difficulties, but i'd love to hear what you'd like to explore together.",
+    "there's a temporary issue with my AI processing, but i'm curious - what would you like to talk about?",
+    "while i work through some technical challenges, i'm wondering what's been weighing on your heart recently?"
+  ];
+  
+  return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -173,10 +199,12 @@ serve(async (req) => {
       console.error('OpenAI API key not configured');
       return new Response(
         JSON.stringify({ 
-          error: 'AI response service is temporarily unavailable. Please try again later.' 
+          response: getFallbackResponse(),
+          fallback: true,
+          error: 'AI_SERVICE_UNAVAILABLE'
         }),
         {
-          status: 503,
+          status: 200, // Return 200 to allow conversation to continue
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
@@ -193,20 +221,20 @@ serve(async (req) => {
 
     // Validate required fields
     if (!user_id) {
-      throw new Error('user_id is required');
+      throw new Error('VALIDATION_USER_ID_REQUIRED');
     }
 
     if (!conversation_history || !Array.isArray(conversation_history)) {
-      throw new Error('conversation_history must be an array');
+      throw new Error('VALIDATION_CONVERSATION_HISTORY_REQUIRED');
     }
 
     if (!persona_state || typeof persona_state !== 'object') {
-      throw new Error('persona_state must be an object');
+      throw new Error('VALIDATION_PERSONA_STATE_REQUIRED');
     }
 
     // Validate conversation history content
     if (conversation_history.length === 0) {
-      throw new Error('conversation_history cannot be empty');
+      throw new Error('VALIDATION_CONVERSATION_HISTORY_EMPTY');
     }
 
     // Build the AI prompt based on conversation and persona
@@ -219,7 +247,7 @@ serve(async (req) => {
     const lumiResponse = openAIData.choices?.[0]?.message?.content;
 
     if (!lumiResponse || lumiResponse.trim().length === 0) {
-      throw new Error('No response generated from OpenAI');
+      throw new Error('OPENAI_EMPTY_RESPONSE');
     }
 
     console.log('Generated Lumi response:', lumiResponse.substring(0, 100) + '...');
@@ -227,7 +255,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         response: lumiResponse,
-        usage: openAIData.usage 
+        usage: openAIData.usage,
+        fallback: false
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -237,26 +266,31 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in generate-lumi-response function:', error);
     
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
-    let userMessage = 'I\'m having trouble generating a response right now. Please try again in a moment.';
+    const errorMessage = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
     
-    if (errorMessage.includes('rate limit')) {
-      userMessage = 'I\'m receiving a lot of requests right now. Please wait a moment and try again.';
-    } else if (errorMessage.includes('temporarily unavailable') || errorMessage.includes('timeout')) {
-      userMessage = 'My AI service is temporarily unavailable. Please try again in a few minutes.';
-    } else if (errorMessage.includes('API key')) {
-      userMessage = 'There\'s a configuration issue. Please contact support if this persists.';
-    } else if (errorMessage.includes('required') || errorMessage.includes('must be')) {
-      userMessage = 'There was an issue with your request. Please try starting a new conversation.';
+    // Determine fallback response based on error type
+    let fallbackResponse = getFallbackResponse();
+    let shouldContinue = true;
+    
+    if (errorMessage.includes('VALIDATION_')) {
+      fallbackResponse = "i'm having trouble understanding your request. could you try sharing your thoughts again?";
+    } else if (errorMessage.includes('OPENAI_RATE_LIMIT')) {
+      fallbackResponse = "i'm receiving a lot of conversations right now. let me take a moment and we can continue chatting.";
+    } else if (errorMessage.includes('OPENAI_SERVER_ERROR') || errorMessage.includes('OPENAI_ALL_ATTEMPTS_FAILED')) {
+      fallbackResponse = "my AI is taking a brief rest, but i'm still here. what's on your mind today?";
+    } else if (errorMessage.includes('OPENAI_AUTH_ERROR')) {
+      fallbackResponse = "there's a technical issue on my end, but let's keep our conversation going. how can i support you?";
     }
     
     return new Response(
       JSON.stringify({ 
-        error: userMessage,
-        details: error.toString()
+        response: fallbackResponse,
+        fallback: true,
+        error: errorMessage,
+        should_continue: shouldContinue
       }),
       {
-        status: 500,
+        status: 200, // Always return 200 to allow conversation to continue
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

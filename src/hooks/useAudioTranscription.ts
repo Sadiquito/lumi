@@ -33,46 +33,57 @@ export const useAudioTranscription = () => {
         setTranscriptionProgress(100);
 
         if (error) {
-          // Handle specific error types from the backend
-          let errorMessage = error.message || 'Transcription failed';
-          let shouldFallback = false;
+          const errorMessage = error.message || 'Transcription failed';
           
-          if (errorMessage.includes('Daily transcription limit reached')) {
+          // Handle specific error types with graceful fallback
+          if (errorMessage.includes('TRANSCRIPTION_LIMIT_REACHED')) {
             toast({
               title: "Daily Limit Reached",
-              description: "You've used all voice features today. Upgrade for unlimited access.",
-              variant: "destructive",
+              description: "Switching to text input for today. Upgrade for unlimited voice features.",
             });
-            shouldFallback = true;
-          } else if (errorMessage.includes('temporarily unavailable')) {
-            errorMessage = 'Voice transcription is temporarily unavailable. Please try text input.';
-            shouldFallback = true;
-          } else if (errorMessage.includes('sign in again')) {
+            if (onFallbackToText) onFallbackToText();
+            throw new Error('FALLBACK_TO_TEXT');
+          } else if (errorMessage.includes('TRANSCRIPTION_SERVICE_UNAVAILABLE') || 
+                     errorMessage.includes('TRANSCRIPTION_SERVER_ERROR')) {
+            toast({
+              title: "Voice Temporarily Unavailable",
+              description: "Switching to text input. Voice will return shortly.",
+            });
+            if (onFallbackToText) onFallbackToText();
+            throw new Error('FALLBACK_TO_TEXT');
+          } else if (errorMessage.includes('TRANSCRIPTION_AUTH_REQUIRED') || 
+                     errorMessage.includes('TRANSCRIPTION_AUTH_INVALID')) {
             toast({
               title: "Authentication Required",
               description: "Please sign in again to continue using voice features.",
               variant: "destructive",
             });
-            shouldFallback = true;
-          } else if (errorMessage.includes('too large') || errorMessage.includes('too long')) {
+            if (onFallbackToText) onFallbackToText();
+            throw new Error('FALLBACK_TO_TEXT');
+          } else if (errorMessage.includes('TRANSCRIPTION_FILE_TOO_LARGE')) {
             toast({
-              title: "Audio Too Long",
-              description: "Please record shorter messages or try text input.",
-              variant: "destructive",
+              title: "Recording Too Long",
+              description: "Please record shorter messages or use text input.",
             });
-            shouldFallback = true;
-          } else if (errorMessage.includes('No speech detected')) {
+            if (onFallbackToText) onFallbackToText();
+            throw new Error('FALLBACK_TO_TEXT');
+          } else if (errorMessage.includes('TRANSCRIPTION_NO_SPEECH')) {
             toast({
               title: "No Speech Detected",
               description: "Please speak clearly and try again, or use text input.",
             });
-            shouldFallback = true;
+            // For no speech, allow retry
+            throw new Error('RETRY_NEEDED');
+          } else if (errorMessage.includes('TRANSCRIPTION_RATE_LIMIT')) {
+            toast({
+              title: "Service Busy",
+              description: "Voice service is busy. Please try again in a moment.",
+            });
+            throw new Error('RETRY_NEEDED');
           }
           
-          if (shouldFallback && onFallbackToText) {
-            onFallbackToText();
-          }
-          
+          // Generic error handling
+          console.error('Transcription error:', errorMessage);
           throw new Error(errorMessage);
         }
 
@@ -82,7 +93,7 @@ export const useAudioTranscription = () => {
         console.log('Transcription completed:', { transcript, confidence });
 
         if (!transcript.trim()) {
-          throw new Error('No speech detected in audio');
+          throw new Error('TRANSCRIPTION_NO_SPEECH');
         }
 
         if (confidence < 0.3) {
@@ -106,35 +117,27 @@ export const useAudioTranscription = () => {
       console.error('Transcription error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not transcribe your audio';
       
+      // Handle fallback scenarios
+      if (errorMessage === 'FALLBACK_TO_TEXT') {
+        throw error; // Re-throw to trigger fallback
+      }
+      
       // Determine if we should retry based on error type
-      if (retryCount < 2 && (
-        errorMessage.includes('network') || 
-        errorMessage.includes('timeout') ||
-        errorMessage.includes('temporarily unavailable')
-      )) {
+      if (retryCount < 1 && errorMessage === 'RETRY_NEEDED') {
+        console.log('Retrying transcription...');
         throw new Error('RETRY_NEEDED');
       }
       
-      // For other errors, provide user-friendly feedback
-      let userMessage = errorMessage;
-      if (errorMessage.includes('rate limit') || errorMessage.includes('busy')) {
-        userMessage = 'Voice service is busy. Please try text input instead.';
-      } else if (errorMessage.includes('authentication') || errorMessage.includes('sign in')) {
-        userMessage = 'Please sign in again to use voice features.';
-      } else if (!errorMessage.includes('Daily transcription limit') && 
-                 !errorMessage.includes('No speech detected') &&
-                 !errorMessage.includes('too large')) {
-        userMessage = 'Voice transcription failed. Please try text input instead.';
-      }
-      
-      toast({
-        title: "Transcription Failed",
-        description: userMessage,
-        variant: "destructive",
-      });
-      
-      if (onFallbackToText && !errorMessage.includes('RETRY_NEEDED')) {
-        onFallbackToText();
+      // For other errors after retries, fallback to text
+      if (retryCount >= 1) {
+        toast({
+          title: "Voice Not Working",
+          description: "Switching to text input. Please type your message.",
+        });
+        if (onFallbackToText) {
+          onFallbackToText();
+        }
+        throw new Error('FALLBACK_TO_TEXT');
       }
       
       throw error;
