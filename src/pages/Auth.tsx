@@ -6,48 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Star, Eye, EyeOff } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/components/SimpleAuthProvider";
 import { useToast } from "@/hooks/use-toast";
-import PasswordReset from "@/components/PasswordReset";
 import { supabase } from "@/integrations/supabase/client";
-import SocialAuthButtons from "@/components/SocialAuthButtons";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signUp, signIn, user } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
-  // Check if this is a password reset redirect
-  const isPasswordReset = searchParams.get('reset') === 'true';
-
   // Redirect authenticated users
   useEffect(() => {
-    if (user && !isPasswordReset) {
+    if (user) {
       navigate('/journal', { replace: true });
     }
-  }, [user, navigate, isPasswordReset]);
-
-  useEffect(() => {
-    if (isPasswordReset) {
-      // Handle password reset flow
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      if (accessToken) {
-        setShowPasswordReset(false);
-        setIsSignUp(false);
-      }
-    }
-  }, [isPasswordReset]);
+  }, [user, navigate]);
 
   // Form validation
   const validateForm = () => {
@@ -69,12 +50,6 @@ const Auth = () => {
       errors.name = "Name is required";
     }
 
-    if (isPasswordReset && !newPassword.trim()) {
-      errors.newPassword = "New password is required";
-    } else if (isPasswordReset && newPassword.length < 6) {
-      errors.newPassword = "Password must be at least 6 characters";
-    }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -90,37 +65,33 @@ const Auth = () => {
     setFormErrors({});
 
     try {
-      // Handle password update for reset flow
-      if (isPasswordReset && newPassword) {
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-
-        if (error) {
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Password updated successfully",
-            description: "Your password has been updated.",
-          });
-          navigate('/journal', { replace: true });
-        }
-        return;
-      }
-
-      // Regular sign in/up flow
       let result;
       if (isSignUp) {
-        result = await signUp(email.trim(), password, name.trim());
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              name: name.trim()
+            }
+          }
+        });
+        result = { error };
       } else {
-        result = await signIn(email.trim(), password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password
+        });
+        result = { error };
       }
 
-      if (!result.error) {
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: result.error.message,
+          variant: "destructive",
+        });
+      } else {
         if (isSignUp) {
           toast({
             title: "Welcome to Lumi!",
@@ -146,31 +117,6 @@ const Auth = () => {
     }
   };
 
-  // Show password reset component
-  if (showPasswordReset) {
-    return (
-      <div className="min-h-screen bg-cosmic-gradient">
-        <div className="flex items-center p-4 md:p-6">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/')}
-            className="text-white hover:bg-white/10 mr-3"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl font-medium text-white font-title">
-            reset password
-          </h1>
-        </div>
-
-        <div className="max-w-md mx-auto px-4 md:px-6 pb-8">
-          <PasswordReset onBack={() => setShowPasswordReset(false)} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-cosmic-gradient">
       {/* Header */}
@@ -184,7 +130,7 @@ const Auth = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-2xl font-medium text-white font-title">
-          {isPasswordReset ? "update password" : isSignUp ? "join lumi" : "welcome back"}
+          {isSignUp ? "join lumi" : "welcome back"}
         </h1>
       </div>
 
@@ -196,161 +142,97 @@ const Auth = () => {
               <CardTitle className="text-white text-xl font-title">lumi</CardTitle>
             </div>
             <p className="text-white/70 font-sans">
-              {isPasswordReset 
-                ? "enter your new password" 
-                : isSignUp 
-                  ? "start your daily reflection journey" 
-                  : "continue your reflection practice"
+              {isSignUp 
+                ? "start your daily reflection journey" 
+                : "continue your reflection practice"
               }
             </p>
           </CardHeader>
           <CardContent>
-            {/* Social Auth Buttons - Only show for regular auth flows */}
-            {!isPasswordReset && (
-              <>
-                <SocialAuthButtons isSignUp={isSignUp} />
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/20"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-lumi-charcoal/80 px-3 text-white/60 font-sans">or continue with email</span>
-                  </div>
-                </div>
-              </>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Password reset form */}
-              {isPasswordReset && (
+              {isSignUp && (
                 <div className="space-y-2">
-                  <Label className="text-white/80 font-sans">new password</Label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40 pr-10"
-                      placeholder="your new password"
-                      required
-                      minLength={6}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 text-white/60 hover:text-white"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  {formErrors.newPassword && (
-                    <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.newPassword}</p>
+                  <Label className="text-white/80 font-sans">name</Label>
+                  <Input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
+                    placeholder="your name"
+                    required
+                  />
+                  {formErrors.name && (
+                    <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.name}</p>
                   )}
                 </div>
               )}
-
-              {/* Regular auth form */}
-              {!isPasswordReset && (
-                <>
-                  {isSignUp && (
-                    <div className="space-y-2">
-                      <Label className="text-white/80 font-sans">name</Label>
-                      <Input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
-                        placeholder="your name"
-                        required
-                      />
-                      {formErrors.name && (
-                        <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.name}</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <Label className="text-white/80 font-sans">email</Label>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
-                      placeholder="your@email.com"
-                      required
-                    />
-                    {formErrors.email && (
-                      <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.email}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-white/80 font-sans">password</Label>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40 pr-10"
-                        placeholder="your password"
-                        required
-                        minLength={6}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3 text-white/60 hover:text-white"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                    {formErrors.password && (
-                      <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.password}</p>
-                    )}
-                  </div>
-                </>
-              )}
+              
+              <div className="space-y-2">
+                <Label className="text-white/80 font-sans">email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40"
+                  placeholder="your@email.com"
+                  required
+                />
+                {formErrors.email && (
+                  <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.email}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-white/80 font-sans">password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="border-lumi-sunset-coral/20 focus:border-lumi-aquamarine bg-lumi-deep-space/50 text-white placeholder:text-white/40 pr-10"
+                    placeholder="your password"
+                    required
+                    minLength={6}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 text-white/60 hover:text-white"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+                {formErrors.password && (
+                  <p className="text-lumi-sunset-coral text-sm font-sans">{formErrors.password}</p>
+                )}
+              </div>
 
               <Button 
                 type="submit"
                 className="w-full bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 text-lg font-medium rounded-xl font-sans"
                 disabled={loading}
               >
-                {loading ? "..." : isPasswordReset ? "update password" : isSignUp ? "create account" : "sign in"}
+                {loading ? "..." : isSignUp ? "create account" : "sign in"}
               </Button>
             </form>
 
-            {!isPasswordReset && (
-              <div className="mt-6 space-y-2 text-center">
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setFormErrors({});
-                  }}
-                  className="text-lumi-aquamarine hover:text-lumi-aquamarine/80 p-0 h-auto block mx-auto font-sans"
-                >
-                  {isSignUp 
-                    ? "already have an account? sign in" 
-                    : "need an account? sign up"
-                  }
-                </Button>
-                
-                {!isSignUp && (
-                  <Button
-                    variant="link"
-                    onClick={() => setShowPasswordReset(true)}
-                    className="text-white/60 hover:text-white/80 p-0 h-auto block mx-auto font-sans text-sm"
-                  >
-                    forgot your password?
-                  </Button>
-                )}
-              </div>
-            )}
+            <div className="mt-6 text-center">
+              <Button
+                variant="link"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setFormErrors({});
+                }}
+                className="text-lumi-aquamarine hover:text-lumi-aquamarine/80 p-0 h-auto block mx-auto font-sans"
+              >
+                {isSignUp 
+                  ? "already have an account? sign in" 
+                  : "need an account? sign up"
+                }
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

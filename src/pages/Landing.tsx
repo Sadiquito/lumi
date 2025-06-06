@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Star, Heart, Clock } from "lucide-react";
@@ -61,10 +62,10 @@ const Landing = () => {
         </div>
 
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
-          {/* Large Lumi Title in Center - More fantasy/magical styling */}
+          {/* Large Lumi Title in Center */}
           <div className="text-center mb-8 mt-16 relative">
             <h1 className="text-6xl md:text-7xl font-title font-bold tracking-wider relative">
-              {/* Mystical glow effect - larger and more prominent */}
+              {/* Mystical glow effect */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
                 lumi
               </span>
@@ -87,7 +88,7 @@ const Landing = () => {
               <span className="text-lumi-aquamarine font-semibold">journaling</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
-              
+              Your AI companion for daily reflection through natural conversation
             </p>
             <Button 
               onClick={() => navigate('/auth')}
@@ -125,7 +126,7 @@ const Landing = () => {
                 Ready to Begin?
               </h3>
               <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
-                Join thousands who are building meaningful reflection practices with Lumi.
+                Start your daily reflection practice with Lumi.
               </p>
               <Button 
                 onClick={() => navigate('/auth')}
