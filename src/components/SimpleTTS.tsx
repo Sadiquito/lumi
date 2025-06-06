@@ -17,13 +17,16 @@ const SimpleTTS: React.FC<SimpleTTSProps> = ({
   autoPlay = false,
   className = '' 
 }) => {
-  const { speak, stop, isSpeaking } = useTextToSpeech();
+  const { handlePlay, handlePause, isPlaying } = useTextToSpeech({
+    text,
+    autoPlay
+  });
 
   const handleToggle = () => {
-    if (isSpeaking) {
-      stop();
+    if (isPlaying) {
+      handlePause();
     } else {
-      speak(text);
+      handlePlay();
     }
   };
 
@@ -35,7 +38,7 @@ const SimpleTTS: React.FC<SimpleTTSProps> = ({
         onClick={handleToggle}
         className={className}
       >
-        {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        {isPlaying ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
       </Button>
     );
   }
@@ -48,8 +51,8 @@ const SimpleTTS: React.FC<SimpleTTSProps> = ({
         onClick={handleToggle}
         className={className}
       >
-        {isSpeaking ? <VolumeX className="w-3 h-3 mr-1" /> : <Volume2 className="w-3 h-3 mr-1" />}
-        {isSpeaking ? 'Stop' : 'Listen'}
+        {isPlaying ? <VolumeX className="w-3 h-3 mr-1" /> : <Volume2 className="w-3 h-3 mr-1" />}
+        {isPlaying ? 'Stop' : 'Listen'}
       </Button>
     );
   }
@@ -60,8 +63,8 @@ const SimpleTTS: React.FC<SimpleTTSProps> = ({
       onClick={handleToggle}
       className={className}
     >
-      {isSpeaking ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
-      {isSpeaking ? 'Stop Audio' : 'Listen to Response'}
+      {isPlaying ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+      {isPlaying ? 'Stop Audio' : 'Listen to Response'}
     </Button>
   );
 };
