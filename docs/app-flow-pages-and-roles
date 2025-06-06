@@ -1,55 +1,31 @@
-# Lumi - App Flow, Pages, and User Roles
+# Lumi App Flow — Audio-First Reset
 
-## User Roles
+## Pages
 
-- **User:** Journaling customer
-- **Admin (internal):** Developer/admin view of system health & stats
+1️⃣ Landing Page  
+- Basic intro text
+- Login / Signup
 
-## Core Pages
+2️⃣ Journal Page  
+- Large Start Conversation button (centered)
+- Conversation log below button
 
-### Landing Page
-- AI-generated fantasy scene
-- Title, tagline ("a daily moment of reflection")
-- Login/Signup buttons
+---
 
-### Journal Page (Home)
-- Daily AI-generated advice (personalized)
-- "Journal Now" (audio capture via browser)
-- Transcript history with AI questions interwoven
-- Export options (PDF/Excel)
-- Placeholder for printed journal purchase
+## Conversation Loop
 
-### Call Settings Page
-- Set daily call time
-- Missed call retry rules (up to 3 retries/day)
-- Phone number entry & channel selection (Phone/WhatsApp)
+- User clicks Start Conversation
+- Lumi speaks (ElevenLabs)
+- User responds (Mic)
+- Transcription → GPT-4o → Response
+- Loop continues until end of session
+- Conversation stored, persona_state updated
 
-### Subscription Page
-- Pricing display ($33/month or $333/year)
-- Option to purchase your journal entries as a printed book for $100 (button is grayed out as this is not available yet)
-- Stripe-managed customer portal
+---
 
-### Admin Dashboard (Internal Only)
-- Call success rates, durations, journaling frequency stats
-- System health overview
-- No access to user transcripts post-development
+## Roles
 
-## App Flow
-
-1. **Onboarding**
-   - User signs up onto 7-day free trial
-   - Sets call schedule and phone number
-   - Chooses subscription plan
-   - After 7-day trial ends, if user does not subscribe to a paid plan, Lumi no longer calls user and Lumi no longer provides prompts. Free version is simply a web-app that records and transcribes entries.
-
-2. **Daily Use Flow**
-   - Lumi calls at scheduled time (or user journals manually)
-   - Audio transcribed in real-time via AssemblyAI
-   - Transcript analyzed by AI → daily advice generated
-   - Advice shown on Journal Page post-call
-
-3. **Personalization Flow**
-   - Personalization state updated after each journal
-   - AI adapts prompts and reflections accordingly
-   - Longitudinal growth insights evolve over time
+- User: Journaling participant
+- Developer: Access to persona_state for tuning
+- No admin panel required
 
