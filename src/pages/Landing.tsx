@@ -37,7 +37,7 @@ const Landing = () => {
 
   return (
     <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat relative"
+      className="min-h-screen h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
       style={{
         backgroundImage: `url('/lovable-uploads/64e09d9e-4a2f-40b0-8df2-f575927a323c.png')`
       }}
@@ -46,10 +46,10 @@ const Landing = () => {
       <div className="absolute inset-0 bg-black/30"></div>
       
       {/* Content */}
-      <div className="relative z-10">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
+      <div className="relative z-10 h-full">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8 h-full flex flex-col justify-center">
           {/* Large Lumi Title in Center */}
-          <div className="text-center mb-8 mt-16 relative">
+          <div className="text-center mb-8 relative">
             <h1 className="text-6xl md:text-7xl font-title font-bold tracking-wider relative">
               {/* Mystical glow effect */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
@@ -68,7 +68,7 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-title font-semibold text-white mb-6 leading-tight tracking-wide">
+            <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
               superintelligent
               <br />
               <span className="text-lumi-aquamarine font-semibold">journaling</span>
@@ -84,7 +84,7 @@ const Landing = () => {
           </div>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card key={index} className="bg-black/10 backdrop-blur-sm border-white/5 shadow-xl transition-all duration-300 hover:bg-black/20">
                 <CardHeader>
