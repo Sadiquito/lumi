@@ -41,7 +41,15 @@ export const useAudioRecordingCore = ({
     duration
   } = useAudioRecorder({
     maxDuration,
-    onError: handleAudioRecorderError
+    onError: handleAudioRecorderError,
+    onRecordingComplete: (audioBlob: Blob) => {
+      console.log('Audio recording completed:', {
+        size: audioBlob.size,
+        type: audioBlob.type,
+        duration
+      });
+      setRecordedBlob(audioBlob);
+    }
   });
 
   // Monitor network status
@@ -111,6 +119,10 @@ export const useAudioRecordingCore = ({
         return;
       }
     }
+
+    // Clear previous recording
+    setRecordedBlob(null);
+    setRetryCount(0);
 
     const started = await startRecording();
     if (started) {

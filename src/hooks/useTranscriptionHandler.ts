@@ -48,11 +48,14 @@ export const useTranscriptionHandler = ({
   ) => {
     if (!audioBlob) {
       console.error('No audio blob provided for transcription');
+      handleConversationError('No audio data to transcribe');
+      goIdle();
       return;
     }
 
     if (networkStatus === 'offline') {
       handleConversationError('No internet connection available for transcription');
+      goIdle();
       return;
     }
 
@@ -67,7 +70,7 @@ export const useTranscriptionHandler = ({
     setTranscriptionProgress(0);
 
     try {
-      // Use the new Whisper transcription implementation
+      // Use the Whisper transcription implementation
       const transcript = await transcribeAudio(
         audioBlob,
         retryCount,

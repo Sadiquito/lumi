@@ -41,7 +41,7 @@ export const useAudioRecordingFeature = ({
     audioLevel,
     duration,
     handleStartRecording: coreStartRecording,
-    handleStopRecording,
+    handleStopRecording: coreStopRecording,
     pauseRecording,
     resumeRecording,
     trialStatus,
@@ -87,23 +87,56 @@ export const useAudioRecordingFeature = ({
 
     try {
       await coreStartRecording();
-      startListening();
+      if (state.isRecording) {
+        startListening();
+      }
     } catch (error) {
       console.error('Failed to start recording:', error);
     }
+  };
+
+  // Enhanced stop recording that triggers transcription
+  const handleStopRecording = () => {
+    coreStopRecording();
+    
+    // Wait for the recorded blob to be available
+    setTimeout(() => {
+      if (recordedBlob) {
+        console.log('Starting transcription with recorded blob:', {
+          size: recordedBlob.size,
+          type: recordedBlob.type,
+          duration,
+          audioQuality
+        });
+        
+        startProcessing();
+        handleTranscription(
+          recordedBlob, 
+          duration, 
+          audioQuality, 
+          networkStatus, 
+          isSessionActive, 
+          updateActivity, 
+          retryCount, 
+          setRetryCount
+        );
+      } else {
+        console.error('No recorded blob available for transcription');
+        toast({
+          title: "Recording Error",
+          description: "No audio was recorded. Please try again.",
+          variant: "destructive",
+        });
+        goIdle();
+      }
+    }, 100); // Small delay to ensure blob is set
   };
 
   // Enhanced audio recorder with transcription handling
   const enhancedAudioRecorder = {
     ...state,
     startRecording: handleStartRecording,
-    stopRecording: () => {
-      handleStopRecording();
-      if (recordedBlob) {
-        startProcessing();
-        handleTranscription(recordedBlob, duration, audioQuality, networkStatus, isSessionActive, updateActivity, retryCount, setRetryCount);
-      }
-    },
+    stopRecording: handleStopRecording,
     pauseRecording,
     resumeRecording,
   };
@@ -111,7 +144,7 @@ export const useAudioRecordingFeature = ({
   // Handle session end cleanup
   const handleSessionEnd = () => {
     if (state.isRecording) {
-      handleStopRecording();
+      coreStopRecording();
     }
     goIdle();
     endSession();
@@ -133,6 +166,7 @@ export const useAudioRecordingFeature = ({
     networkStatus,
     retryCount,
     conversationData,
+    recordedBlob,
     
     // Session management
     session,
