@@ -21,8 +21,8 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: ['Crimson Pro', 'serif'],
-				hero: ['Crimson Pro', 'serif'],
-				title: ['Crimson Pro', 'serif'],
+				hero: ['Cinzel', 'serif'],
+				title: ['Cinzel', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
