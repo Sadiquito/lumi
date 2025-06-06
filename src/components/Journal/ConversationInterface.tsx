@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
@@ -20,8 +19,8 @@ const ConversationInterface: React.FC = () => {
   };
 
   const handleStartConversation = () => {
+    // Only change the active mode, let the LumiInitiatedConversation handle the state
     setActiveMode('conversation');
-    setConversationState('lumi_speaking');
   };
 
   const handleStateChange = (newState: 'ready' | 'lumi_speaking' | 'waiting_for_user' | 'user_recording' | 'processing') => {
