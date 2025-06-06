@@ -308,7 +308,7 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
                         disabled={disabled}
                         onStartRecording={handleStartRecording}
                         onFallbackToText={() => setShowTextFallback(true)}
-                        networkStatus={networkStatus}
+                        networkStatus={networkStatus?.online ? "online" : "offline"}
                         isSupported={isSupported}
                       />
                     )}
