@@ -1,41 +1,71 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { User, Star } from 'lucide-react';
 
 interface ConversationThreadProps {
-  conversation: any;
+  conversation: {
+    transcript: string;
+    ai_response: string;
+  };
 }
 
 const ConversationThread: React.FC<ConversationThreadProps> = ({ conversation }) => {
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          className="text-white/60 hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Journal
-        </Button>
-      </div>
+    <div className="space-y-4">
+      {/* User Message */}
+      <div className="flex gap-3 flex-row-reverse">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          <Avatar className="w-8 h-8 bg-lumi-sunset-coral/20">
+            <AvatarFallback className="text-lumi-sunset-coral">
+              <User className="w-4 h-4" />
+            </AvatarFallback>
+          </Avatar>
+        </div>
 
-      <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-white text-xl font-title flex items-center">
-            <MessageCircle className="w-6 h-6 mr-2 text-lumi-aquamarine" />
-            Conversation Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-white/70">
-              Conversation view will be implemented in Phase 2 with audio functionality.
+        {/* Message Container */}
+        <div className="flex flex-col max-w-[75%] items-end">
+          {/* Speaker Label */}
+          <div className="text-xs font-medium mb-1 text-lumi-sunset-coral" style={{ fontFamily: 'Cinzel' }}>
+            you
+          </div>
+
+          {/* Message Bubble */}
+          <div className="bg-lumi-sunset-coral text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'Crimson Pro' }}>
+              {conversation.transcript}
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Lumi Message */}
+      <div className="flex gap-3">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          <Avatar className="w-8 h-8 bg-lumi-aquamarine/20">
+            <AvatarFallback className="text-lumi-aquamarine">
+              <Star className="w-4 h-4" />
+            </AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Message Container */}
+        <div className="flex flex-col max-w-[75%] items-start">
+          {/* Speaker Label */}
+          <div className="text-xs font-medium mb-1 text-lumi-aquamarine" style={{ fontFamily: 'Cinzel' }}>
+            lumi
+          </div>
+
+          {/* Message Bubble */}
+          <div className="bg-lumi-charcoal/60 border border-lumi-aquamarine/20 text-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'Crimson Pro' }}>
+              {conversation.ai_response}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Calendar, MessageCircle } from 'lucide-react';
@@ -27,12 +28,12 @@ const ConversationCard: React.FC<ConversationCardProps> = ({ conversation }) => 
     <Card className="bg-lumi-charcoal/60 backdrop-blur-sm border-lumi-sunset-coral/15 shadow-lg hover:border-lumi-sunset-coral/25 transition-colors">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center text-lumi-aquamarine text-sm font-medium">
+          <div className="flex items-center text-lumi-aquamarine text-sm font-medium" style={{ fontFamily: 'Cinzel' }}>
             <MessageCircle className="w-4 h-4 mr-2" />
             conversation
           </div>
           <div className="flex items-center space-x-2">
-            <div className="flex items-center text-white/60 text-xs">
+            <div className="flex items-center text-white/60 text-xs" style={{ fontFamily: 'Crimson Pro' }}>
               <Calendar className="w-3 h-3 mr-1" />
               {formatDate(conversation.created_at)}
             </div>
