@@ -14,14 +14,9 @@ const GoogleAuthButton = () => {
     try {
       setLoading(true);
       
-      // Detect if we're in Lovable preview or deployed
+      // Use the current origin for redirect, whether it's preview or deployed
       const currentUrl = window.location.origin;
-      let redirectTo = `${currentUrl}/journal`;
-      
-      // If we're in a Lovable preview environment, use the deployed URL for redirect
-      if (currentUrl.includes('lovableproject.com')) {
-        redirectTo = 'https://lumii.lovable.app/journal';
-      }
+      const redirectTo = `${currentUrl}/journal`;
       
       console.log('Current URL:', currentUrl);
       console.log('Redirect URL:', redirectTo);
