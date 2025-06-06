@@ -37,6 +37,8 @@ const LumiInitiatedConversation = ({
     handleLumiFinishedSpeaking,
     handleUserStartRecording,
     handleUserStopRecording,
+    error,
+    isTransitioning,
   } = useConversationFlowManager({
     onUserResponse,
     onConversationEnd,
@@ -98,6 +100,8 @@ const LumiInitiatedConversation = ({
         onFinishedSpeaking={handleLumiFinishedSpeaking}
         onStartRecording={handleUserStartRecording}
         onStopRecording={handleUserStopRecording}
+        error={error}
+        isTransitioning={isTransitioning}
       />
       
       {/* Conversation History */}

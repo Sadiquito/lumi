@@ -25,6 +25,7 @@ export const useConversationFlowManager = ({
   const [currentLumiMessage, setCurrentLumiMessage] = useState<string>('');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize conversation context with persona state
   const {
@@ -56,6 +57,7 @@ export const useConversationFlowManager = ({
     },
     onFallbackToText: () => {
       console.log('Falling back to text input');
+      setError('Voice input is unavailable. Please use text input instead.');
     }
   });
 
@@ -72,6 +74,16 @@ export const useConversationFlowManager = ({
       setFlowState('processing');
     }
   }, [isListening, isProcessing, flowState]);
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      console.error('Conversation flow error:', error);
+      // Reset to ready state on error
+      setFlowState('ready');
+      setError(null);
+    }
+  }, [error]);
 
   // Log persona state when available
   useEffect(() => {
@@ -107,6 +119,7 @@ export const useConversationFlowManager = ({
     
     try {
       setIsTransitioning(true);
+      setError(null);
       console.log('Starting conversation...');
       
       // Start audio session
@@ -131,8 +144,8 @@ export const useConversationFlowManager = ({
       addMessage('assistant', prompt);
     } catch (error) {
       console.error('Error starting conversation:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start conversation');
       setFlowState('ready');
-      throw error;
     } finally {
       setIsTransitioning(false);
     }
@@ -151,6 +164,8 @@ export const useConversationFlowManager = ({
     console.log('User starting recording...');
     try {
       setIsTransitioning(true);
+      setError(null);
+      
       // Always ensure session is started first
       if (!isSessionActive) {
         console.log('Starting new session before recording...');
@@ -164,9 +179,9 @@ export const useConversationFlowManager = ({
       await handleStartRecording();
     } catch (error) {
       console.error('Error starting recording:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start recording');
       // Reset flow state on error
       setFlowState('ready');
-      throw error;
     } finally {
       setIsTransitioning(false);
     }
@@ -176,7 +191,12 @@ export const useConversationFlowManager = ({
     if (isTransitioning) return;
     
     console.log('User stopping recording...');
-    handleStopRecording();
+    try {
+      handleStopRecording();
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setError(error instanceof Error ? error.message : 'Failed to stop recording');
+    }
   };
 
   const handleUserResponse = (transcript: string) => {
@@ -200,28 +220,33 @@ export const useConversationFlowManager = ({
   const handleLumiResponse = async (aiResponse: string) => {
     console.log('Processing Lumi response in flow manager:', aiResponse);
     
-    setCurrentLumiMessage(aiResponse);
-    
-    setConversationHistory(prev => [...prev, {
-      speaker: 'lumi',
-      message: aiResponse,
-      timestamp: new Date()
-    }]);
+    try {
+      setCurrentLumiMessage(aiResponse);
+      
+      setConversationHistory(prev => [...prev, {
+        speaker: 'lumi',
+        message: aiResponse,
+        timestamp: new Date()
+      }]);
 
-    // Add AI response to context - this WILL trigger persona update if preceded by user message
-    console.log('Adding Lumi response to conversation context');
-    addMessage('assistant', aiResponse);
+      // Add AI response to context - this WILL trigger persona update if preceded by user message
+      console.log('Adding Lumi response to conversation context');
+      addMessage('assistant', aiResponse);
 
-    // Manual persona update with basic insights (will be replaced by AI-generated insights)
-    const mockInsights = {
-      lastInteraction: new Date().toISOString(),
-      totalConversations: (context.personaState?.totalConversations || 0) + 1,
-    };
+      // Manual persona update with basic insights (will be replaced by AI-generated insights)
+      const mockInsights = {
+        lastInteraction: new Date().toISOString(),
+        totalConversations: (context.personaState?.totalConversations || 0) + 1,
+      };
 
-    console.log('Applying manual persona insights:', mockInsights);
-    await updatePersonaFromConversation(mockInsights);
-    
-    setFlowState('lumi_speaking');
+      console.log('Applying manual persona insights:', mockInsights);
+      await updatePersonaFromConversation(mockInsights);
+      
+      setFlowState('lumi_speaking');
+    } catch (error) {
+      console.error('Error processing Lumi response:', error);
+      setError(error instanceof Error ? error.message : 'Failed to process Lumi response');
+    }
   };
 
   return {
@@ -236,6 +261,8 @@ export const useConversationFlowManager = ({
     audioState,
     isListening,
     isProcessing,
+    error,
+    isTransitioning,
     handleStartConversation,
     handleLumiFinishedSpeaking,
     handleUserStartRecording,
