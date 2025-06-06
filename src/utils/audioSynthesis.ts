@@ -1,7 +1,6 @@
 
 /**
- * Audio synthesis interface and implementation scaffolding
- * Ready for ElevenLabs integration
+ * Audio synthesis interface and implementation with ElevenLabs integration
  */
 
 export interface AudioSynthesisConfig {
@@ -28,7 +27,7 @@ export interface AudioSynthesisProvider {
   getAvailableVoices?(): Promise<Array<{ id: string; name: string; }>>;
 }
 
-// Default implementation - placeholder for ElevenLabs
+// ElevenLabs implementation using Supabase Edge Function
 class ElevenLabsSynthesisProvider implements AudioSynthesisProvider {
   private config: AudioSynthesisConfig;
 
@@ -37,50 +36,65 @@ class ElevenLabsSynthesisProvider implements AudioSynthesisProvider {
   }
 
   async synthesize(text: string, overrideConfig?: AudioSynthesisConfig): Promise<AudioSynthesisResult> {
-    // Placeholder implementation
-    console.log('Synthesizing audio with ElevenLabs (placeholder):', {
+    const finalConfig = { ...this.config, ...overrideConfig };
+    
+    console.log('Synthesizing audio with ElevenLabs:', {
       textLength: text.length,
-      config: { ...this.config, ...overrideConfig }
+      config: finalConfig
     });
 
-    // TODO: Replace with actual ElevenLabs API call
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
+    // Call Supabase Edge Function
+    const { supabase } = await import('@/integrations/supabase/client');
     
-    // Create a placeholder audio blob (silent audio)
-    const sampleRate = 44100;
-    const duration = Math.max(1, text.length * 0.1); // Rough estimate
-    const samples = Math.floor(sampleRate * duration);
-    const audioBuffer = new Float32Array(samples);
-    
-    // Generate very quiet white noise as placeholder
-    for (let i = 0; i < samples; i++) {
-      audioBuffer[i] = (Math.random() - 0.5) * 0.01;
+    const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
+      body: {
+        text: text.trim(),
+        voice_id: finalConfig.voiceId || '9BWtsMINqrJLrRacOk9x', // Aria - warm female voice
+        model_id: finalConfig.model || 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: finalConfig.stability || 0.5,
+          similarity_boost: finalConfig.similarityBoost || 0.75,
+          style: finalConfig.style || 0.0,
+          use_speaker_boost: finalConfig.useSpeakerBoost !== false
+        }
+      }
+    });
+
+    if (error) {
+      console.error('ElevenLabs synthesis error:', error);
+      throw new Error(`Synthesis failed: ${error.message}`);
     }
 
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
-    const audioUrl = URL.createObjectURL(audioBlob);
+    if (!data || !data.audio_url) {
+      throw new Error('No audio data received');
+    }
+
+    // Convert data URL to blob
+    const response = await fetch(data.audio_url);
+    const audioBlob = await response.blob();
 
     return {
-      audioUrl,
+      audioUrl: data.audio_url,
       audioBlob,
-      duration,
-      voiceId: overrideConfig?.voiceId || this.config.voiceId || 'default',
+      duration: data.duration || 0,
+      voiceId: data.voice_id,
       characterCount: text.length
     };
   }
 
   async getAvailableVoices() {
-    // TODO: Replace with actual ElevenLabs voices API call
+    // ElevenLabs voices for Lumi
     return [
-      { id: 'lumi-voice-1', name: 'Lumi Voice 1 (Warm)' },
-      { id: 'lumi-voice-2', name: 'Lumi Voice 2 (Calming)' },
-      { id: 'lumi-voice-3', name: 'Lumi Voice 3 (Gentle)' }
+      { id: '9BWtsMINqrJLrRacOk9x', name: 'Aria (Warm Female)' },
+      { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah (Gentle Female)' },
+      { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte (Calm Female)' },
+      { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice (Friendly Female)' }
     ];
   }
 
   isConfigured(): boolean {
-    // TODO: Check if ElevenLabs API key is available
-    return !!this.config.apiKey;
+    // Since we're using Supabase Edge Function, check if it's available
+    return true;
   }
 }
 

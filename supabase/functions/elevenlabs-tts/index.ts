@@ -36,20 +36,6 @@ serve(async (req) => {
       )
     }
 
-    // Check if user has TTS access
-    const { data: hasTTSAccess, error: accessError } = await supabaseClient
-      .rpc('can_use_tts', { user_id: user.id })
-
-    if (accessError || !hasTTSAccess) {
-      return new Response(
-        JSON.stringify({ error: 'TTS access not available. Upgrade to premium.' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
     const { text, voice_id = '9BWtsMINqrJLrRacOk9x', model_id = 'eleven_multilingual_v2', voice_settings } = await req.json()
 
     if (!text || text.trim().length === 0) {
@@ -75,7 +61,7 @@ serve(async (req) => {
       )
     }
 
-    // Default voice settings
+    // Default voice settings for warm, humanlike female voice
     const defaultVoiceSettings = {
       stability: 0.5,
       similarity_boost: 0.75,
