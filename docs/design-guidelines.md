@@ -14,6 +14,9 @@
 ## Page Layout Principles
 
 - Mobile-first responsive design
+- Single action button on Journal page: "Start Conversation"
+- Prior conversation log below button
+- Minimal navigation
 - Cozy, card-based structure with generous whitespace
 - Dark theme evoking a cosmic sunset, viewed from orbit
 - Warm, reflective atmosphere rather than harsh sci-fi aesthetic
