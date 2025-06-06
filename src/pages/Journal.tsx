@@ -2,8 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/components/SimpleAuthProvider';
 import JournalHeader from '@/components/Journal/JournalHeader';
-import StartConversationSection from '@/components/Journal/StartConversationSection';
-import ConversationLog from '@/components/Journal/ConversationLog';
+import ConversationInterface from '@/components/Journal/ConversationInterface';
 
 const Journal: React.FC = () => {
   const { user } = useAuth();
@@ -13,13 +12,23 @@ const Journal: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-lumi-deep-space">
-      <JournalHeader />
+    <div 
+      className="min-h-screen bg-cover bg-center bg-no-repeat relative"
+      style={{
+        backgroundImage: `url('/lovable-uploads/1f629700-83cc-4ed8-9a5f-5b47389195de.png')`
+      }}
+    >
+      {/* Subtle overlay to maintain readability */}
+      <div className="absolute inset-0 bg-black/20"></div>
       
-      <main className="px-4 py-8 max-w-2xl mx-auto">
-        <StartConversationSection />
-        <ConversationLog />
-      </main>
+      {/* Content */}
+      <div className="relative z-10">
+        <JournalHeader />
+        
+        <main className="px-4 py-8 max-w-4xl mx-auto">
+          <ConversationInterface />
+        </main>
+      </div>
     </div>
   );
 };
