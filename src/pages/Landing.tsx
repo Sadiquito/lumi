@@ -1,10 +1,10 @@
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Star, Heart, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/SimpleAuthProvider";
 import { useEffect } from "react";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -48,22 +48,16 @@ const Landing = () => {
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 md:p-6">
+        <div className="flex justify-center items-center p-4 md:p-6">
           <div className="flex items-center">
             <Star className="w-8 h-8 text-lumi-aquamarine mr-2" />
             <h1 className="text-2xl font-title text-white tracking-wide">Lumi</h1>
           </div>
-          <Button 
-            onClick={() => navigate('/auth')}
-            className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white font-sans"
-          >
-            Get Started
-          </Button>
         </div>
 
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
           {/* Large Lumi Title in Center */}
-          <div className="text-center mb-8 mt-16 relative">
+          <div className="text-center mb-8 mt-8 relative">
             <h1 className="text-6xl md:text-7xl font-title font-bold tracking-wider relative">
               {/* Mystical glow effect */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
@@ -81,7 +75,7 @@ const Landing = () => {
           </div>
 
           {/* Hero Section */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
               superintelligent
               <br />
@@ -90,12 +84,11 @@ const Landing = () => {
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Your AI companion for daily reflection through natural conversation
             </p>
-            <Button 
-              onClick={() => navigate('/auth')}
-              className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-4 px-8 text-lg font-medium rounded-xl font-sans"
-            >
-              Begin Your Journey
-            </Button>
+            
+            {/* Google Sign-In Button */}
+            <div className="flex justify-center">
+              <GoogleAuthButton />
+            </div>
           </div>
 
           {/* Features */}
@@ -128,12 +121,7 @@ const Landing = () => {
               <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
                 Start your daily reflection practice with Lumi.
               </p>
-              <Button 
-                onClick={() => navigate('/auth')}
-                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white py-3 px-6 text-lg font-medium rounded-xl font-sans"
-              >
-                Create Your Account
-              </Button>
+              <GoogleAuthButton />
             </CardContent>
           </Card>
         </div>

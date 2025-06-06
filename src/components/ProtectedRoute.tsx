@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     if (shouldRedirect) {
-      navigate('/auth', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [shouldRedirect, navigate]);
 

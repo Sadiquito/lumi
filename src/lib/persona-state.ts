@@ -27,7 +27,7 @@ export const getPersonaState = async (): Promise<PersonaState | null> => {
       return null;
     }
 
-    return data?.state_blob || {};
+    return (data?.state_blob as PersonaState) || {};
   } catch (error) {
     console.error('Error in getPersonaState:', error);
     return null;
