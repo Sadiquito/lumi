@@ -2,7 +2,14 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PersonaState {
-  [key: string]: any;
+  full_name?: string;
+  preferred_name?: string;
+  tone_preferences?: string; // e.g. "warm and encouraging", "playful"
+  reflection_focus?: string; // e.g. "career growth", "relationships", "self-confidence"
+  personality_snapshot?: string; // Lumi's ongoing psychological synthesis of user
+  conversational_notes?: string; // lightweight notes Lumi uses to guide tone and pacing
+  ai_internal_notes?: string; // optional metadata for Lumi's internal AI system to track key facts
+  [key: string]: any; // Allow for additional dynamic fields
 }
 
 /**
@@ -78,4 +85,36 @@ export const mergePersonaState = async (partialState: Partial<PersonaState>): Pr
     console.error('Error in mergePersonaState:', error);
     return false;
   }
+};
+
+/**
+ * Helper function to get a specific persona field
+ */
+export const getPersonaField = async (fieldName: keyof PersonaState): Promise<any> => {
+  const state = await getPersonaState();
+  return state?.[fieldName] || null;
+};
+
+/**
+ * Helper function to update a specific persona field
+ */
+export const updatePersonaField = async (fieldName: keyof PersonaState, value: any): Promise<boolean> => {
+  return await mergePersonaState({ [fieldName]: value });
+};
+
+/**
+ * Initialize default persona state for new users
+ */
+export const initializePersonaState = async (): Promise<boolean> => {
+  const defaultState: PersonaState = {
+    full_name: '',
+    preferred_name: '',
+    tone_preferences: 'warm and encouraging',
+    reflection_focus: '',
+    personality_snapshot: '',
+    conversational_notes: '',
+    ai_internal_notes: ''
+  };
+  
+  return await updatePersonaState(defaultState);
 };

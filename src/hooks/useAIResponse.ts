@@ -22,25 +22,23 @@ export const useAIResponse = () => {
     const emotionalContext = detectEmotionalContext(userInput);
     console.log('Detected emotional context:', emotionalContext);
     
-    // Log persona state for AI context (placeholder for future AI integration)
+    // Log persona state for AI context
     if (personaState) {
       console.log('Generating response with persona context:', {
-        personaState,
+        preferred_name: personaState.preferred_name,
+        tone_preferences: personaState.tone_preferences,
+        reflection_focus: personaState.reflection_focus,
+        personality_snapshot: personaState.personality_snapshot?.slice(0, 100) + '...',
+        conversational_notes: personaState.conversational_notes,
         userInput: userInput.slice(0, 50) + '...',
         emotionalContext,
       });
-      
-      // TODO: Use persona state to inform AI response generation
-      // - Previous conversation patterns
-      // - User preferences and communication style
-      // - Emotional state history
-      // - Topics of interest
     }
     
-    // Generate contextual system prompt (will be enhanced with persona data)
+    // Generate contextual response using persona data
     const systemPrompt = generateContextualResponse(userInput, emotionalContext, 'reflection');
     
-    // Generate AI response with Lumi's personality
+    // Generate AI response with Lumi's personality and persona awareness
     const responses = [
       `i can hear the thoughtfulness in what you're sharing. when you mention "${userInput.slice(0, 30)}...", it sounds like there's a lot happening beneath the surface. what feels most important to you about this right now?`,
       `thank you for trusting me with this. there's something really genuine in how you're describing this situation. i'm curious - what would it feel like if you could approach this with just a little more gentleness toward yourself?`,
@@ -49,17 +47,30 @@ export const useAIResponse = () => {
       `there's something beautiful about how you're approaching this, even if it doesn't feel clear right now. what would it be like to trust that you're exactly where you need to be in figuring this out?`
     ];
     
-    // Select response based on emotional context and persona (placeholder)
+    // Select response based on emotional context and persona preferences
     let selectedResponse;
+    
+    // Use preferred name if available
+    const namePrefix = personaState?.preferred_name ? `${personaState.preferred_name}, ` : '';
+    
     if (emotionalContext === 'overwhelmed') {
-      selectedResponse = `i can feel the weight of what you're carrying. it makes complete sense that you'd feel overwhelmed - there's a lot here. sometimes when everything feels like too much, it can help to focus on just this moment, just this breath. what's one small thing that feels manageable right now?`;
+      selectedResponse = `${namePrefix}i can feel the weight of what you're carrying. it makes complete sense that you'd feel overwhelmed - there's a lot here. sometimes when everything feels like too much, it can help to focus on just this moment, just this breath. what's one small thing that feels manageable right now?`;
     } else if (emotionalContext === 'anxious') {
-      selectedResponse = `i hear the anxiety in what you're sharing, and that's so understandable given what you're facing. anxiety often shows up when we care deeply about something. what would it feel like to acknowledge this worry as a part of you that's trying to protect something important?`;
+      selectedResponse = `${namePrefix}i hear the anxiety in what you're sharing, and that's so understandable given what you're facing. anxiety often shows up when we care deeply about something. what would it feel like to acknowledge this worry as a part of you that's trying to protect something important?`;
     } else if (emotionalContext === 'sad') {
-      selectedResponse = `i can sense the sadness in your words, and i want you to know that sadness has its place too. sometimes it's our heart's way of honoring what matters to us. i'm here with you in this feeling. what would it mean to be gentle with yourself right now?`;
+      selectedResponse = `${namePrefix}i can sense the sadness in your words, and i want you to know that sadness has its place too. sometimes it's our heart's way of honoring what matters to us. i'm here with you in this feeling. what would it mean to be gentle with yourself right now?`;
     } else {
-      // TODO: Use persona state to select more personalized responses
-      selectedResponse = responses[Math.floor(Math.random() * responses.length)];
+      // Use persona-aware response selection
+      const baseResponse = responses[Math.floor(Math.random() * responses.length)];
+      selectedResponse = namePrefix + baseResponse;
+      
+      // TODO: Further customize based on tone_preferences and reflection_focus
+      if (personaState?.tone_preferences === 'playful') {
+        // Could adjust tone here in future
+      }
+      if (personaState?.reflection_focus) {
+        // Could guide conversation toward their focus area
+      }
     }
     
     clearInterval(thinkingInterval);
