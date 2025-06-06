@@ -1,238 +1,228 @@
-
-import { useState, useCallback, useEffect } from 'react';
-import { useConversationState } from '@/hooks/useConversationState';
+import { useState, useCallback } from 'react';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useAIResponse } from '@/hooks/useAIResponse';
-import { useAudioRecordingHandlers } from '@/hooks/useAudioRecordingHandlers';
-import { useToast } from '@/hooks/use-toast';
-import { ConversationData, AudioQualityMetadata, UseAudioRecordingFeatureProps } from '@/types/audioRecording';
+import { useAudioRecordingHandlers } from './useAudioRecordingHandlers';
+import { useToast } from './use-toast';
+import { ConversationData } from '@/types/audioRecording';
+import { PersonaState } from '@/lib/persona-state';
+
+export type ConversationState = 'idle' | 'listening' | 'processing' | 'speaking' | 'waiting_for_user' | 'waiting_for_ai';
+
+interface UseAudioConversationFlowProps {
+  onTranscriptionComplete?: (transcript: string) => void;
+  onAIResponse?: (response: string) => void;
+  onFallbackToText?: () => void;
+}
+
+interface ConversationDataState {
+  conversationId?: string;
+  startTime?: Date;
+  endTime?: Date;
+  lastActivity?: Date;
+  messageCount: number;
+  totalDuration: number;
+  topics: string[];
+  personaState?: PersonaState | null;
+  lastTranscript?: string;
+  lastTranscriptionTime?: Date;
+  lastAiResponse?: string;
+  lastAiResponseTime?: Date;
+}
 
 export const useAudioConversationFlow = ({
   onTranscriptionComplete,
   onAIResponse,
   onFallbackToText
-}: Pick<UseAudioRecordingFeatureProps, 'onTranscriptionComplete' | 'onAIResponse' | 'onFallbackToText'>) => {
+}: UseAudioConversationFlowProps) => {
   const { toast } = useToast();
-  const [conversationData, setConversationData] = useState<ConversationData | null>(null);
+  const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [aiResponse, setAiResponse] = useState<string>('');
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [thinkingProgress, setThinkingProgress] = useState(0);
+  const [stateStartTime, setStateStartTime] = useState<Date>(new Date());
 
-  const {
-    handleTimeoutError,
-    handleConversationError,
-    storeConversation,
-  } = useAudioRecordingHandlers(() => {}, onFallbackToText);
+  const [conversationData, setConversationData] = useState<ConversationDataState>({
+    messageCount: 0,
+    totalDuration: 0,
+    topics: [],
+    personaState: null,
+  });
 
   const { transcribeAudio } = useAudioTranscription();
   const { generateAIResponse } = useAIResponse();
+  const { handleConversationError } = useAudioRecordingHandlers(() => {});
 
-  const {
-    state: conversationState,
-    startListening,
-    startProcessing,
-    startSpeaking,
-    waitForUser,
-    waitForAI,
-    goIdle,
-    addMessage,
-    getStateDuration,
-    isIdle,
-    isListening,
-    isProcessing,
-    isSpeaking,
-    isWaitingForUser,
-    isWaitingForAI,
-    canUserStartTurn,
-    canAIStartTurn,
-  } = useConversationState({
-    config: {
-      strictTurnEnforcement: true,
-    },
-    onStateChange: (newState, previousState) => {
-      console.log(`Conversation state: ${previousState} → ${newState}`);
-    },
-    onTimeout: handleTimeoutError,
-    onError: handleConversationError,
-    onTurnViolation: (attemptedState, currentTurnOwner) => {
-      console.warn(`Turn violation: Attempted to transition to ${attemptedState} while ${currentTurnOwner} has control`);
-      toast({
-        title: "Turn violation",
-        description: `Cannot perform action - it's ${currentTurnOwner === 'user' ? 'your' : 'Lumi\'s'} turn`,
-        variant: "destructive",
-      });
+  const getStateDuration = (): number => {
+    const now = new Date();
+    return (now.getTime() - stateStartTime.getTime()) / 1000;
+  };
+
+  const goIdle = () => {
+    setConversationState('idle');
+    setStateStartTime(new Date());
+  };
+
+  const startListening = () => {
+    setConversationState('listening');
+    setStateStartTime(new Date());
+  };
+
+  const startProcessing = () => {
+    setConversationState('processing');
+    setStateStartTime(new Date());
+  };
+
+  const goToSpeaking = () => {
+    setConversationState('speaking');
+    setStateStartTime(new Date());
+  };
+
+  const isIdle = conversationState === 'idle';
+  const isListening = conversationState === 'listening';
+  const isProcessing = conversationState === 'processing';
+  const isSpeaking = conversationState === 'speaking';
+  const isWaitingForUser = conversationState === 'waiting_for_user';
+  const isWaitingForAI = conversationState === 'waiting_for_ai';
+
+  const handleTranscription = useCallback(async (
+    audioBlob: Blob,
+    duration: number,
+    audioQuality: 'good' | 'low' | 'poor',
+    networkStatus: 'online' | 'offline',
+    isSessionActive: boolean,
+    updateActivity: () => void,
+    retryCount: number,
+    setRetryCount: (fn: (prev: number) => number) => void
+  ) => {
+    if (!audioBlob) {
+      console.error('No audio blob provided for transcription');
+      return;
     }
-  });
 
-  const handleTranscription = useCallback(async (audioBlob: Blob, duration: number, audioQuality: string, networkStatus: string, isSessionActive: boolean, updateActivity: () => void, retryCount: number, setRetryCount: (fn: (prev: number) => number) => void) => {
     if (networkStatus === 'offline') {
-      toast({
-        title: "No internet connection",
-        description: "Please check your connection and try again.",
-        variant: "destructive",
-      });
-      goIdle();
+      handleConversationError('No internet connection available for transcription');
       return;
     }
 
-    if (!isSessionActive) {
-      toast({
-        title: "No active session",
-        description: "Please start a conversation session first.",
-        variant: "destructive",
-      });
-      goIdle();
-      return;
-    }
-
-    if (!canAIStartTurn()) {
-      toast({
-        title: "Processing not allowed",
-        description: "Cannot process audio at this time.",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log('Starting transcription process...', {
+      audioBlobSize: audioBlob.size,
+      duration,
+      audioQuality,
+      isSessionActive
+    });
 
     setIsTranscribing(true);
     setTranscriptionProgress(0);
-    setRetryCount((prev) => 0);
-    
+
     try {
+      // Use the new Whisper transcription implementation
       const transcript = await transcribeAudio(
         audioBlob,
         retryCount,
         setTranscriptionProgress,
         onFallbackToText
       );
-      
-      // Add user message to conversation
-      addMessage({
-        content: transcript,
-        speaker: 'user',
-        type: 'audio',
-        metadata: {
-          duration: duration,
-          audioUrl: URL.createObjectURL(audioBlob),
-          confidence: 0.8,
-          audioQuality
-        } as AudioQualityMetadata
-      });
 
+      console.log('Transcription successful:', transcript.substring(0, 100) + '...');
+      
+      setIsTranscribing(false);
+      setThinkingProgress(0);
+      
       // Update session activity
-      updateActivity();
+      if (isSessionActive) {
+        updateActivity();
+      }
+
+      // Store transcript and trigger callback
+      setConversationData(prev => ({
+        ...prev,
+        lastTranscript: transcript,
+        lastTranscriptionTime: new Date(),
+      }));
 
       onTranscriptionComplete?.(transcript);
+
+      // Generate AI response
+      const aiResponse = await generateAIResponse(
+        transcript,
+        setThinkingProgress,
+        conversationData.conversationId,
+        conversationData.personaState
+      );
+
+      console.log('AI response generated:', aiResponse.substring(0, 100) + '...');
       
-      // Transition to waiting for AI, then start thinking
-      waitForAI();
-      await handleAIThinking(transcript, updateActivity);
+      setAiResponse(aiResponse);
+      onAIResponse?.(aiResponse);
       
+      // Update conversation data
+      setConversationData(prev => ({
+        ...prev,
+        lastAiResponse: aiResponse,
+        lastAiResponseTime: new Date(),
+      }));
+
+      // Transition to speaking state
+      goToSpeaking();
+
     } catch (error) {
-      if (error instanceof Error && error.message === 'RETRY_NEEDED') {
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => handleTranscription(audioBlob, duration, audioQuality, networkStatus, isSessionActive, updateActivity, retryCount, setRetryCount), 1000 * (retryCount + 1));
-        toast({
-          title: "Retrying transcription",
-          description: `Attempt ${retryCount + 2} of 3...`,
-        });
-        return;
-      }
-      
-      goIdle();
-    } finally {
+      console.error('Transcription/AI response error:', error);
       setIsTranscribing(false);
-      setTranscriptionProgress(0);
-    }
-  }, [transcribeAudio, onTranscriptionComplete, onFallbackToText, addMessage, goIdle, toast, canAIStartTurn, waitForAI]);
-
-  const handleAIThinking = useCallback(async (userInput: string, updateActivity: () => void) => {
-    if (!canAIStartTurn()) {
-      toast({
-        title: "AI cannot respond",
-        description: "AI is not allowed to respond at this time.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    startProcessing();
-
-    try {
-      const response = await generateAIResponse(userInput, setThinkingProgress);
       
-      setAiResponse(response);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      // Store conversation in database
-      const storedConversation = await storeConversation(userInput, response);
-      if (storedConversation) {
-        setConversationData(storedConversation);
+      if (errorMessage === 'RETRY_NEEDED' && retryCount < 2) {
+        console.log('Retrying transcription...');
+        setRetryCount(prev => prev + 1);
+        // Retry automatically
+        setTimeout(() => {
+          handleTranscription(
+            audioBlob, 
+            duration, 
+            audioQuality, 
+            networkStatus, 
+            isSessionActive, 
+            updateActivity, 
+            retryCount + 1, 
+            setRetryCount
+          );
+        }, 1000);
+      } else {
+        handleConversationError(`Transcription failed: ${errorMessage}`);
+        goIdle();
       }
-      
-      // Add AI message to conversation
-      addMessage({
-        content: response,
-        speaker: 'ai',
-        type: 'text'
-      });
-
-      // Update session activity
-      updateActivity();
-
-      startSpeaking();
-      onAIResponse?.(response);
-      
-    } catch (error) {
-      console.error('AI processing error:', error);
-      toast({
-        title: "AI processing failed",
-        description: "Could not generate response. Please try again.",
-        variant: "destructive",
-      });
-      goIdle();
-    } finally {
-      setThinkingProgress(0);
     }
-  }, [generateAIResponse, storeConversation, addMessage, startSpeaking, onAIResponse, toast, goIdle, canAIStartTurn, startProcessing]);
-
-  // Handle speech completion by listening for when TTS finishes
-  useEffect(() => {
-    if (isSpeaking && aiResponse) {
-      const estimatedDuration = aiResponse.length * 50;
-      const timeout = setTimeout(() => {
-        setAiResponse('');
-        waitForUser(); // Explicitly transition to waiting for user
-      }, Math.max(estimatedDuration, 3000));
-
-      return () => clearTimeout(timeout);
-    }
-  }, [isSpeaking, aiResponse, waitForUser, setAiResponse]);
+  }, [
+    transcribeAudio,
+    generateAIResponse,
+    onTranscriptionComplete,
+    onAIResponse,
+    onFallbackToText,
+    conversationData,
+    setTranscriptionProgress,
+    setThinkingProgress,
+    setIsTranscribing,
+    setAiResponse,
+    setConversationData,
+    goToSpeaking,
+    goIdle,
+    handleConversationError
+  ]);
 
   return {
-    // States
     conversationState,
     isTranscribing,
     aiResponse,
     transcriptionProgress,
     thinkingProgress,
-    conversationData,
-    
-    // Conversation states
     isIdle,
     isListening,
     isProcessing,
     isSpeaking,
     isWaitingForUser,
     isWaitingForAI,
-    
-    // Turn management
-    canUserStartTurn,
-    canAIStartTurn,
-    
-    // Actions
     startListening,
-    startProcessing,
     getStateDuration,
     handleTranscription,
     goIdle,

@@ -1,7 +1,6 @@
 
 /**
- * Audio transcription interface and implementation scaffolding
- * Ready for Whisper integration
+ * Audio transcription interface and implementation with Whisper integration
  */
 
 export interface AudioTranscriptionConfig {
@@ -23,7 +22,7 @@ export interface AudioTranscriptionProvider {
   isConfigured(): boolean;
 }
 
-// Default implementation - placeholder for Whisper
+// Whisper implementation using Supabase Edge Function
 class WhisperTranscriptionProvider implements AudioTranscriptionProvider {
   private config: AudioTranscriptionConfig;
 
@@ -32,26 +31,48 @@ class WhisperTranscriptionProvider implements AudioTranscriptionProvider {
   }
 
   async transcribe(audioBlob: Blob, overrideConfig?: AudioTranscriptionConfig): Promise<AudioTranscriptionResult> {
-    // Placeholder implementation
-    console.log('Transcribing audio with Whisper (placeholder):', {
+    const finalConfig = { ...this.config, ...overrideConfig };
+    
+    console.log('Transcribing audio with Whisper:', {
       audioSize: audioBlob.size,
-      config: { ...this.config, ...overrideConfig }
+      config: finalConfig
     });
 
-    // TODO: Replace with actual Whisper API call
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+    // Convert blob to base64
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+    // Call Supabase Edge Function
+    const { supabase } = await import('@/integrations/supabase/client');
     
+    const { data, error } = await supabase.functions.invoke('whisper-transcription', {
+      body: {
+        audio: base64Audio,
+        language: finalConfig.language || 'en',
+        prompt: 'Please transcribe this audio clearly and accurately.'
+      }
+    });
+
+    if (error) {
+      console.error('Whisper transcription error:', error);
+      throw new Error(`Transcription failed: ${error.message}`);
+    }
+
+    if (!data || !data.text) {
+      throw new Error('No transcription text received');
+    }
+
     return {
-      text: "This is a placeholder transcription. Will be replaced with Whisper integration.",
-      confidence: 0.95,
-      duration: 5.2,
-      language: this.config.language || 'en'
+      text: data.text,
+      confidence: data.confidence || 0.95,
+      duration: data.duration || 0,
+      language: data.language || finalConfig.language || 'en'
     };
   }
 
   isConfigured(): boolean {
-    // TODO: Check if Whisper API key is available
-    return !!this.config.apiKey;
+    // Since we're using Supabase Edge Function, no local API key needed
+    return true;
   }
 }
 
