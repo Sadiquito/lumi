@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useAIResponse } from '@/hooks/useAIResponse';
@@ -216,6 +217,7 @@ export const useAudioConversationFlow = ({
     aiResponse,
     transcriptionProgress,
     thinkingProgress,
+    conversationData,
     isIdle,
     isListening,
     isProcessing,
@@ -223,6 +225,7 @@ export const useAudioConversationFlow = ({
     isWaitingForUser,
     isWaitingForAI,
     startListening,
+    startProcessing,
     getStateDuration,
     handleTranscription,
     goIdle,
