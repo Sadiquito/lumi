@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useConversationContext } from '@/hooks/useConversationContext';
 import { useAudioRecordingFeature } from '@/hooks/useAudioRecordingFeature';
@@ -25,6 +24,7 @@ export const useConversationFlowManager = ({
   const [flowState, setFlowState] = useState<ConversationFlow>('ready');
   const [currentLumiMessage, setCurrentLumiMessage] = useState<string>('');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Initialize conversation context with persona state
   const {
@@ -103,44 +103,78 @@ export const useConversationFlowManager = ({
   };
 
   const handleStartConversation = async () => {
-    console.log('Starting conversation...');
+    if (isTransitioning) return;
     
-    // Start audio session
-    await startSession();
-    
-    setFlowState('lumi_speaking');
-    
-    // Select an opening prompt - in production this would come from persona-aware AI
-    const prompts = getOpeningPrompts();
-    const prompt = prompts[Math.floor(Math.random() * prompts.length)];
-    setCurrentLumiMessage(prompt);
-    
-    // Add to conversation history and context
-    setConversationHistory([{
-      speaker: 'lumi',
-      message: prompt,
-      timestamp: new Date()
-    }]);
+    try {
+      setIsTransitioning(true);
+      console.log('Starting conversation...');
+      
+      // Start audio session
+      await startSession();
+      
+      setFlowState('lumi_speaking');
+      
+      // Select an opening prompt - in production this would come from persona-aware AI
+      const prompts = getOpeningPrompts();
+      const prompt = prompts[Math.floor(Math.random() * prompts.length)];
+      setCurrentLumiMessage(prompt);
+      
+      // Add to conversation history and context
+      setConversationHistory([{
+        speaker: 'lumi',
+        message: prompt,
+        timestamp: new Date()
+      }]);
 
-    // Add to conversation context - this will NOT trigger persona update (only assistant messages)
-    console.log('Adding Lumi opening message to context');
-    addMessage('assistant', prompt);
+      // Add to conversation context - this will NOT trigger persona update (only assistant messages)
+      console.log('Adding Lumi opening message to context');
+      addMessage('assistant', prompt);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      setFlowState('ready');
+      throw error;
+    } finally {
+      setIsTransitioning(false);
+    }
   };
 
   const handleLumiFinishedSpeaking = () => {
+    if (isTransitioning) return;
+    
     console.log('Lumi finished speaking, waiting for user...');
     setFlowState('waiting_for_user');
   };
 
   const handleUserStartRecording = async () => {
+    if (isTransitioning) return;
+    
     console.log('User starting recording...');
-    if (!isSessionActive) {
-      await startSession();
+    try {
+      setIsTransitioning(true);
+      // Always ensure session is started first
+      if (!isSessionActive) {
+        console.log('Starting new session before recording...');
+        await startSession();
+        // Add a small delay to ensure session is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Now start recording
+      console.log('Starting recording...');
+      await handleStartRecording();
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      // Reset flow state on error
+      setFlowState('ready');
+      throw error;
+    } finally {
+      setIsTransitioning(false);
     }
-    await handleStartRecording();
   };
 
   const handleUserStopRecording = () => {
+    if (isTransitioning) return;
+    
     console.log('User stopping recording...');
     handleStopRecording();
   };
