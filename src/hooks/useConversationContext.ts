@@ -2,6 +2,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { usePersonaState } from './usePersonaState';
 import { type PersonaState } from '@/lib/persona-state';
+import { updatePersonaStateFromConversation } from '@/lib/updatePersonaState';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 export interface ConversationContext {
   sessionId: string;
@@ -24,6 +26,7 @@ interface UseConversationContextProps {
 
 export const useConversationContext = ({ sessionId }: UseConversationContextProps = {}) => {
   const { personaState, isLoading: personaLoading, updatePersona } = usePersonaState();
+  const { user } = useAuth();
   
   const [context, setContext] = useState<ConversationContext>({
     sessionId: sessionId || `session_${Date.now()}`,
@@ -53,20 +56,48 @@ export const useConversationContext = ({ sessionId }: UseConversationContextProp
   }, []);
 
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
-    setContext(prev => ({
-      ...prev,
-      messageCount: prev.messageCount + 1,
-      lastActivity: new Date(),
-      conversationHistory: [
+    setContext(prev => {
+      const newHistory = [
         ...prev.conversationHistory,
         {
           role,
           content,
           timestamp: new Date(),
         }
-      ],
-    }));
-  }, []);
+      ];
+
+      // Trigger persona state update when we have a complete user-assistant exchange
+      if (user?.id && newHistory.length >= 2) {
+        const lastTwoMessages = newHistory.slice(-2);
+        if (lastTwoMessages[0].role === 'user' && lastTwoMessages[1].role === 'assistant') {
+          const conversationText = `User: ${lastTwoMessages[0].content}\nLumi: ${lastTwoMessages[1].content}`;
+          
+          // Update persona state in background
+          setTimeout(() => {
+            updatePersonaStateFromConversation(
+              user.id,
+              conversationText,
+              {
+                user_message: lastTwoMessages[0].content,
+                ai_response: lastTwoMessages[1].content
+              }
+            ).then((result) => {
+              if (result.success) {
+                console.log('Persona state updated from conversation context:', result.updated_fields);
+              }
+            });
+          }, 100);
+        }
+      }
+
+      return {
+        ...prev,
+        messageCount: prev.messageCount + 1,
+        lastActivity: new Date(),
+        conversationHistory: newHistory,
+      };
+    });
+  }, [user?.id]);
 
   const updatePersonaFromConversation = useCallback(async (insights: Partial<PersonaState>) => {
     const success = await updatePersona(insights);

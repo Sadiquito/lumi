@@ -2,9 +2,12 @@
 import { useConversationAnalysis } from './useConversationAnalysis';
 import { type PersonaState } from '@/lib/persona-state';
 import { LUMI_PERSONALITY, generateContextualResponse, detectEmotionalContext } from '@/utils/lumiPersonality';
+import { updatePersonaStateFromConversation } from '@/lib/updatePersonaState';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 export const useAIResponse = () => {
   const { triggerAnalysis } = useConversationAnalysis();
+  const { user } = useAuth();
 
   const generateAIResponse = async (
     userInput: string,
@@ -76,13 +79,39 @@ export const useAIResponse = () => {
     clearInterval(thinkingInterval);
     setThinkingProgress(100);
 
+    // Update persona state after generating AI response
+    if (user?.id && userInput && selectedResponse) {
+      console.log('Updating persona state after conversation round');
+      
+      // Combine user input and AI response for context
+      const conversationText = `User: ${userInput}\nLumi: ${selectedResponse}`;
+      
+      // Call persona state update in the background
+      setTimeout(() => {
+        updatePersonaStateFromConversation(
+          user.id,
+          conversationText,
+          {
+            user_message: userInput,
+            ai_response: selectedResponse
+          }
+        ).then((result) => {
+          if (result.success) {
+            console.log('Persona state updated successfully:', result.updated_fields);
+          } else {
+            console.error('Failed to update persona state:', result.error);
+          }
+        });
+      }, 100);
+    }
+
     // Trigger conversation analysis after AI response is generated
     if (conversationId && userInput && selectedResponse) {
       console.log('Triggering conversation analysis for conversation:', conversationId);
       
       setTimeout(() => {
         triggerAnalysis(conversationId, userInput, selectedResponse);
-      }, 100);
+      }, 200);
     }
     
     return selectedResponse;

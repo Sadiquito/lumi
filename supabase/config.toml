@@ -35,5 +35,8 @@ verify_jwt = true
 [functions.generate-lumi-response]
 verify_jwt = true
 
+[functions.update-persona-state]
+verify_jwt = true
+
 [edge-runtime]
 inspector_port = 8083
