@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useAudioUsageTracking } from '@/hooks/useAudioUsageTracking';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 interface AudioTrialUsageIndicatorProps {
   className?: string;

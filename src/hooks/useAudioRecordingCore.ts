@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAudioRecordingState } from '@/hooks/useAudioRecordingState';
 import { useAudioRecordingHandlers } from '@/hooks/useAudioRecordingHandlers';

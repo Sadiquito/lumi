@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AudioRecorder, AudioRecorderConfig, AudioRecorderState, AudioChunk } from '@/utils/AudioRecorder';
 import { AudioProcessor } from '@/utils/AudioProcessing';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 export interface UseAudioRecorderConfig {
   maxDuration?: number;

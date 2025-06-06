@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { useAdminFunctions } from '@/hooks/useAdminFunctions';
 import { useToast } from '@/hooks/use-toast';
 

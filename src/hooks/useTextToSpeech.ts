@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DEFAULT_VOICE_ID, ELEVENLABS_MODEL, DEFAULT_VOICE_SETTINGS } from '@/utils/elevenLabsConfig';
 import { useToast } from '@/hooks/use-toast';
 import { useTTSUsageTracking } from '@/hooks/useTTSUsageTracking';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 interface UseTextToSpeechProps {
   text: string;

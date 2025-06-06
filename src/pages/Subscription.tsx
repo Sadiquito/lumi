@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Check, Star, Clock, AlertTriangle, Crown, Zap, Shield, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/components/SimpleAuthProvider";
 import TrialCountdown from "@/components/TrialCountdown";
 
 const Subscription = () => {

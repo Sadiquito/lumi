@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { usePsychologicalPortrait } from './usePsychologicalPortrait';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { useToast } from '@/hooks/use-toast';
 
 interface UseConversationAnalysisProps {

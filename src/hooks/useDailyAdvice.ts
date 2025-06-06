@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 interface PrivacySettings {
   psychological_analysis_consent: boolean;

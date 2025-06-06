@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Crown, VolumeX } from 'lucide-react';

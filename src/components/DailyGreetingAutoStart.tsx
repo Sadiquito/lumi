@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Volume2, Sparkles, Coffee, Sun, Moon } from 'lucide-react';
 import { useDailyGreeting } from '@/hooks/useDailyGreeting';
 import { useDailyAdvice } from '@/hooks/useDailyAdvice';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import TextToSpeech from './TextToSpeech';
 
 interface DailyGreetingAutoStartProps {

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Crown, Clock, AlertTriangle, X, Zap, TrendingUp, Sparkles } from 'lucide-react';

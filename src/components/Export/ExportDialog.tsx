@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 

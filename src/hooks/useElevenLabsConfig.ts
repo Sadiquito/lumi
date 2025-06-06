@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { getElevenLabsConfig, type ElevenLabsConfig } from '@/utils/elevenLabsConfig';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 
 export const useElevenLabsConfig = () => {
   const [config, setConfig] = useState<ElevenLabsConfig>({ 
