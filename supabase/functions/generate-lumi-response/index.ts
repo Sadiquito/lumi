@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.10';
@@ -90,12 +89,30 @@ Communication style:
   return messages;
 };
 
-async function generateResponseWithRetry(messages: any[], maxRetries = 2): Promise<any> {
+// Health logging helper
+const logHealthMetric = async (supabase: any, metric: string, value: number, metadata: any = {}) => {
+  try {
+    await supabase.from('system_health').insert({
+      metric_name: metric,
+      metric_value: value,
+      metric_date: new Date().toISOString().split('T')[0],
+      metadata: {
+        timestamp: new Date().toISOString(),
+        ...metadata
+      }
+    });
+  } catch (error) {
+    console.error('Failed to log health metric:', error);
+  }
+};
+
+async function generateResponseWithRetry(messages: any[], maxRetries = 2, supabase: any): Promise<any> {
   let lastError: Error | null = null;
+  const startTime = Date.now();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`OpenAI API attempt ${attempt}/${maxRetries}`);
+      console.log(`[AI_RESPONSE] Attempt ${attempt}/${maxRetries} started`);
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -113,8 +130,18 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 2): Promi
         }),
       });
 
+      const responseTime = Date.now() - startTime;
+
       if (!response.ok) {
         const errorData = await response.text();
+        
+        // Log failed attempt
+        await logHealthMetric(supabase, 'ai_response_attempt_failed', 1, {
+          attempt,
+          status: response.status,
+          error: errorData,
+          response_time: responseTime
+        });
         
         // Handle specific OpenAI errors
         if (response.status === 401) {
@@ -152,10 +179,21 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 2): Promi
         throw new Error('OPENAI_INVALID_RESPONSE');
       }
 
+      // Log successful response
+      await logHealthMetric(supabase, 'ai_response_success', 1, {
+        attempt,
+        response_time: responseTime,
+        tokens_used: result.usage?.total_tokens || 0,
+        prompt_tokens: result.usage?.prompt_tokens || 0,
+        completion_tokens: result.usage?.completion_tokens || 0
+      });
+
+      console.log(`[AI_RESPONSE] Success on attempt ${attempt}, response time: ${responseTime}ms`);
+
       return result;
     } catch (error) {
       lastError = error as Error;
-      console.error(`OpenAI attempt ${attempt} failed:`, error);
+      console.error(`[AI_RESPONSE] Attempt ${attempt} failed:`, error);
       
       // Don't retry for certain errors
       if (error.message.includes('OPENAI_AUTH_ERROR') || 
@@ -172,6 +210,13 @@ async function generateResponseWithRetry(messages: any[], maxRetries = 2): Promi
     }
   }
 
+  // Log final failure
+  await logHealthMetric(supabase, 'ai_response_final_failure', 1, {
+    error: lastError?.message || 'Unknown error',
+    total_attempts: maxRetries,
+    response_time: Date.now() - startTime
+  });
+
   throw lastError || new Error('OPENAI_ALL_ATTEMPTS_FAILED');
 }
 
@@ -180,7 +225,7 @@ const getFallbackResponse = (userMessage?: string): string => {
     "i'm having trouble connecting to my AI right now, but i'm still here with you. what's been on your mind lately?",
     "my systems are experiencing a brief hiccup, but let's continue our conversation. how are you feeling today?",
     "i'm encountering some technical difficulties, but i'd love to hear what you'd like to explore together.",
-    "there's a temporary issue with my AI processing, but i'm curious - what would you like to talk about?",
+    "there's a temporary issue with my AI processing, but i'm wondering what's been weighing on your heart recently?",
     "while i work through some technical challenges, i'm wondering what's been weighing on your heart recently?"
   ];
   
@@ -193,10 +238,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestStartTime = Date.now();
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     // Validate OpenAI API key
     if (!openAIApiKey) {
-      console.error('OpenAI API key not configured');
+      console.error('[AI_RESPONSE] OpenAI API key not configured');
+      await logHealthMetric(supabase, 'ai_response_config_error', 1, {
+        error: 'OpenAI API key not configured'
+      });
+      
       return new Response(
         JSON.stringify({ 
           response: getFallbackResponse(),
@@ -210,14 +262,10 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
     // Parse request body
     const { user_id, conversation_history, persona_state }: RequestBody = await req.json();
 
-    console.log('Generating Lumi response for user:', user_id);
-    console.log('Conversation history length:', conversation_history?.length || 0);
-    console.log('Persona state:', persona_state);
+    console.log('[AI_RESPONSE] Generating Lumi response for user:', user_id);
 
     // Validate required fields
     if (!user_id) {
@@ -240,17 +288,24 @@ serve(async (req) => {
     // Build the AI prompt based on conversation and persona
     const messages = buildLumiPrompt(conversation_history, persona_state);
 
-    console.log('Built prompt with', messages.length, 'messages');
+    console.log('[AI_RESPONSE] Built prompt with', messages.length, 'messages');
 
     // Call OpenAI API with retry logic
-    const openAIData = await generateResponseWithRetry(messages);
+    const openAIData = await generateResponseWithRetry(messages, 2, supabase);
     const lumiResponse = openAIData.choices?.[0]?.message?.content;
 
     if (!lumiResponse || lumiResponse.trim().length === 0) {
       throw new Error('OPENAI_EMPTY_RESPONSE');
     }
 
-    console.log('Generated Lumi response:', lumiResponse.substring(0, 100) + '...');
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.log(`[AI_RESPONSE] Request completed successfully in ${totalResponseTime}ms`);
+
+    await logHealthMetric(supabase, 'ai_response_request_success', 1, {
+      total_response_time: totalResponseTime,
+      user_id,
+      response_length: lumiResponse.length
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -264,9 +319,15 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in generate-lumi-response function:', error);
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.error('[AI_RESPONSE] Request failed:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+    
+    await logHealthMetric(supabase, 'ai_response_request_failure', 1, {
+      error: errorMessage,
+      total_response_time: totalResponseTime
+    });
     
     // Determine fallback response based on error type
     let fallbackResponse = getFallbackResponse();

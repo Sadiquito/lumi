@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -7,17 +6,44 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Health logging helper
+const logHealthMetric = async (supabase: any, metric: string, value: number, metadata: any = {}) => {
+  try {
+    await supabase.from('system_health').insert({
+      metric_name: metric,
+      metric_value: value,
+      metric_date: new Date().toISOString().split('T')[0],
+      metadata: {
+        timestamp: new Date().toISOString(),
+        ...metadata
+      }
+    });
+  } catch (error) {
+    console.error('Failed to log health metric:', error);
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const requestStartTime = Date.now();
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+  )
+
   try {
     // Validate ElevenLabs API key first
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY')
     if (!apiKey) {
-      console.error('ElevenLabs API key not configured')
+      console.error('[TTS] ElevenLabs API key not configured')
+      await logHealthMetric(supabaseClient, 'tts_config_error', 1, {
+        error: 'ElevenLabs API key not configured'
+      });
+      
       return new Response(
         JSON.stringify({ 
           error: 'TTS_SERVICE_UNAVAILABLE',
@@ -32,12 +58,6 @@ serve(async (req) => {
     }
 
     // Create Supabase client for user verification
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
-
-    // Get the user from the request
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return new Response(
@@ -112,7 +132,7 @@ serve(async (req) => {
 
     const finalVoiceSettings = { ...defaultVoiceSettings, ...voice_settings }
 
-    console.log('Generating TTS with ElevenLabs:', { 
+    console.log('[TTS] Generating TTS with ElevenLabs:', { 
       voice_id, 
       model_id, 
       textLength: text.length,
@@ -123,9 +143,12 @@ serve(async (req) => {
     let elevenLabsResponse: Response;
     let retryCount = 0;
     const maxRetries = 2;
+    const startTime = Date.now();
 
     while (retryCount <= maxRetries) {
       try {
+        console.log(`[TTS] Attempt ${retryCount + 1}/${maxRetries + 1} started`);
+        
         elevenLabsResponse = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
           {
@@ -143,13 +166,32 @@ serve(async (req) => {
           }
         )
 
+        const responseTime = Date.now() - startTime;
+
         if (elevenLabsResponse.ok) {
+          // Log successful attempt
+          await logHealthMetric(supabaseClient, 'tts_success', 1, {
+            attempt: retryCount + 1,
+            response_time: responseTime,
+            text_length: text.length,
+            voice_id,
+            model_id
+          });
+          
+          console.log(`[TTS] Success on attempt ${retryCount + 1}, response time: ${responseTime}ms`);
           break; // Success, exit retry loop
         }
 
+        // Log failed attempt
+        await logHealthMetric(supabaseClient, 'tts_attempt_failed', 1, {
+          attempt: retryCount + 1,
+          status: elevenLabsResponse.status,
+          response_time: responseTime
+        });
+
         // Handle specific ElevenLabs errors
         if (elevenLabsResponse.status === 401) {
-          console.error('ElevenLabs API key is invalid')
+          console.error('[TTS] ElevenLabs API key is invalid')
           return new Response(
             JSON.stringify({ 
               error: 'TTS_AUTH_ERROR',
@@ -210,9 +252,15 @@ serve(async (req) => {
         throw new Error(`TTS_API_ERROR: ${elevenLabsResponse.status}`)
 
       } catch (error) {
-        console.error(`ElevenLabs attempt ${retryCount + 1} failed:`, error)
+        console.error(`[TTS] Attempt ${retryCount + 1} failed:`, error)
         
         if (retryCount >= maxRetries) {
+          await logHealthMetric(supabaseClient, 'tts_final_failure', 1, {
+            error: error.toString(),
+            total_attempts: maxRetries + 1,
+            response_time: Date.now() - startTime
+          });
+          
           return new Response(
             JSON.stringify({ 
               error: 'TTS_ALL_ATTEMPTS_FAILED',
@@ -257,7 +305,14 @@ serve(async (req) => {
     // Create a data URL for the audio
     const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`
 
-    console.log('TTS generation successful, audio size:', audioBuffer.byteLength)
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.log(`[TTS] Request completed successfully in ${totalResponseTime}ms, audio size: ${audioBuffer.byteLength}`);
+
+    await logHealthMetric(supabaseClient, 'tts_request_success', 1, {
+      total_response_time: totalResponseTime,
+      audio_size: audioBuffer.byteLength,
+      text_length: text.length
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -274,9 +329,15 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in elevenlabs-tts function:', error)
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.error('[TTS] Request failed:', error)
     
     const errorMessage = error instanceof Error ? error.message : 'TTS_UNKNOWN_ERROR'
+    
+    await logHealthMetric(supabaseClient, 'tts_request_failure', 1, {
+      error: errorMessage,
+      total_response_time: totalResponseTime
+    });
     
     let fallbackMessage = 'Voice generation failed. Text response is available above.'
     

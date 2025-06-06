@@ -3,13 +3,13 @@ import { useCallback } from 'react';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useAuth } from '@/components/SimpleAuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { ConversationData, AudioQuality, NetworkStatus } from '@/types/audioRecording';
+import { ConversationData, AudioQuality, NetworkStatus, ConversationDataState } from '@/types/audioRecording';
 
 interface UseTranscriptionHandlerProps {
   onTranscriptionComplete?: (transcript: string) => void;
   onAIResponse?: (response: string) => void;
   onFallbackToText?: () => void;
-  conversationData: ConversationData | null;
+  conversationData: ConversationDataState | null;
   setConversationData: (data: ConversationData | null) => void;
   setIsTranscribing: (value: boolean) => void;
   setTranscriptionProgress: (value: number | ((prev: number) => number)) => void;
@@ -35,10 +35,67 @@ export const useTranscriptionHandler = ({
   const { transcribeAudio } = useAudioTranscription();
   const { user } = useAuth();
 
+  // Log transcription events
+  const logTranscriptionEvent = useCallback(async (
+    event: 'attempt' | 'success' | 'failure' | 'fallback',
+    details: any
+  ) => {
+    console.log(`[Transcription ${event.toUpperCase()}]`, {
+      timestamp: new Date().toISOString(),
+      userId: user?.id,
+      ...details
+    });
+
+    // Track in system health for admin monitoring
+    try {
+      await supabase.functions.invoke('track-system-health', {
+        body: {
+          metric_name: `transcription_${event}`,
+          metric_value: event === 'success' ? 1 : 0,
+          metadata: {
+            user_id: user?.id,
+            ...details
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to log transcription event:', error);
+    }
+  }, [user?.id]);
+
+  // Log AI response events
+  const logAIResponseEvent = useCallback(async (
+    event: 'attempt' | 'success' | 'failure' | 'fallback',
+    details: any
+  ) => {
+    console.log(`[AI Response ${event.toUpperCase()}]`, {
+      timestamp: new Date().toISOString(),
+      userId: user?.id,
+      ...details
+    });
+
+    try {
+      await supabase.functions.invoke('track-system-health', {
+        body: {
+          metric_name: `ai_response_${event}`,
+          metric_value: event === 'success' ? 1 : 0,
+          metadata: {
+            user_id: user?.id,
+            ...details
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to log AI response event:', error);
+    }
+  }, [user?.id]);
+
   const generateAIResponse = useCallback(async (transcript: string): Promise<string> => {
     if (!user?.id) {
       throw new Error('User not authenticated');
     }
+
+    await logAIResponseEvent('attempt', { transcript_length: transcript.length });
 
     console.log('Generating AI response for transcript:', transcript);
     
@@ -59,6 +116,8 @@ export const useTranscriptionHandler = ({
     
     while (retryCount <= maxRetries) {
       try {
+        const startTime = Date.now();
+        
         const { data, error } = await supabase.functions.invoke('generate-lumi-response', {
           body: {
             user_id: user.id,
@@ -67,8 +126,16 @@ export const useTranscriptionHandler = ({
           }
         });
 
+        const responseTime = Date.now() - startTime;
+
         if (error) {
           console.error('AI response error:', error);
+          
+          await logAIResponseEvent('failure', {
+            error: error.message,
+            retry_count: retryCount,
+            response_time: responseTime
+          });
           
           // Handle specific error types
           if (error.message?.includes('AI_SERVICE_UNAVAILABLE')) {
@@ -100,6 +167,16 @@ export const useTranscriptionHandler = ({
         // Handle fallback responses
         if (data?.fallback) {
           console.log('Received fallback AI response:', data.response);
+          await logAIResponseEvent('fallback', {
+            response_time: responseTime,
+            retry_count: retryCount
+          });
+        } else {
+          await logAIResponseEvent('success', {
+            response_time: responseTime,
+            retry_count: retryCount,
+            response_length: data?.response?.length || 0
+          });
         }
 
         return data?.response || "i'm here with you. what would you like to explore together?";
@@ -107,6 +184,11 @@ export const useTranscriptionHandler = ({
         console.error(`AI response attempt ${retryCount + 1} failed:`, error);
         
         if (retryCount >= maxRetries) {
+          await logAIResponseEvent('fallback', {
+            final_error: error.toString(),
+            retry_count: retryCount
+          });
+          
           // Return polite fallback message
           const fallbackResponses = [
             "i'm having a brief moment of technical difficulty, but i'm still here. what's on your mind?",
@@ -124,7 +206,7 @@ export const useTranscriptionHandler = ({
     
     // This should never be reached, but just in case
     return "i'm here and ready to listen. what would you like to share?";
-  }, [user?.id]);
+  }, [user?.id, logAIResponseEvent]);
 
   const handleTranscription = useCallback(async (
     audioBlob: Blob,
@@ -138,6 +220,7 @@ export const useTranscriptionHandler = ({
   ) => {
     if (!audioBlob) {
       console.error('No audio blob provided for transcription');
+      await logTranscriptionEvent('failure', { error: 'No audio blob provided' });
       goIdle();
       return;
     }
@@ -148,6 +231,14 @@ export const useTranscriptionHandler = ({
       audioQuality,
       networkStatus,
       retryCount
+    });
+
+    await logTranscriptionEvent('attempt', {
+      audio_size: audioBlob.size,
+      duration,
+      audio_quality: audioQuality.level,
+      network_status: networkStatus.online,
+      retry_count: retryCount
     });
 
     setIsTranscribing(true);
@@ -169,10 +260,17 @@ export const useTranscriptionHandler = ({
 
       console.log('Transcription successful:', transcript);
       
+      await logTranscriptionEvent('success', {
+        transcript_length: transcript.length,
+        retry_count: retryCount,
+        audio_size: audioBlob.size
+      });
+      
       // Store conversation data
       const newConversationData: ConversationData = {
+        id: crypto.randomUUID(),
         transcript,
-        audioBlob,
+        ai_response: '', // Will be filled later
         duration,
         quality: audioQuality,
         timestamp: new Date(),
@@ -217,6 +315,12 @@ export const useTranscriptionHandler = ({
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
+      await logTranscriptionEvent('failure', {
+        error: errorMessage,
+        retry_count: retryCount,
+        audio_size: audioBlob.size
+      });
+      
       if (errorMessage === 'RETRY_NEEDED' && retryCount < 1) {
         console.log('Retrying transcription...');
         setRetryCount(prev => prev + 1);
@@ -239,6 +343,11 @@ export const useTranscriptionHandler = ({
       
       if (errorMessage === 'FALLBACK_TO_TEXT') {
         console.log('Falling back to text input due to transcription failure');
+        await logTranscriptionEvent('fallback', {
+          error: errorMessage,
+          retry_count: retryCount
+        });
+        
         if (onFallbackToText) {
           onFallbackToText();
         }
@@ -258,7 +367,8 @@ export const useTranscriptionHandler = ({
     setThinkingProgress,
     setAiResponse,
     goToSpeaking,
-    goIdle
+    goIdle,
+    logTranscriptionEvent
   ]);
 
   return { handleTranscription };

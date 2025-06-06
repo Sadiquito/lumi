@@ -1,32 +1,26 @@
 
 import { useState } from 'react';
-import { PersonaState } from '@/lib/persona-state';
-
-export interface ConversationDataState {
-  conversationId?: string;
-  startTime?: Date;
-  endTime?: Date;
-  lastActivity?: Date;
-  messageCount: number;
-  totalDuration: number;
-  topics: string[];
-  personaState?: PersonaState | null;
-  lastTranscript?: string;
-  lastTranscriptionTime?: Date;
-  lastAiResponse?: string;
-  lastAiResponseTime?: Date;
-}
+import { ConversationData, ConversationDataState } from '@/types/audioRecording';
 
 export const useConversationData = () => {
-  const [conversationData, setConversationData] = useState<ConversationDataState>({
-    messageCount: 0,
-    totalDuration: 0,
-    topics: [],
-    personaState: null,
-  });
+  const [conversationData, setConversationDataState] = useState<ConversationDataState | null>(null);
 
-  return {
-    conversationData,
-    setConversationData,
+  const setConversationData = (data: ConversationData | null) => {
+    if (data) {
+      setConversationDataState({
+        id: data.id,
+        transcript: data.transcript,
+        ai_response: data.ai_response,
+        audioBlob: data.audioBlob,
+        duration: data.duration,
+        quality: data.quality,
+        timestamp: data.timestamp,
+        retryCount: data.retryCount
+      });
+    } else {
+      setConversationDataState(null);
+    }
   };
+
+  return { conversationData, setConversationData };
 };

@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.10';
@@ -26,6 +25,23 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
+
+// Health logging helper
+const logHealthMetric = async (metric: string, value: number, metadata: any = {}) => {
+  try {
+    await supabase.from('system_health').insert({
+      metric_name: metric,
+      metric_value: value,
+      metric_date: new Date().toISOString().split('T')[0],
+      metadata: {
+        timestamp: new Date().toISOString(),
+        ...metadata
+      }
+    });
+  } catch (error) {
+    console.error('Failed to log health metric:', error);
+  }
+};
 
 // Process base64 audio in chunks to prevent memory issues
 function processBase64Chunks(base64String: string, chunkSize = 32768) {
@@ -120,10 +136,11 @@ async function checkUsageLimits(userId: string): Promise<boolean> {
 
 async function transcribeWithRetry(formData: FormData, maxRetries = 2): Promise<any> {
   let lastError: Error | null = null;
+  const startTime = Date.now();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`Whisper transcription attempt ${attempt}/${maxRetries}`);
+      console.log(`[TRANSCRIPTION] Attempt ${attempt}/${maxRetries} started`);
       
       const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
         method: 'POST',
@@ -133,8 +150,18 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 2): Promise<
         body: formData,
       });
 
+      const responseTime = Date.now() - startTime;
+
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Log failed attempt
+        await logHealthMetric('transcription_attempt_failed', 1, {
+          attempt,
+          status: response.status,
+          error: errorText,
+          response_time: responseTime
+        });
         
         // Handle specific OpenAI errors
         if (response.status === 401) {
@@ -171,10 +198,20 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 2): Promise<
         throw new Error('TRANSCRIPTION_NO_SPEECH');
       }
 
+      // Log successful transcription
+      await logHealthMetric('transcription_success', 1, {
+        attempt,
+        response_time: responseTime,
+        text_length: result.text.length,
+        confidence: result.confidence || 0
+      });
+
+      console.log(`[TRANSCRIPTION] Success on attempt ${attempt}, response time: ${responseTime}ms`);
+
       return result;
     } catch (error) {
       lastError = error as Error;
-      console.error(`Transcription attempt ${attempt} failed:`, error);
+      console.error(`[TRANSCRIPTION] Attempt ${attempt} failed:`, error);
       
       // Don't retry for certain errors
       if (error.message.includes('TRANSCRIPTION_AUTH_ERROR') || 
@@ -192,6 +229,13 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 2): Promise<
     }
   }
 
+  // Log final failure
+  await logHealthMetric('transcription_final_failure', 1, {
+    error: lastError?.message || 'Unknown error',
+    total_attempts: maxRetries,
+    response_time: Date.now() - startTime
+  });
+
   throw lastError || new Error('TRANSCRIPTION_UNKNOWN_ERROR');
 }
 
@@ -200,10 +244,16 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const requestStartTime = Date.now();
+
   try {
     // Validate OpenAI API key
     if (!Deno.env.get('OPENAI_API_KEY')) {
-      console.error('OpenAI API key not configured');
+      console.error('[TRANSCRIPTION] OpenAI API key not configured');
+      await logHealthMetric('transcription_config_error', 1, {
+        error: 'OpenAI API key not configured'
+      });
+      
       return new Response(
         JSON.stringify({ 
           error: 'TRANSCRIPTION_SERVICE_UNAVAILABLE',
@@ -265,6 +315,10 @@ serve(async (req) => {
     const requestData: TranscriptionRequest = await req.json();
     
     if (!requestData.audio) {
+      await logHealthMetric('transcription_invalid_request', 1, {
+        error: 'No audio data provided'
+      });
+      
       return new Response(
         JSON.stringify({ 
           error: 'TRANSCRIPTION_NO_AUDIO',
@@ -277,7 +331,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing audio transcription request...');
+    console.log('[TRANSCRIPTION] Processing audio transcription request...');
 
     // Process audio in chunks to prevent memory issues
     let binaryAudio: Uint8Array;
@@ -335,7 +389,14 @@ serve(async (req) => {
     // Track usage after successful transcription
     await trackTranscriptionUsage(user.id, audioLength);
 
-    console.log('Transcription completed successfully');
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.log(`[TRANSCRIPTION] Request completed successfully in ${totalResponseTime}ms`);
+
+    await logHealthMetric('transcription_request_success', 1, {
+      total_response_time: totalResponseTime,
+      user_id: user.id,
+      audio_size: binaryAudio.length
+    });
 
     const response: TranscriptionResponse = {
       text: result.text || '',
@@ -352,9 +413,15 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Transcription error:', error);
+    const totalResponseTime = Date.now() - requestStartTime;
+    console.error('[TRANSCRIPTION] Request failed:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'TRANSCRIPTION_UNKNOWN_ERROR';
+    
+    await logHealthMetric('transcription_request_failure', 1, {
+      error: errorMessage,
+      total_response_time: totalResponseTime
+    });
     
     // Map specific errors to user-friendly messages
     let fallbackMessage = 'Voice transcription failed. Please use text input.';
