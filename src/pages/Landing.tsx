@@ -68,7 +68,7 @@ const Landing = () => {
 
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
+            <h2 className="text-3xl md:text-5xl font-title font-semibold text-white mb-6 leading-tight tracking-wide">
               superintelligent
               <br />
               <span className="text-lumi-aquamarine font-semibold">journaling</span>
