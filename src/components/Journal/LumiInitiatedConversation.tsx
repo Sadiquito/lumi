@@ -9,13 +9,15 @@ import SimpleTTS from '@/components/SimpleTTS';
 interface LumiInitiatedConversationProps {
   onUserResponse?: (transcript: string) => void;
   onConversationEnd?: () => void;
+  onStateChange?: (state: 'ready' | 'lumi_speaking' | 'waiting_for_user' | 'user_recording' | 'processing') => void;
 }
 
 type ConversationFlow = 'ready' | 'lumi_speaking' | 'waiting_for_user' | 'user_recording' | 'processing';
 
 const LumiInitiatedConversation: React.FC<LumiInitiatedConversationProps> = ({
   onUserResponse,
-  onConversationEnd
+  onConversationEnd,
+  onStateChange
 }) => {
   const [flowState, setFlowState] = useState<ConversationFlow>('ready');
   const [currentLumiMessage, setCurrentLumiMessage] = useState<string>('');
@@ -24,6 +26,11 @@ const LumiInitiatedConversation: React.FC<LumiInitiatedConversationProps> = ({
     message: string;
     timestamp: Date;
   }>>([]);
+
+  // Notify parent of state changes
+  useEffect(() => {
+    onStateChange?.(flowState);
+  }, [flowState, onStateChange]);
 
   // Mock Lumi opening prompts - these will be replaced with AI-generated content
   const openingPrompts = [
