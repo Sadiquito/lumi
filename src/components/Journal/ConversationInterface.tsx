@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LumiInitiatedConversation from './LumiInitiatedConversation';
-import ConversationHistory from './ConversationHistory';
 
 const ConversationInterface: React.FC = () => {
   const [activeMode, setActiveMode] = useState<'start' | 'conversation'>('start');
@@ -124,9 +123,6 @@ const ConversationInterface: React.FC = () => {
           <MessageCircle className="w-12 h-12 text-white drop-shadow-lg" />
         </Button>
       </div>
-
-      {/* Conversation History */}
-      <ConversationHistory />
     </div>
   );
 };
