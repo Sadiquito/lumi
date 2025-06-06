@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/AuthProvider";
+import { AuthProvider } from "@/components/SimpleAuthProvider";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import { PerformanceTracker } from "@/components/Analytics/PerformanceTracker";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -13,7 +13,6 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Journal from "./pages/Journal";
 import Settings from "./pages/Settings";
-import Subscription from "./pages/Subscription";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -39,11 +38,6 @@ const App = () => (
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="/subscription" element={
-                <ProtectedRoute>
-                  <Subscription />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={

@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface ActivityTrackerProps {

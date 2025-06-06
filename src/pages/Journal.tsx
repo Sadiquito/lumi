@@ -1,17 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/components/SimpleAuthProvider';
 import { useAnalyticsTracking } from '@/components/AnalyticsProvider';
 import { FeatureTracker } from '@/components/Analytics/FeatureTracker';
 import JournalHeader from '@/components/Journal/JournalHeader';
 import TodaysCheckIn from '@/components/Journal/TodaysCheckIn';
 import RecentConversations from '@/components/Journal/RecentConversations';
 import ConversationThread from '@/components/Journal/ConversationThread';
-import TrialStatusAlerts from '@/components/Journal/TrialStatusAlerts';
 import ActivityTracker from '@/components/Admin/ActivityTracker';
 
 const Journal: React.FC = () => {
-  const { user, trialStatus } = useAuth();
+  const { user } = useAuth();
   const { trackConversation, trackFeatureUsage } = useAnalyticsTracking();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
 
@@ -42,8 +41,6 @@ const Journal: React.FC = () => {
   return (
     <ActivityTracker activityType="journal_usage">
       <div className="min-h-screen bg-gradient-to-br from-lumi-sage/10 to-lumi-aquamarine/10">
-        <TrialStatusAlerts />
-        
         <div className="flex h-screen">
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
