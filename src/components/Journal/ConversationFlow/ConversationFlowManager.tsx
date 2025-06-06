@@ -47,11 +47,11 @@ export const useConversationFlowManager = ({
     isProcessing,
   } = useAudioRecordingFeature({
     onTranscriptionComplete: (transcript: string) => {
-      console.log('Transcription completed:', transcript);
+      console.log('Transcription completed in flow manager:', transcript);
       handleUserResponse(transcript);
     },
     onAIResponse: (response: string) => {
-      console.log('AI response received:', response);
+      console.log('AI response received in flow manager:', response);
       handleLumiResponse(response);
     },
     onFallbackToText: () => {
@@ -103,6 +103,8 @@ export const useConversationFlowManager = ({
   };
 
   const handleStartConversation = async () => {
+    console.log('Starting conversation...');
+    
     // Start audio session
     await startSession();
     
@@ -120,15 +122,18 @@ export const useConversationFlowManager = ({
       timestamp: new Date()
     }]);
 
-    // Add to conversation context
+    // Add to conversation context - this will NOT trigger persona update (only assistant messages)
+    console.log('Adding Lumi opening message to context');
     addMessage('assistant', prompt);
   };
 
   const handleLumiFinishedSpeaking = () => {
+    console.log('Lumi finished speaking, waiting for user...');
     setFlowState('waiting_for_user');
   };
 
   const handleUserStartRecording = async () => {
+    console.log('User starting recording...');
     if (!isSessionActive) {
       await startSession();
     }
@@ -136,26 +141,30 @@ export const useConversationFlowManager = ({
   };
 
   const handleUserStopRecording = () => {
+    console.log('User stopping recording...');
     handleStopRecording();
   };
 
   const handleUserResponse = (transcript: string) => {
-    console.log('User response received:', transcript);
+    console.log('Processing user response in flow manager:', transcript);
     
-    // Add user response to history and context
+    // Add user response to history
     setConversationHistory(prev => [...prev, {
       speaker: 'user',
       message: transcript,
       timestamp: new Date()
     }]);
 
-    // Add to conversation context
+    // Add to conversation context - this WILL trigger persona update when followed by assistant message
+    console.log('Adding user message to conversation context');
     addMessage('user', transcript);
+    
+    // Notify parent component
     onUserResponse?.(transcript);
   };
 
   const handleLumiResponse = async (aiResponse: string) => {
-    console.log('Lumi response received:', aiResponse);
+    console.log('Processing Lumi response in flow manager:', aiResponse);
     
     setCurrentLumiMessage(aiResponse);
     
@@ -165,15 +174,17 @@ export const useConversationFlowManager = ({
       timestamp: new Date()
     }]);
 
-    // Add AI response to context
+    // Add AI response to context - this WILL trigger persona update if preceded by user message
+    console.log('Adding Lumi response to conversation context');
     addMessage('assistant', aiResponse);
 
-    // Update persona state from conversation
+    // Manual persona update with basic insights (will be replaced by AI-generated insights)
     const mockInsights = {
       lastInteraction: new Date().toISOString(),
       totalConversations: (context.personaState?.totalConversations || 0) + 1,
     };
 
+    console.log('Applying manual persona insights:', mockInsights);
     await updatePersonaFromConversation(mockInsights);
     
     setFlowState('lumi_speaking');

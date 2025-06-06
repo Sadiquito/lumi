@@ -14,7 +14,9 @@ export interface UpdatePersonaStateResponse {
   success: boolean;
   updated_fields: string[];
   persona_state: any;
+  database_updated?: boolean;
   error?: string;
+  fallback?: boolean;
 }
 
 /**
@@ -26,7 +28,11 @@ export const updatePersonaStateFromConversation = async (
   context?: { user_message: string; ai_response: string }
 ): Promise<UpdatePersonaStateResponse> => {
   try {
-    console.log('Calling update-persona-state function for user:', userId);
+    console.log('Calling update-persona-state function:', {
+      userId,
+      conversationLength: conversationText.length,
+      hasContext: !!context
+    });
     
     const { data, error } = await supabase.functions.invoke('update-persona-state', {
       body: {
@@ -41,7 +47,13 @@ export const updatePersonaStateFromConversation = async (
       throw error;
     }
 
-    console.log('Persona state update response:', data);
+    console.log('Persona state update response:', {
+      success: data?.success,
+      updatedFields: data?.updated_fields,
+      databaseUpdated: data?.database_updated,
+      hasPersonaState: !!data?.persona_state
+    });
+
     return data;
 
   } catch (error) {
@@ -50,7 +62,9 @@ export const updatePersonaStateFromConversation = async (
       success: false,
       updated_fields: [],
       persona_state: null,
-      error: error.message || 'Unknown error occurred'
+      database_updated: false,
+      error: error.message || 'Unknown error occurred',
+      fallback: true
     };
   }
 };
