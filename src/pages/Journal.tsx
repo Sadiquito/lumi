@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { useAuth } from '@/components/SimpleAuthProvider';
-import JournalHeader from '@/components/Journal/JournalHeader';
 import ConversationInterface from '@/components/Journal/ConversationInterface';
+import UserGreeting from '@/components/Journal/UserGreeting';
+import DiscreteSignOutButton from '@/components/Journal/DiscreteSignOutButton';
 
 const Journal: React.FC = () => {
   const { user } = useAuth();
@@ -21,11 +22,16 @@ const Journal: React.FC = () => {
       {/* Subtle overlay to maintain readability */}
       <div className="absolute inset-0 bg-black/20"></div>
       
+      {/* Discrete Sign Out Button */}
+      <DiscreteSignOutButton />
+      
       {/* Content */}
       <div className="relative z-10">
-        <JournalHeader />
-        
-        <main className="px-4 py-8 max-w-4xl mx-auto">
+        <main className="px-4 py-16 max-w-4xl mx-auto">
+          {/* User Greeting */}
+          <UserGreeting />
+          
+          {/* Conversation Interface */}
           <ConversationInterface />
         </main>
       </div>

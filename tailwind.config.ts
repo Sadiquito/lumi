@@ -20,9 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Crimson Text', 'Arial', 'serif'],
-				hero: ['Crimson Text', 'Arial', 'serif'],
-				title: ['Cinzel', 'serif'],
+				sans: ['Crimson Pro', 'serif'],
+				hero: ['Crimson Pro', 'serif'],
+				title: ['Crimson Pro', 'serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

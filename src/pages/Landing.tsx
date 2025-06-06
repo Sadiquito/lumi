@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Star, Heart, Clock } from "lucide-react";
+import { Mic, Heart, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/SimpleAuthProvider";
 import { useEffect } from "react";
@@ -47,17 +47,9 @@ const Landing = () => {
       
       {/* Content */}
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex justify-center items-center p-4 md:p-6">
-          <div className="flex items-center">
-            <Star className="w-8 h-8 text-lumi-aquamarine mr-2" />
-            <h1 className="text-2xl font-title text-white tracking-wide">Lumi</h1>
-          </div>
-        </div>
-
         <div className="max-w-4xl mx-auto px-4 md:px-6 pb-8">
           {/* Large Lumi Title in Center */}
-          <div className="text-center mb-8 mt-8 relative">
+          <div className="text-center mb-8 mt-16 relative">
             <h1 className="text-6xl md:text-7xl font-title font-bold tracking-wider relative">
               {/* Mystical glow effect */}
               <span className="absolute inset-0 text-lumi-aquamarine/40 blur-2xl transform scale-110">
@@ -111,8 +103,6 @@ const Landing = () => {
               </Card>
             ))}
           </div>
-
-
         </div>
       </div>
     </div>
