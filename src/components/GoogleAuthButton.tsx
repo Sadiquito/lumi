@@ -14,15 +14,23 @@ const GoogleAuthButton = () => {
     try {
       setLoading(true);
       
-      // Get the current URL for proper redirect
+      // Detect if we're in Lovable preview or deployed
       const currentUrl = window.location.origin;
+      let redirectTo = `${currentUrl}/journal`;
+      
+      // If we're in a Lovable preview environment, use the deployed URL for redirect
+      if (currentUrl.includes('lovableproject.com')) {
+        redirectTo = 'https://lumii.lovable.app/journal';
+      }
+      
       console.log('Current URL:', currentUrl);
+      console.log('Redirect URL:', redirectTo);
       console.log('Attempting Google OAuth...');
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${currentUrl}/journal`,
+          redirectTo: redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
