@@ -14,6 +14,21 @@ serve(async (req) => {
   }
 
   try {
+    // Validate ElevenLabs API key first
+    const apiKey = Deno.env.get('ELEVENLABS_API_KEY')
+    if (!apiKey) {
+      console.error('ElevenLabs API key not configured')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Voice generation service is temporarily unavailable. The text response is available above.' 
+        }),
+        { 
+          status: 503, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Create Supabase client for user verification
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,14 +36,24 @@ serve(async (req) => {
     )
 
     // Get the user from the request
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Please sign in again to continue' }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -40,7 +65,7 @@ serve(async (req) => {
 
     if (!text || text.trim().length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Text is required' }),
+        JSON.stringify({ error: 'Text is required for voice generation' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -48,14 +73,12 @@ serve(async (req) => {
       )
     }
 
-    // Get ElevenLabs API key
-    const apiKey = Deno.env.get('ELEVENLABS_API_KEY')
-    if (!apiKey) {
-      console.error('ElevenLabs API key not configured')
+    // Validate text length
+    if (text.length > 5000) {
       return new Response(
-        JSON.stringify({ error: 'TTS service not configured' }),
+        JSON.stringify({ error: 'Text is too long for voice generation. Please use shorter responses.' }),
         { 
-          status: 500, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
@@ -78,41 +101,101 @@ serve(async (req) => {
       settings: finalVoiceSettings
     })
 
-    // Call ElevenLabs API
-    const elevenLabsResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          text: text.trim(),
-          model_id,
-          voice_settings: finalVoiceSettings,
-        }),
-      }
-    )
+    // Call ElevenLabs API with retry logic
+    let elevenLabsResponse: Response;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    if (!elevenLabsResponse.ok) {
-      const errorData = await elevenLabsResponse.text()
-      console.error('ElevenLabs API error:', errorData)
-      return new Response(
-        JSON.stringify({ 
-          error: `TTS generation failed: ${elevenLabsResponse.status}`,
-          details: errorData
-        }),
-        { 
-          status: elevenLabsResponse.status, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    while (retryCount < maxRetries) {
+      try {
+        elevenLabsResponse = await fetch(
+          `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'audio/mpeg',
+              'Content-Type': 'application/json',
+              'xi-api-key': apiKey,
+            },
+            body: JSON.stringify({
+              text: text.trim(),
+              model_id,
+              voice_settings: finalVoiceSettings,
+            }),
+          }
+        )
+
+        if (elevenLabsResponse.ok) {
+          break; // Success, exit retry loop
         }
-      )
+
+        // Handle specific ElevenLabs errors
+        if (elevenLabsResponse.status === 401) {
+          console.error('ElevenLabs API key is invalid')
+          return new Response(
+            JSON.stringify({ error: 'Voice service authentication failed. Please try text mode.' }),
+            { 
+              status: 503, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        } else if (elevenLabsResponse.status === 429) {
+          // Rate limited, try again after delay
+          retryCount++
+          if (retryCount < maxRetries) {
+            console.log(`Rate limited, retrying in ${retryCount * 2} seconds...`)
+            await new Promise(resolve => setTimeout(resolve, retryCount * 2000))
+            continue
+          } else {
+            return new Response(
+              JSON.stringify({ error: 'Voice service is busy. Please try again in a moment.' }),
+              { 
+                status: 429, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            )
+          }
+        } else if (elevenLabsResponse.status >= 500) {
+          // Server error, retry
+          retryCount++
+          if (retryCount < maxRetries) {
+            console.log(`Server error ${elevenLabsResponse.status}, retrying...`)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+            continue
+          }
+        }
+
+        // If we get here, it's a non-retryable error
+        const errorData = await elevenLabsResponse.text()
+        console.error('ElevenLabs API error:', errorData)
+        throw new Error(`Voice generation failed: ${elevenLabsResponse.status}`)
+
+      } catch (error) {
+        retryCount++
+        if (retryCount >= maxRetries) {
+          console.error('All ElevenLabs retry attempts failed:', error)
+          return new Response(
+            JSON.stringify({ 
+              error: 'Voice generation service is temporarily unavailable. The text response is available above.'
+            }),
+            { 
+              status: 503, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          )
+        }
+        
+        console.log(`Attempt ${retryCount} failed, retrying...`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+      }
     }
 
     // Get the audio data
     const audioBuffer = await elevenLabsResponse.arrayBuffer()
+    
+    if (audioBuffer.byteLength === 0) {
+      throw new Error('Received empty audio response')
+    }
     
     // Convert to base64 for transport
     const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)))
@@ -137,9 +220,19 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in elevenlabs-tts function:', error)
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    let userMessage = 'Voice generation failed. The text response is available above.'
+    
+    if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+      userMessage = 'Network issue detected. Voice generation is temporarily unavailable.'
+    } else if (errorMessage.includes('Rate limit') || errorMessage.includes('busy')) {
+      userMessage = 'Voice service is busy. Please try again in a moment.'
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error',
+        error: userMessage,
         message: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 

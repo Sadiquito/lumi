@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Volume2, Sparkles, Loader2 } from 'lucide-react';
+import { Volume2, Sparkles, Loader2, MessageSquare } from 'lucide-react';
 import { useAudioSynthesis } from '@/hooks/useAudioSynthesis';
 
 interface LumiSpeakingStateProps {
@@ -16,14 +16,15 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  const { isSynthesizing, synthesisResult, handleSynthesis } = useAudioSynthesis({
+  const { isSynthesizing, synthesisResult, error, hasVoiceSupport, handleSynthesis } = useAudioSynthesis({
     onSynthesisComplete: (result) => {
       // Auto-play the synthesized audio
       if (audioRef.current && result.audioUrl) {
         audioRef.current.src = result.audioUrl;
         audioRef.current.play().catch(console.error);
       }
-    }
+    },
+    enableFallback: true
   });
 
   // Synthesize audio when message is available
@@ -46,23 +47,60 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
     onFinishedSpeaking();
   };
 
+  // Auto-finish if voice synthesis fails
+  useEffect(() => {
+    if (error || !hasVoiceSupport) {
+      const timer = setTimeout(() => {
+        onFinishedSpeaking();
+      }, 3000); // 3 second delay for reading
+
+      return () => clearTimeout(timer);
+    }
+  }, [error, hasVoiceSupport, onFinishedSpeaking]);
+
+  const getStatusText = () => {
+    if (error || !hasVoiceSupport) {
+      return 'Lumi\'s response (text mode)';
+    }
+    if (isSynthesizing) {
+      return 'Preparing voice...';
+    }
+    return 'Lumi is speaking';
+  };
+
+  const getStatusSubtext = () => {
+    if (error || !hasVoiceSupport) {
+      return 'Voice is temporarily unavailable';
+    }
+    if (isSynthesizing) {
+      return 'Generating audio...';
+    }
+    return 'Listen to Lumi\'s question';
+  };
+
+  const getStatusIcon = () => {
+    if (error || !hasVoiceSupport) {
+      return <MessageSquare className="w-8 h-8 text-white" />;
+    }
+    if (isSynthesizing) {
+      return <Loader2 className="w-8 h-8 text-white animate-spin" />;
+    }
+    return <Volume2 className="w-8 h-8 text-white" />;
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <div className="flex justify-center mb-4">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-lumi-sunset-gold/80 to-lumi-sunset-gold/60 flex items-center justify-center shadow-2xl animate-pulse">
-            {isSynthesizing ? (
-              <Loader2 className="w-8 h-8 text-white animate-spin" />
-            ) : (
-              <Volume2 className="w-8 h-8 text-white" />
-            )}
+            {getStatusIcon()}
           </div>
         </div>
         <h3 className="text-white text-lg font-medium mb-2" style={{ fontFamily: 'Cinzel' }}>
-          {isSynthesizing ? 'Preparing voice...' : 'Lumi is speaking'}
+          {getStatusText()}
         </h3>
         <p className="text-white/70" style={{ fontFamily: 'Crimson Pro' }}>
-          {isSynthesizing ? 'Generating audio...' : 'Listen to Lumi\'s question'}
+          {getStatusSubtext()}
         </p>
       </div>
       
@@ -76,6 +114,11 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
               <p className="text-white text-lg leading-relaxed" style={{ fontFamily: 'Crimson Pro' }}>
                 {currentMessage}
               </p>
+              {(error || !hasVoiceSupport) && (
+                <p className="text-lumi-sunset-gold/70 text-sm mt-2 italic">
+                  Voice temporarily unavailable - text response shown above
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -92,11 +135,14 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
       </div>
 
       {/* Audio Element */}
-      {synthesisResult?.audioUrl && (
+      {synthesisResult?.audioUrl && hasVoiceSupport && !error && (
         <audio
           ref={audioRef}
           onEnded={handleAudioEnd}
-          onError={(e) => console.error('Audio playback error:', e)}
+          onError={(e) => {
+            console.error('Audio playback error:', e);
+            onFinishedSpeaking();
+          }}
           preload="metadata"
         />
       )}

@@ -135,6 +135,18 @@ async function transcribeWithRetry(formData: FormData, maxRetries = 3): Promise<
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Handle specific OpenAI errors
+        if (response.status === 401) {
+          throw new Error('OpenAI API key is invalid or expired');
+        } else if (response.status === 429) {
+          throw new Error('OpenAI API rate limit exceeded. Please try again later');
+        } else if (response.status === 413) {
+          throw new Error('Audio file is too large. Please record shorter messages');
+        } else if (response.status >= 500) {
+          throw new Error('OpenAI service is temporarily unavailable. Please try again');
+        }
+        
         throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
       }
 
@@ -161,10 +173,24 @@ serve(async (req) => {
   }
 
   try {
+    // Validate OpenAI API key
+    if (!Deno.env.get('OPENAI_API_KEY')) {
+      console.error('OpenAI API key not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Transcription service is temporarily unavailable. Please try text input instead.' 
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Get user ID from JWT
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      throw new Error('Authorization header required');
+      throw new Error('Authentication required');
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -197,8 +223,21 @@ serve(async (req) => {
     console.log('Processing audio transcription request...');
 
     // Process audio in chunks to prevent memory issues
-    const binaryAudio = processBase64Chunks(requestData.audio);
-    const audioLength = binaryAudio.length / (16000 * 2); // Estimate duration in seconds
+    let binaryAudio: Uint8Array;
+    let audioLength: number;
+    
+    try {
+      binaryAudio = processBase64Chunks(requestData.audio);
+      audioLength = binaryAudio.length / (16000 * 2); // Estimate duration in seconds
+    } catch (error) {
+      console.error('Audio processing error:', error);
+      throw new Error('Invalid audio data format');
+    }
+    
+    // Validate audio size
+    if (binaryAudio.length > 25 * 1024 * 1024) { // 25MB limit
+      throw new Error('Audio file is too large. Please record shorter messages');
+    }
     
     // Prepare form data for OpenAI
     const formData = new FormData();
@@ -217,6 +256,11 @@ serve(async (req) => {
 
     // Transcribe with retry logic
     const result = await transcribeWithRetry(formData);
+
+    // Validate transcription result
+    if (!result.text || result.text.trim().length === 0) {
+      throw new Error('No speech detected in audio. Please speak clearly and try again');
+    }
 
     // Track usage after successful transcription
     await trackTranscriptionUsage(user.id, audioLength);
@@ -242,8 +286,22 @@ serve(async (req) => {
     
     const errorMessage = error instanceof Error ? error.message : 'Transcription failed';
     
+    // Provide user-friendly error messages
+    let userMessage = errorMessage;
+    if (errorMessage.includes('rate limit')) {
+      userMessage = 'Service is busy. Please wait a moment and try again';
+    } else if (errorMessage.includes('temporarily unavailable') || errorMessage.includes('timeout')) {
+      userMessage = 'Voice service is temporarily unavailable. Please try text input instead';
+    } else if (errorMessage.includes('Invalid audio') || errorMessage.includes('No speech detected')) {
+      userMessage = errorMessage; // Keep specific audio-related messages
+    } else if (errorMessage.includes('Authentication') || errorMessage.includes('Invalid authentication')) {
+      userMessage = 'Please sign in again to continue';
+    } else {
+      userMessage = 'Voice transcription failed. Please try text input instead';
+    }
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

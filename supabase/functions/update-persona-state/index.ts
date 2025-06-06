@@ -73,69 +73,105 @@ Please provide thoughtful updates to help Lumi better understand and support thi
 
 Return only a JSON object with the fields to update.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 800,
-        response_format: { type: 'json_object' }
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const aiInsights = JSON.parse(data.choices[0].message.content);
+    // Retry logic for OpenAI API calls
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    console.log('AI summarization successful:', aiInsights);
+    while (retryCount < maxRetries) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.3,
+            max_tokens: 800,
+            response_format: { type: 'json_object' }
+          }),
+        });
 
-    // Add timestamp to track when insights were generated
-    const timestamp = new Date().toISOString();
-    const updatedInsights = {
-      ...aiInsights,
-      last_updated: timestamp,
-    };
+        if (!response.ok) {
+          const errorData = await response.text();
+          
+          if (response.status === 429 && retryCount < maxRetries - 1) {
+            // Rate limited, wait and retry
+            retryCount++;
+            const delay = Math.pow(2, retryCount) * 1000;
+            console.log(`Rate limited, retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          } else if (response.status >= 500 && retryCount < maxRetries - 1) {
+            // Server error, retry
+            retryCount++;
+            console.log(`Server error ${response.status}, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+          
+          throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        }
 
-    // Ensure we don't overwrite existing good data - merge intelligently
-    const safeUpdates: Partial<PersonaState> = {};
-    
-    if (aiInsights.personality_snapshot) {
-      // Merge with existing personality snapshot
-      const existing = currentState.personality_snapshot || '';
-      safeUpdates.personality_snapshot = existing 
-        ? `${existing}\n\n[${timestamp.slice(0, 10)}] ${aiInsights.personality_snapshot}`
-        : aiInsights.personality_snapshot;
-    }
-    
-    if (aiInsights.conversational_notes) {
-      // Merge with existing conversational notes
-      const existing = currentState.conversational_notes || '';
-      safeUpdates.conversational_notes = existing
-        ? `${existing}\n\n[${timestamp.slice(0, 10)}] ${aiInsights.conversational_notes}`
-        : aiInsights.conversational_notes;
-    }
+        const data = await response.json();
+        
+        if (!data.choices?.[0]?.message?.content) {
+          throw new Error('No content received from OpenAI');
+        }
+        
+        const aiInsights = JSON.parse(data.choices[0].message.content);
+        
+        console.log('AI summarization successful:', aiInsights);
 
-    // Copy other fields directly
-    Object.keys(aiInsights).forEach(key => {
-      if (!['personality_snapshot', 'conversational_notes'].includes(key)) {
-        safeUpdates[key] = aiInsights[key];
+        // Add timestamp to track when insights were generated
+        const timestamp = new Date().toISOString();
+        
+        // Ensure we don't overwrite existing good data - merge intelligently
+        const safeUpdates: Partial<PersonaState> = {};
+        
+        if (aiInsights.personality_snapshot) {
+          // Merge with existing personality snapshot
+          const existing = currentState.personality_snapshot || '';
+          safeUpdates.personality_snapshot = existing 
+            ? `${existing}\n\n[${timestamp.slice(0, 10)}] ${aiInsights.personality_snapshot}`
+            : aiInsights.personality_snapshot;
+        }
+        
+        if (aiInsights.conversational_notes) {
+          // Merge with existing conversational notes
+          const existing = currentState.conversational_notes || '';
+          safeUpdates.conversational_notes = existing
+            ? `${existing}\n\n[${timestamp.slice(0, 10)}] ${aiInsights.conversational_notes}`
+            : aiInsights.conversational_notes;
+        }
+
+        // Copy other fields directly
+        Object.keys(aiInsights).forEach(key => {
+          if (!['personality_snapshot', 'conversational_notes'].includes(key)) {
+            safeUpdates[key] = aiInsights[key];
+          }
+        });
+
+        safeUpdates.last_updated = timestamp;
+
+        return safeUpdates;
+
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw error;
+        }
+        console.log(`Attempt ${retryCount} failed, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
-    });
+    }
 
-    safeUpdates.last_updated = timestamp;
-
-    return safeUpdates;
+    throw new Error('All OpenAI attempts failed');
 
   } catch (error) {
     console.error('AI summarization failed, falling back to basic updates:', error);
@@ -155,6 +191,21 @@ serve(async (req) => {
   }
 
   try {
+    // Validate required environment variables
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Persona update service is temporarily unavailable',
+          fallback: true
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Parse request body
@@ -172,23 +223,30 @@ serve(async (req) => {
       throw new Error('new_conversation_text is required and cannot be empty');
     }
 
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    // Retrieve current persona state with error handling
+    let currentPersonaData;
+    let currentState: PersonaState = {};
+    
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('persona_state')
+        .select('state_blob')
+        .eq('user_id', user_id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error fetching current persona state:', fetchError);
+        // Continue with empty state rather than failing
+        console.log('Continuing with empty persona state');
+      } else {
+        currentPersonaData = data;
+        currentState = currentPersonaData?.state_blob || {};
+      }
+    } catch (error) {
+      console.error('Database fetch error:', error);
+      console.log('Continuing with empty persona state');
     }
 
-    // Retrieve current persona state
-    const { data: currentPersonaData, error: fetchError } = await supabase
-      .from('persona_state')
-      .select('state_blob')
-      .eq('user_id', user_id)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error('Error fetching current persona state:', fetchError);
-      throw new Error(`Failed to fetch persona state: ${fetchError.message}`);
-    }
-
-    const currentState: PersonaState = currentPersonaData?.state_blob || {};
     console.log('Current persona state keys:', Object.keys(currentState));
 
     // Generate new insights using AI summarization
@@ -201,27 +259,46 @@ serve(async (req) => {
       ...newInsights,
     };
 
-    // Update the persona state in the database
-    const { error: updateError } = await supabase
-      .from('persona_state')
-      .upsert({
-        user_id: user_id,
-        state_blob: updatedState,
-        updated_at: new Date().toISOString()
-      });
+    // Update the persona state in the database with retry logic
+    let updateSuccess = false;
+    let updateRetries = 0;
+    const maxUpdateRetries = 3;
+    
+    while (!updateSuccess && updateRetries < maxUpdateRetries) {
+      try {
+        const { error: updateError } = await supabase
+          .from('persona_state')
+          .upsert({
+            user_id: user_id,
+            state_blob: updatedState,
+            updated_at: new Date().toISOString()
+          });
 
-    if (updateError) {
-      console.error('Error updating persona state:', updateError);
-      throw new Error(`Failed to update persona state: ${updateError.message}`);
+        if (updateError) {
+          throw updateError;
+        }
+        
+        updateSuccess = true;
+        console.log('Persona state updated successfully with AI insights');
+      } catch (error) {
+        updateRetries++;
+        console.error(`Database update attempt ${updateRetries} failed:`, error);
+        
+        if (updateRetries < maxUpdateRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * updateRetries));
+        } else {
+          // Final attempt failed, but don't fail the whole request
+          console.error('All database update attempts failed, continuing without saving');
+        }
+      }
     }
-
-    console.log('Persona state updated successfully with AI insights');
 
     return new Response(
       JSON.stringify({ 
         success: true,
         updated_fields: Object.keys(newInsights),
-        persona_state: updatedState
+        persona_state: updatedState,
+        database_updated: updateSuccess
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -230,10 +307,23 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in update-persona-state function:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    let userMessage = 'Persona update temporarily unavailable';
+    
+    if (errorMessage.includes('required') || errorMessage.includes('cannot be empty')) {
+      userMessage = 'Invalid request data';
+    } else if (errorMessage.includes('rate limit')) {
+      userMessage = 'Service is busy, persona updates may be delayed';
+    } else if (errorMessage.includes('temporarily unavailable')) {
+      userMessage = 'Persona update service is temporarily unavailable';
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Internal server error',
-        details: error.toString()
+        error: userMessage,
+        details: error.toString(),
+        fallback: true // Indicates the conversation can continue without persona updates
       }),
       {
         status: 500,

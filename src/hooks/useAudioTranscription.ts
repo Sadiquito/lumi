@@ -33,7 +33,47 @@ export const useAudioTranscription = () => {
         setTranscriptionProgress(100);
 
         if (error) {
-          throw new Error(error.message || 'Transcription failed');
+          // Handle specific error types from the backend
+          let errorMessage = error.message || 'Transcription failed';
+          let shouldFallback = false;
+          
+          if (errorMessage.includes('Daily transcription limit reached')) {
+            toast({
+              title: "Daily Limit Reached",
+              description: "You've used all voice features today. Upgrade for unlimited access.",
+              variant: "destructive",
+            });
+            shouldFallback = true;
+          } else if (errorMessage.includes('temporarily unavailable')) {
+            errorMessage = 'Voice transcription is temporarily unavailable. Please try text input.';
+            shouldFallback = true;
+          } else if (errorMessage.includes('sign in again')) {
+            toast({
+              title: "Authentication Required",
+              description: "Please sign in again to continue using voice features.",
+              variant: "destructive",
+            });
+            shouldFallback = true;
+          } else if (errorMessage.includes('too large') || errorMessage.includes('too long')) {
+            toast({
+              title: "Audio Too Long",
+              description: "Please record shorter messages or try text input.",
+              variant: "destructive",
+            });
+            shouldFallback = true;
+          } else if (errorMessage.includes('No speech detected')) {
+            toast({
+              title: "No Speech Detected",
+              description: "Please speak clearly and try again, or use text input.",
+            });
+            shouldFallback = true;
+          }
+          
+          if (shouldFallback && onFallbackToText) {
+            onFallbackToText();
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const transcript = data?.text || '';
@@ -48,7 +88,7 @@ export const useAudioTranscription = () => {
         if (confidence < 0.3) {
           console.warn('Low confidence transcription:', confidence);
           toast({
-            title: "Audio quality warning",
+            title: "Audio Quality Warning",
             description: "The audio quality was low. Please speak clearly and try again if needed.",
           });
         }
@@ -66,17 +106,34 @@ export const useAudioTranscription = () => {
       console.error('Transcription error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Could not transcribe your audio';
       
-      if (retryCount < 2 && (errorMessage.includes('network') || errorMessage.includes('timeout'))) {
+      // Determine if we should retry based on error type
+      if (retryCount < 2 && (
+        errorMessage.includes('network') || 
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('temporarily unavailable')
+      )) {
         throw new Error('RETRY_NEEDED');
       }
       
+      // For other errors, provide user-friendly feedback
+      let userMessage = errorMessage;
+      if (errorMessage.includes('rate limit') || errorMessage.includes('busy')) {
+        userMessage = 'Voice service is busy. Please try text input instead.';
+      } else if (errorMessage.includes('authentication') || errorMessage.includes('sign in')) {
+        userMessage = 'Please sign in again to use voice features.';
+      } else if (!errorMessage.includes('Daily transcription limit') && 
+                 !errorMessage.includes('No speech detected') &&
+                 !errorMessage.includes('too large')) {
+        userMessage = 'Voice transcription failed. Please try text input instead.';
+      }
+      
       toast({
-        title: "Transcription failed",
-        description: `${errorMessage}. Please try text input instead.`,
+        title: "Transcription Failed",
+        description: userMessage,
         variant: "destructive",
       });
       
-      if (onFallbackToText) {
+      if (onFallbackToText && !errorMessage.includes('RETRY_NEEDED')) {
         onFallbackToText();
       }
       
