@@ -69,9 +69,9 @@ const Landing = () => {
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-title font-medium text-white mb-6 leading-tight tracking-wide">
-              superintelligent
+              personal
               <br />
-              <span className="text-lumi-aquamarine font-semibold">journaling</span>
+              <span className="text-lumi-aquamarine font-semibold">superintelligence</span>
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Your AI companion for daily reflection through natural conversation
