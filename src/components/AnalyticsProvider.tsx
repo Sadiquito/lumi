@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect } from 'react';
-import { useAuth } from './AuthProvider';
+import { useAuth } from './SimpleAuthProvider';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSystemHealthMonitor } from '@/hooks/useSystemHealthMonitor';
 import { useAdminAuditLogger } from '@/hooks/useAdminAuditLogger';
