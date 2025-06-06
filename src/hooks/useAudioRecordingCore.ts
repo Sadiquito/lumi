@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
@@ -48,6 +47,36 @@ export const useAudioRecordingCore = ({
         type: audioBlob.type,
         duration
       });
+      
+      // Enhanced validation before setting the blob
+      if (!audioBlob) {
+        console.error('Audio recording completed but no blob provided');
+        toast({
+          title: "Recording Error",
+          description: "No audio was captured. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (audioBlob.size === 0) {
+        console.error('Audio recording completed but blob is empty');
+        toast({
+          title: "Recording Error", 
+          description: "The audio recording was empty. Please speak and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (audioBlob.size < 100) {
+        console.warn('Audio recording is very small, may be invalid');
+        toast({
+          title: "Recording Warning",
+          description: "The recording seems very short. Please try speaking for longer.",
+        });
+      }
+      
       setRecordedBlob(audioBlob);
     }
   });
@@ -148,7 +177,7 @@ export const useAudioRecordingCore = ({
         }
       }
 
-      // Clear previous recording
+      // Clear previous recording and reset state
       setRecordedBlob(null);
       setRetryCount(0);
 
@@ -197,6 +226,13 @@ export const useAudioRecordingCore = ({
         stopRecording();
       } catch (secondError) {
         console.error('Failed to force stop recording:', secondError);
+        // Clear state manually if all else fails
+        setRecordedBlob(null);
+        toast({
+          title: "Recording Error",
+          description: "There was an issue with the recording. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };

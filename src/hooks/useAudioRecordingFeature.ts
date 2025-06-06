@@ -1,4 +1,3 @@
-
 import { useAudioSessionManager } from '@/hooks/useAudioSessionManager';
 import { useAudioRecordingCore } from '@/hooks/useAudioRecordingCore';
 import { useAudioConversationFlow } from '@/hooks/useAudioConversationFlow';
@@ -76,60 +75,88 @@ export const useAudioRecordingFeature = ({
 
   // Enhanced start recording that ensures session is active
   const handleStartRecording = async () => {
-    if (!isSessionActive) {
-      toast({
-        title: "Start a session first",
-        description: "Please start a conversation session before recording.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
+      if (!isSessionActive) {
+        toast({
+          title: "Start a session first",
+          description: "Please start a conversation session before recording.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await coreStartRecording();
       if (state.isRecording) {
         startListening();
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
+      toast({
+        title: "Recording Failed",
+        description: "Could not start recording. Please try again or use text input.",
+        variant: "destructive",
+      });
+      if (onFallbackToText) {
+        onFallbackToText();
+      }
     }
   };
 
-  // Enhanced stop recording that triggers transcription
+  // Enhanced stop recording that triggers transcription with safety checks
   const handleStopRecording = () => {
-    coreStopRecording();
-    
-    // Wait for the recorded blob to be available
-    setTimeout(() => {
-      if (recordedBlob) {
-        console.log('Starting transcription with recorded blob:', {
-          size: recordedBlob.size,
-          type: recordedBlob.type,
-          duration,
-          audioQuality
-        });
+    try {
+      coreStopRecording();
+      
+      // Wait for the recorded blob to be available with timeout
+      const checkForBlob = (attempts = 0) => {
+        const maxAttempts = 10; // 1 second total wait time
         
-        startProcessing();
-        handleTranscription(
-          recordedBlob, 
-          duration, 
-          audioQuality, 
-          networkStatus, 
-          isSessionActive, 
-          updateActivity, 
-          retryCount, 
-          setRetryCount
-        );
-      } else {
-        console.error('No recorded blob available for transcription');
-        toast({
-          title: "Recording Error",
-          description: "No audio was recorded. Please try again.",
-          variant: "destructive",
-        });
-        goIdle();
-      }
-    }, 100); // Small delay to ensure blob is set
+        if (attempts >= maxAttempts) {
+          console.error('Timeout waiting for recorded blob');
+          toast({
+            title: "Recording Error",
+            description: "The recording didn't complete properly. Please try again.",
+            variant: "destructive",
+          });
+          goIdle();
+          return;
+        }
+        
+        if (recordedBlob && recordedBlob.size > 0) {
+          console.log('Starting transcription with recorded blob:', {
+            size: recordedBlob.size,
+            type: recordedBlob.type,
+            duration,
+            audioQuality
+          });
+          
+          startProcessing();
+          handleTranscription(
+            recordedBlob, 
+            duration, 
+            audioQuality, 
+            networkStatus, 
+            isSessionActive, 
+            updateActivity, 
+            retryCount, 
+            setRetryCount
+          );
+        } else {
+          // Check again after a short delay
+          setTimeout(() => checkForBlob(attempts + 1), 100);
+        }
+      };
+      
+      checkForBlob();
+    } catch (error) {
+      console.error('Critical error in stop recording:', error);
+      toast({
+        title: "Recording Error",
+        description: "There was an error processing the recording. Please try again.",
+        variant: "destructive",
+      });
+      goIdle();
+    }
   };
 
   // Enhanced audio recorder with transcription handling
