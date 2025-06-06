@@ -3,19 +3,23 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import LumiInitiatedConversation from './LumiInitiatedConversation';
 import { useToast } from '@/hooks/use-toast';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
-const ConversationInterface: React.FC = () => {
+function ConversationInterface() {
   const [isInConversation, setIsInConversation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   const handleStartConversation = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       // Start the conversation immediately
       setIsInConversation(true);
     } catch (error) {
       console.error('Error starting conversation:', error);
+      setError('Failed to start conversation. Please try again.');
       toast({
         title: "Error",
         description: "Failed to start conversation. Please try again.",
@@ -32,20 +36,26 @@ const ConversationInterface: React.FC = () => {
 
   if (isInConversation) {
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <LumiInitiatedConversation
-          autoStart={true}
-          onConversationEnd={handleConversationEnd}
-          onStateChange={(state) => {
-            console.log('Conversation state changed:', state);
-          }}
-        />
-      </div>
+      <ErrorBoundary>
+        <div className="w-full max-w-2xl mx-auto">
+          <LumiInitiatedConversation
+            autoStart={true}
+            onConversationEnd={handleConversationEnd}
+            onStateChange={(state) => {
+              console.log('Conversation state changed:', state);
+            }}
+          />
+        </div>
+      </ErrorBoundary>
     );
   }
 
+  // Always show fallback UI if not in conversation
   return (
     <div className="flex flex-col items-center justify-center space-y-4">
+      {error && (
+        <div className="text-red-500 text-center mb-2">{error}</div>
+      )}
       <Button
         onClick={handleStartConversation}
         disabled={isLoading}
@@ -62,6 +72,6 @@ const ConversationInterface: React.FC = () => {
       </p>
     </div>
   );
-};
+}
 
 export default ConversationInterface;
