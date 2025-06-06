@@ -12,11 +12,22 @@ export const useAudioTranscription = () => {
     onFallbackToText?: () => void
   ): Promise<string> => {
     const attemptTranscription = async (attempt: number): Promise<string> => {
+      let progressInterval: NodeJS.Timeout | null = null;
+      
       try {
+        // Input validation
+        if (!audioBlob || audioBlob.size === 0) {
+          throw new Error('TRANSCRIPTION_NO_AUDIO');
+        }
+
         const arrayBuffer = await audioBlob.arrayBuffer();
+        if (arrayBuffer.byteLength === 0) {
+          throw new Error('TRANSCRIPTION_NO_AUDIO');
+        }
+
         const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
         
-        const progressInterval = setInterval(() => {
+        progressInterval = setInterval(() => {
           setTranscriptionProgress(prev => Math.min(prev + 10, 70));
         }, 200);
 
@@ -29,7 +40,10 @@ export const useAudioTranscription = () => {
           }
         });
 
-        clearInterval(progressInterval);
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
         setTranscriptionProgress(100);
 
         if (error) {
@@ -107,6 +121,13 @@ export const useAudioTranscription = () => {
         return transcript;
       } catch (error) {
         console.error(`Transcription attempt ${attempt + 1} failed:`, error);
+        
+        // Clean up progress interval
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+        }
+        
         throw error;
       }
     };

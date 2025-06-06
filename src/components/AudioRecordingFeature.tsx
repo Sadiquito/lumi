@@ -15,6 +15,7 @@ import AudioRecordingListeningState from './AudioRecordingListeningState';
 import AudioRecordingIdleState from './AudioRecordingIdleState';
 import MobileAudioControls from './MobileAudioControls';
 import AudioTrialUsageIndicator from './AudioTrialUsageIndicator';
+import AudioRecordingErrorBoundary from './AudioRecordingErrorBoundary';
 import { useNavigate } from 'react-router-dom';
 
 interface AudioRecordingFeatureProps {
@@ -70,11 +71,23 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
     getStateDuration
   } = useAudioRecordingFeature({
     onTranscriptionComplete: (transcript) => {
-      // Track usage when transcription completes
-      trackTranscription(duration, transcript);
-      onTranscriptionComplete?.(transcript);
+      try {
+        // Track usage when transcription completes
+        trackTranscription(duration, transcript);
+        onTranscriptionComplete?.(transcript);
+      } catch (error) {
+        console.error('Error in transcription completion handler:', error);
+        // Don't break the flow
+      }
     },
-    onAIResponse,
+    onAIResponse: (response) => {
+      try {
+        onAIResponse?.(response);
+      } catch (error) {
+        console.error('Error in AI response handler:', error);
+        // Don't break the flow
+      }
+    },
     disabled: disabled || !canTranscribeToday(),
     maxDuration: effectiveMaxDuration,
     onFallbackToText: () => setShowTextFallback(true)
@@ -154,174 +167,176 @@ const AudioRecordingFeature: React.FC<AudioRecordingFeatureProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Trial usage indicator */}
-      {!trialStatus.hasPremiumAccess && (
-        <AudioTrialUsageIndicator variant="compact" />
-      )}
+    <AudioRecordingErrorBoundary onFallbackToText={() => setShowTextFallback(true)}>
+      <div className="space-y-4">
+        {/* Trial usage indicator */}
+        {!trialStatus.hasPremiumAccess && (
+          <AudioTrialUsageIndicator variant="compact" />
+        )}
 
-      {/* Conversation State Indicator */}
-      <ConversationStateIndicator
-        state={conversationState}
-        duration={getStateDuration()}
-      />
+        {/* Conversation State Indicator */}
+        <ConversationStateIndicator
+          state={conversationState}
+          duration={getStateDuration()}
+        />
 
-      <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center justify-between">
-            <div className="flex items-center">
-              {showTextFallback ? (
-                <Keyboard className="w-5 h-5 mr-2 text-lumi-sunset-coral" />
-              ) : (
-                <Mic className="w-5 h-5 mr-2 text-lumi-aquamarine" />
-              )}
-              {showTextFallback ? 'text conversation' : 'voice conversation'}
-            </div>
-            <div className="flex items-center space-x-2">
-              {networkStatus === 'offline' && (
-                <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
-                  Offline
+        <Card className="bg-lumi-charcoal/80 backdrop-blur-sm border-lumi-sunset-coral/20 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-white text-lg flex items-center justify-between">
+              <div className="flex items-center">
+                {showTextFallback ? (
+                  <Keyboard className="w-5 h-5 mr-2 text-lumi-sunset-coral" />
+                ) : (
+                  <Mic className="w-5 h-5 mr-2 text-lumi-aquamarine" />
+                )}
+                {showTextFallback ? 'text conversation' : 'voice conversation'}
+              </div>
+              <div className="flex items-center space-x-2">
+                {networkStatus && !networkStatus.online && (
+                  <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
+                    Offline
+                  </Badge>
+                )}
+                {isListening && (
+                  <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></div>
+                    REC
+                  </Badge>
+                )}
+                {retryCount > 0 && (
+                  <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                    Retry {retryCount}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="bg-lumi-deep-space/30 text-white/70 border-lumi-sunset-coral/20">
+                  max: {getMaxDurationDisplay()}
                 </Badge>
-              )}
-              {isListening && (
-                <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></div>
-                  REC
-                </Badge>
-              )}
-              {retryCount > 0 && (
-                <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                  Retry {retryCount}
-                </Badge>
-              )}
-              <Badge variant="outline" className="bg-lumi-deep-space/30 text-white/70 border-lumi-sunset-coral/20">
-                max: {getMaxDurationDisplay()}
-              </Badge>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Permission Alert */}
-          {!showTextFallback && !state.hasPermission && !state.error && (
-            <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30">
-              <Mic className="h-4 w-4 text-lumi-sunset-coral" />
-              <AlertDescription className="text-white">
-                Microphone access is required for voice conversation.
-              </AlertDescription>
-            </Alert>
-          )}
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Permission Alert */}
+            {!showTextFallback && !state.hasPermission && !state.error && (
+              <Alert className="bg-lumi-sunset-coral/20 border-lumi-sunset-coral/30">
+                <Mic className="h-4 w-4 text-lumi-sunset-coral" />
+                <AlertDescription className="text-white">
+                  Microphone access is required for voice conversation.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/* Error Alert */}
-          {state.error && (
-            <Alert className="bg-red-500/20 border-red-500/30">
-              <AlertTriangle className="h-4 w-4 text-red-400" />
-              <AlertDescription className="text-white">
-                {state.error}
-              </AlertDescription>
-            </Alert>
-          )}
+            {/* Error Alert */}
+            {state.error && (
+              <Alert className="bg-red-500/20 border-red-500/30">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+                <AlertDescription className="text-white">
+                  {state.error}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {/* Text Fallback Input */}
-          {showTextFallback && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-white text-lg font-medium">Text Input</h3>
+            {/* Text Fallback Input */}
+            {showTextFallback && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white text-lg font-medium">Text Input</h3>
+                  <Button
+                    onClick={() => setShowTextFallback(false)}
+                    variant="outline"
+                    size="sm"
+                    className="border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
+                    disabled={!isSupported || (networkStatus && !networkStatus.online) || !canTranscribeToday()}
+                  >
+                    <Mic className="w-4 h-4 mr-1" />
+                    Try Voice
+                  </Button>
+                </div>
+                <Textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="bg-lumi-deep-space/40 border-lumi-sunset-coral/20 text-white placeholder-white/50 min-h-[100px]"
+                  disabled={isSubmittingText}
+                />
                 <Button
-                  onClick={() => setShowTextFallback(false)}
-                  variant="outline"
-                  size="sm"
-                  className="border-lumi-aquamarine text-lumi-aquamarine hover:bg-lumi-aquamarine/10"
-                  disabled={!isSupported || networkStatus === 'offline' || !canTranscribeToday()}
+                  onClick={handleTextSubmit}
+                  disabled={!textInput.trim() || isSubmittingText}
+                  className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white w-full"
                 >
-                  <Mic className="w-4 h-4 mr-1" />
-                  Try Voice
+                  <Send className="w-4 h-4 mr-2" />
+                  {isSubmittingText ? 'Processing...' : 'Send Message'}
                 </Button>
               </div>
-              <Textarea
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Type your message here..."
-                className="bg-lumi-deep-space/40 border-lumi-sunset-coral/20 text-white placeholder-white/50 min-h-[100px]"
-                disabled={isSubmittingText}
-              />
-              <Button
-                onClick={handleTextSubmit}
-                disabled={!textInput.trim() || isSubmittingText}
-                className="bg-lumi-sunset-coral hover:bg-lumi-sunset-coral/90 text-white w-full"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {isSubmittingText ? 'Processing...' : 'Send Message'}
-              </Button>
-            </div>
-          )}
+            )}
 
-          {/* Voice Interface States */}
-          {!showTextFallback && (
-            <>
-              {/* Lumi is Speaking State */}
-              {isSpeaking && (
-                <AudioRecordingSpeakingState aiResponse={aiResponse} />
-              )}
+            {/* Voice Interface States */}
+            {!showTextFallback && (
+              <>
+                {/* Lumi is Speaking State */}
+                {isSpeaking && (
+                  <AudioRecordingSpeakingState aiResponse={aiResponse} />
+                )}
 
-              {/* Processing State */}
-              {isProcessing && (
-                <AudioRecordingProcessingState
-                  isTranscribing={isTranscribing}
-                  transcriptionProgress={transcriptionProgress}
-                  thinkingProgress={thinkingProgress}
-                />
-              )}
+                {/* Processing State */}
+                {isProcessing && (
+                  <AudioRecordingProcessingState
+                    isTranscribing={isTranscribing}
+                    transcriptionProgress={transcriptionProgress}
+                    thinkingProgress={thinkingProgress}
+                  />
+                )}
 
-              {/* Your Turn to Speak State */}
-              {(isIdle || isListening) && !isProcessing && !isSpeaking && (
-                <>
-                  {isListening ? (
-                    // Use mobile-optimized controls for listening state
-                    <MobileAudioControls
-                      isRecording={isListening}
-                      isPaused={state.isPaused}
-                      duration={duration}
-                      audioLevel={audioLevel}
-                      maxDuration={effectiveMaxDuration}
-                      onStartRecording={handleStartRecording}
-                      onStopRecording={handleStopRecording}
-                      onPauseRecording={pauseRecording}
-                      onResumeRecording={resumeRecording}
-                      disabled={disabled}
-                    />
-                  ) : (
-                    <AudioRecordingIdleState
-                      disabled={disabled}
-                      onStartRecording={handleStartRecording}
-                      onFallbackToText={() => setShowTextFallback(true)}
-                      networkStatus={networkStatus}
-                      isSupported={isSupported}
-                    />
-                  )}
-                </>
-              )}
-            </>
-          )}
+                {/* Your Turn to Speak State */}
+                {(isIdle || isListening) && !isProcessing && !isSpeaking && (
+                  <>
+                    {isListening ? (
+                      // Use mobile-optimized controls for listening state
+                      <MobileAudioControls
+                        isRecording={isListening}
+                        isPaused={state.isPaused}
+                        duration={duration}
+                        audioLevel={audioLevel}
+                        maxDuration={effectiveMaxDuration}
+                        onStartRecording={handleStartRecording}
+                        onStopRecording={handleStopRecording}
+                        onPauseRecording={pauseRecording}
+                        onResumeRecording={resumeRecording}
+                        disabled={disabled}
+                      />
+                    ) : (
+                      <AudioRecordingIdleState
+                        disabled={disabled}
+                        onStartRecording={handleStartRecording}
+                        onFallbackToText={() => setShowTextFallback(true)}
+                        networkStatus={networkStatus}
+                        isSupported={isSupported}
+                      />
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
-          {/* Recording Info */}
-          {(isListening || state.isPaused) && !showTextFallback && (
-            <div className="pt-2 border-t border-lumi-sunset-coral/10">
-              <div className="flex items-center justify-between text-xs text-white/60">
-                <span>Duration: {formatDuration(duration)}</span>
-                <span>
-                  {state.isPaused ? "Paused" : "Recording..."}
-                </span>
-              </div>
-              {!trialStatus.hasPremiumAccess && (
-                <div className="text-xs text-white/50 mt-1">
-                  {remaining.daily} transcription{remaining.daily !== 1 ? 's' : ''} remaining today
+            {/* Recording Info */}
+            {(isListening || state.isPaused) && !showTextFallback && (
+              <div className="pt-2 border-t border-lumi-sunset-coral/10">
+                <div className="flex items-center justify-between text-xs text-white/60">
+                  <span>Duration: {formatDuration(duration)}</span>
+                  <span>
+                    {state.isPaused ? "Paused" : "Recording..."}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                {!trialStatus.hasPremiumAccess && (
+                  <div className="text-xs text-white/50 mt-1">
+                    {remaining.daily} transcription{remaining.daily !== 1 ? 's' : ''} remaining today
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AudioRecordingErrorBoundary>
   );
 };
 

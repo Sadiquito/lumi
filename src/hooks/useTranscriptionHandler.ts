@@ -35,19 +35,19 @@ export const useTranscriptionHandler = ({
   const { transcribeAudio } = useAudioTranscription();
   const { user } = useAuth();
 
-  // Log transcription events
+  // Enhanced error-safe logging
   const logTranscriptionEvent = useCallback(async (
     event: 'attempt' | 'success' | 'failure' | 'fallback',
     details: any
   ) => {
-    console.log(`[Transcription ${event.toUpperCase()}]`, {
-      timestamp: new Date().toISOString(),
-      userId: user?.id,
-      ...details
-    });
-
-    // Track in system health for admin monitoring
     try {
+      console.log(`[Transcription ${event.toUpperCase()}]`, {
+        timestamp: new Date().toISOString(),
+        userId: user?.id,
+        ...details
+      });
+
+      // Track in system health for admin monitoring with error handling
       await supabase.functions.invoke('track-system-health', {
         body: {
           metric_name: `transcription_${event}`,
@@ -60,21 +60,22 @@ export const useTranscriptionHandler = ({
       });
     } catch (error) {
       console.error('Failed to log transcription event:', error);
+      // Don't throw - logging failures shouldn't break the flow
     }
   }, [user?.id]);
 
-  // Log AI response events
+  // Enhanced error-safe AI response logging
   const logAIResponseEvent = useCallback(async (
     event: 'attempt' | 'success' | 'failure' | 'fallback',
     details: any
   ) => {
-    console.log(`[AI Response ${event.toUpperCase()}]`, {
-      timestamp: new Date().toISOString(),
-      userId: user?.id,
-      ...details
-    });
-
     try {
+      console.log(`[AI Response ${event.toUpperCase()}]`, {
+        timestamp: new Date().toISOString(),
+        userId: user?.id,
+        ...details
+      });
+
       await supabase.functions.invoke('track-system-health', {
         body: {
           metric_name: `ai_response_${event}`,
@@ -87,10 +88,16 @@ export const useTranscriptionHandler = ({
       });
     } catch (error) {
       console.error('Failed to log AI response event:', error);
+      // Don't throw - logging failures shouldn't break the flow
     }
   }, [user?.id]);
 
   const generateAIResponse = useCallback(async (transcript: string): Promise<string> => {
+    // Input validation
+    if (!transcript?.trim()) {
+      throw new Error('No transcript provided for AI response generation');
+    }
+
     if (!user?.id) {
       throw new Error('User not authenticated');
     }
@@ -164,6 +171,11 @@ export const useTranscriptionHandler = ({
           throw error;
         }
 
+        // Validate response
+        if (!data?.response || typeof data.response !== 'string') {
+          throw new Error('Invalid AI response format');
+        }
+
         // Handle fallback responses
         if (data?.fallback) {
           console.log('Received fallback AI response:', data.response);
@@ -175,11 +187,11 @@ export const useTranscriptionHandler = ({
           await logAIResponseEvent('success', {
             response_time: responseTime,
             retry_count: retryCount,
-            response_length: data?.response?.length || 0
+            response_length: data.response.length
           });
         }
 
-        return data?.response || "i'm here with you. what would you like to explore together?";
+        return data.response;
       } catch (error) {
         console.error(`AI response attempt ${retryCount + 1} failed:`, error);
         
@@ -218,9 +230,17 @@ export const useTranscriptionHandler = ({
     retryCount: number,
     setRetryCount: (fn: (prev: number) => number) => void
   ) => {
+    // Comprehensive input validation
     if (!audioBlob) {
       console.error('No audio blob provided for transcription');
       await logTranscriptionEvent('failure', { error: 'No audio blob provided' });
+      goIdle();
+      return;
+    }
+
+    if (audioBlob.size === 0) {
+      console.error('Audio blob is empty');
+      await logTranscriptionEvent('failure', { error: 'Audio blob is empty' });
       goIdle();
       return;
     }
@@ -247,16 +267,26 @@ export const useTranscriptionHandler = ({
     try {
       // Update activity if session is active
       if (isSessionActive) {
-        updateActivity();
+        try {
+          updateActivity();
+        } catch (error) {
+          console.error('Failed to update activity:', error);
+          // Don't fail the transcription for this
+        }
       }
 
-      // Attempt transcription with retry logic
+      // Attempt transcription with retry logic and comprehensive error handling
       const transcript = await transcribeAudio(
         audioBlob,
         retryCount,
         setTranscriptionProgress,
         onFallbackToText
       );
+
+      // Validate transcript
+      if (!transcript || typeof transcript !== 'string' || !transcript.trim()) {
+        throw new Error('Empty or invalid transcript received');
+      }
 
       console.log('Transcription successful:', transcript);
       
@@ -266,23 +296,35 @@ export const useTranscriptionHandler = ({
         audio_size: audioBlob.size
       });
       
-      // Store conversation data with all required fields
-      const newConversationData: ConversationData = {
-        id: crypto.randomUUID(),
-        transcript,
-        ai_response: '', // Will be filled later
-        audioBlob,
-        duration,
-        quality: audioQuality,
-        timestamp: new Date(),
-        retryCount
-      };
-      setConversationData(newConversationData);
+      // Store conversation data with all required fields and error handling
+      try {
+        const newConversationData: ConversationData = {
+          id: crypto.randomUUID(),
+          transcript,
+          ai_response: '', // Will be filled later
+          audioBlob,
+          duration,
+          quality: audioQuality,
+          timestamp: new Date(),
+          retryCount
+        };
+        setConversationData(newConversationData);
+      } catch (error) {
+        console.error('Failed to store conversation data:', error);
+        // Continue anyway - this shouldn't break the flow
+      }
 
       // Notify completion
-      onTranscriptionComplete?.(transcript);
+      if (onTranscriptionComplete) {
+        try {
+          onTranscriptionComplete(transcript);
+        } catch (error) {
+          console.error('Error in transcription completion callback:', error);
+          // Continue anyway
+        }
+      }
 
-      // Generate AI response
+      // Generate AI response with comprehensive error handling
       setThinkingProgress(0);
       console.log('Generating AI response...');
       
@@ -297,7 +339,15 @@ export const useTranscriptionHandler = ({
         
         console.log('AI response generated:', aiResponse);
         setAiResponse(aiResponse);
-        onAIResponse?.(aiResponse);
+        
+        if (onAIResponse) {
+          try {
+            onAIResponse(aiResponse);
+          } catch (error) {
+            console.error('Error in AI response callback:', error);
+          }
+        }
+        
         goToSpeaking();
       } catch (aiError) {
         clearInterval(thinkingInterval);
@@ -306,7 +356,15 @@ export const useTranscriptionHandler = ({
         // Use fallback response but continue conversation
         const fallbackResponse = "i'm experiencing some technical difficulties, but i'm here with you. what would you like to talk about?";
         setAiResponse(fallbackResponse);
-        onAIResponse?.(fallbackResponse);
+        
+        if (onAIResponse) {
+          try {
+            onAIResponse(fallbackResponse);
+          } catch (error) {
+            console.error('Error in AI response fallback callback:', error);
+          }
+        }
+        
         goToSpeaking();
       }
 
@@ -342,7 +400,7 @@ export const useTranscriptionHandler = ({
         return;
       }
       
-      if (errorMessage === 'FALLBACK_TO_TEXT') {
+      if (errorMessage === 'FALLBACK_TO_TEXT' || retryCount >= 1) {
         console.log('Falling back to text input due to transcription failure');
         await logTranscriptionEvent('fallback', {
           error: errorMessage,
@@ -350,7 +408,11 @@ export const useTranscriptionHandler = ({
         });
         
         if (onFallbackToText) {
-          onFallbackToText();
+          try {
+            onFallbackToText();
+          } catch (error) {
+            console.error('Error in fallback callback:', error);
+          }
         }
       }
       

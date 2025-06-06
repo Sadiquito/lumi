@@ -52,11 +52,20 @@ export const useAudioRecordingCore = ({
     }
   });
 
-  // Monitor network status
+  // Monitor network status with error handling
   useEffect(() => {
     const updateNetworkStatus = () => {
-      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+      try {
+        setNetworkStatus({ online: navigator.onLine });
+      } catch (error) {
+        console.error('Failed to update network status:', error);
+        // Assume online if we can't detect
+        setNetworkStatus({ online: true });
+      }
     };
+
+    // Initial check
+    updateNetworkStatus();
 
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
@@ -67,59 +76,43 @@ export const useAudioRecordingCore = ({
     };
   }, [setNetworkStatus]);
 
-  // Monitor audio quality
+  // Monitor audio quality with error handling
   useEffect(() => {
-    if (audioLevel > 0) {
-      if (audioLevel < 0.05) {
-        setAudioQuality({
-          level: 'poor',
-          signalToNoise: audioLevel
-        });
-      } else if (audioLevel < 0.15) {
-        setAudioQuality({
-          level: 'fair',
-          signalToNoise: audioLevel
-        });
-      } else {
-        setAudioQuality({
-          level: 'good',
-          signalToNoise: audioLevel
-        });
+    try {
+      if (audioLevel > 0) {
+        if (audioLevel < 0.05) {
+          setAudioQuality({
+            level: 'poor',
+            signalToNoise: audioLevel
+          });
+        } else if (audioLevel < 0.15) {
+          setAudioQuality({
+            level: 'fair',
+            signalToNoise: audioLevel
+          });
+        } else {
+          setAudioQuality({
+            level: 'good',
+            signalToNoise: audioLevel
+          });
+        }
       }
+    } catch (error) {
+      console.error('Failed to update audio quality:', error);
+      // Default to good quality if we can't detect
+      setAudioQuality({
+        level: 'good',
+        signalToNoise: 0.8
+      });
     }
   }, [audioLevel, setAudioQuality]);
 
   const handleStartRecording = async () => {
-    if (!isSupported) {
-      toast({
-        title: "Audio not supported",
-        description: "Your browser doesn't support audio recording. Please use text input.",
-        variant: "destructive",
-      });
-      if (onFallbackToText) {
-        onFallbackToText();
-      }
-      return;
-    }
-
-    if (networkStatus === 'offline') {
-      toast({
-        title: "No internet connection",
-        description: "Audio features require an internet connection. Please try text input.",
-        variant: "destructive",
-      });
-      if (onFallbackToText) {
-        onFallbackToText();
-      }
-      return;
-    }
-
-    if (!state.hasPermission) {
-      const granted = await requestPermission();
-      if (!granted) {
+    try {
+      if (!isSupported) {
         toast({
-          title: "Microphone permission required",
-          description: "Please allow microphone access in your browser settings to use voice input.",
+          title: "Audio not supported",
+          description: "Your browser doesn't support audio recording. Please use text input.",
           variant: "destructive",
         });
         if (onFallbackToText) {
@@ -127,25 +120,55 @@ export const useAudioRecordingCore = ({
         }
         return;
       }
-    }
 
-    // Clear previous recording
-    setRecordedBlob(null);
-    setRetryCount(0);
+      if (!networkStatus.online) {
+        toast({
+          title: "No internet connection",
+          description: "Audio features require an internet connection. Please try text input.",
+          variant: "destructive",
+        });
+        if (onFallbackToText) {
+          onFallbackToText();
+        }
+        return;
+      }
 
-    const started = await startRecording();
-    if (started) {
-      setAudioQuality({
-        level: 'good',
-        signalToNoise: 0.8
-      });
-      toast({
-        title: "Recording started",
-        description: trialStatus.hasPremiumAccess 
-          ? "Recording in progress..."
-          : "Recording started (60 second limit for trial users)",
-      });
-    } else {
+      if (!state.hasPermission) {
+        const granted = await requestPermission();
+        if (!granted) {
+          toast({
+            title: "Microphone permission required",
+            description: "Please allow microphone access in your browser settings to use voice input.",
+            variant: "destructive",
+          });
+          if (onFallbackToText) {
+            onFallbackToText();
+          }
+          return;
+        }
+      }
+
+      // Clear previous recording
+      setRecordedBlob(null);
+      setRetryCount(0);
+
+      const started = await startRecording();
+      if (started) {
+        setAudioQuality({
+          level: 'good',
+          signalToNoise: 0.8
+        });
+        toast({
+          title: "Recording started",
+          description: trialStatus.hasPremiumAccess 
+            ? "Recording in progress..."
+            : "Recording started (60 second limit for trial users)",
+        });
+      } else {
+        throw new Error('Failed to start recording');
+      }
+    } catch (error) {
+      console.error('Error starting recording:', error);
       toast({
         title: "Recording failed to start",
         description: "Please try again or use text input.",
@@ -158,14 +181,24 @@ export const useAudioRecordingCore = ({
   };
 
   const handleStopRecording = () => {
-    if (audioQuality.level === 'poor') {
-      toast({
-        title: "Low audio quality detected",
-        description: "The recording may not transcribe well. Consider recording again.",
-      });
+    try {
+      if (audioQuality.level === 'poor') {
+        toast({
+          title: "Low audio quality detected",
+          description: "The recording may not transcribe well. Consider recording again.",
+        });
+      }
+      
+      stopRecording();
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      // Force stop even if there's an error
+      try {
+        stopRecording();
+      } catch (secondError) {
+        console.error('Failed to force stop recording:', secondError);
+      }
     }
-    
-    stopRecording();
   };
 
   return {
