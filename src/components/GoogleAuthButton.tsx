@@ -59,7 +59,9 @@ const GoogleAuthButton = () => {
           description: friendlyMessage,
           variant: "destructive",
         });
+        setLoading(false);
       }
+      // Note: Don't set loading to false on success, as the page will redirect
     } catch (error) {
       console.error('Google auth error:', error);
       toast({
@@ -67,7 +69,6 @@ const GoogleAuthButton = () => {
         description: "Unable to connect. Please check your internet connection.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
