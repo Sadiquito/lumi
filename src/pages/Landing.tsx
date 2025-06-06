@@ -112,18 +112,7 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* CTA Section */}
-          <Card className="bg-black/10 backdrop-blur-sm border-white/5 shadow-xl">
-            <CardContent className="pt-8 pb-8 text-center">
-              <h3 className="text-2xl font-title font-medium text-white mb-4 tracking-wide">
-                Ready to Begin?
-              </h3>
-              <p className="text-white/90 mb-6 max-w-md mx-auto font-sans">
-                Start your daily reflection practice with Lumi.
-              </p>
-              <GoogleAuthButton />
-            </CardContent>
-          </Card>
+
         </div>
       </div>
     </div>
