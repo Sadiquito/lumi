@@ -139,6 +139,27 @@ export type Database = {
           },
         ]
       }
+      persona_state: {
+        Row: {
+          id: string
+          state_blob: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          state_blob?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          state_blob?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       personalization_profiles: {
         Row: {
           id: string
