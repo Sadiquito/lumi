@@ -138,7 +138,10 @@ export const useAudioRecordingCore = ({
 
   const handleStartRecording = async () => {
     try {
+      console.log('Starting recording - checking browser support:', isSupported);
+      
       if (!isSupported) {
+        console.error('Browser does not support audio recording');
         toast({
           title: "Audio not supported",
           description: "Your browser doesn't support audio recording. Please use text input.",
@@ -150,6 +153,7 @@ export const useAudioRecordingCore = ({
         return;
       }
 
+      console.log('Checking network status:', networkStatus.online);
       if (!networkStatus.online) {
         toast({
           title: "No internet connection",
@@ -162,8 +166,11 @@ export const useAudioRecordingCore = ({
         return;
       }
 
+      console.log('Checking permissions:', state.hasPermission);
       if (!state.hasPermission) {
+        console.log('Requesting microphone permission...');
         const granted = await requestPermission();
+        console.log('Permission granted:', granted);
         if (!granted) {
           toast({
             title: "Microphone permission required",
@@ -181,7 +188,10 @@ export const useAudioRecordingCore = ({
       setRecordedBlob(null);
       setRetryCount(0);
 
+      console.log('Attempting to start recording...');
       const started = await startRecording();
+      console.log('Recording started successfully:', started);
+      
       if (started) {
         setAudioQuality({
           level: 'good',
@@ -192,13 +202,14 @@ export const useAudioRecordingCore = ({
           description: "Recording in progress...",
         });
       } else {
-        throw new Error('Failed to start recording');
+        throw new Error('Failed to start recording - no error details available');
       }
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Detailed error starting recording:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Recording failed to start",
-        description: "Please try again or use text input.",
+        description: `Error: ${errorMessage}. Please try again or use text input.`,
         variant: "destructive",
       });
       if (onFallbackToText) {

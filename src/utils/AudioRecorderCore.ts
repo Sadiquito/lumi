@@ -39,8 +39,9 @@ export class AudioRecorderCore {
         throw new Error('Failed to get media stream');
       }
 
-      // Create audio context
-      this.audioContext = new AudioContext({
+      // Create audio context with browser compatibility
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass({
         sampleRate: this.config.sampleRate,
       });
 
@@ -50,21 +51,26 @@ export class AudioRecorderCore {
       this.analyser.fftSize = 256;
       this.analyser.smoothingTimeConstant = 0.8;
 
-      // Create script processor for audio data
+      // Create script processor for audio data (deprecated but widely supported)
       this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
       
       this.scriptProcessor.onaudioprocess = (event) => {
-        const inputBuffer = event.inputBuffer;
-        const audioData = inputBuffer.getChannelData(0);
-        
-        // Create a copy of the audio data
-        const chunk: AudioChunk = {
-          data: new Float32Array(audioData),
-          timestamp: Date.now(),
-        };
-        
-        this.audioChunks.push(chunk);
-        this.onAudioData(chunk);
+        try {
+          const inputBuffer = event.inputBuffer;
+          const audioData = inputBuffer.getChannelData(0);
+          
+          // Create a copy of the audio data
+          const chunk: AudioChunk = {
+            data: new Float32Array(audioData),
+            timestamp: Date.now(),
+          };
+          
+          this.audioChunks.push(chunk);
+          this.onAudioData(chunk);
+        } catch (error) {
+          console.error('Error processing audio data:', error);
+          this.stateManager.updateState({ error: 'Audio processing failed' });
+        }
       };
 
       // Connect the audio pipeline

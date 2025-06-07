@@ -7,7 +7,7 @@ export class AudioRecorderPermissions {
       return !!(
         navigator.mediaDevices &&
         navigator.mediaDevices.getUserMedia &&
-        window.AudioContext
+        (window.AudioContext || (window as any).webkitAudioContext)
       );
     } catch {
       return false;
