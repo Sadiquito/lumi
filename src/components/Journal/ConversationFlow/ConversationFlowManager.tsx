@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useConversationContext } from '@/hooks/useConversationContext';
 import { useAudioRecordingFeature } from '@/hooks/useAudioRecordingFeature';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConversationEntry {
   speaker: 'lumi' | 'user';
@@ -8,24 +9,26 @@ interface ConversationEntry {
   timestamp: Date;
 }
 
-type ConversationFlow = 'ready' | 'lumi_speaking' | 'waiting_for_user' | 'user_recording' | 'processing';
-
 interface ConversationFlowManagerProps {
   onUserResponse?: (transcript: string) => void;
   onConversationEnd?: () => void;
-  onStateChange?: (state: ConversationFlow) => void;
+  onStateChange?: (state: 'idle' | 'lumi_speaking' | 'user_speaking') => void;
+  autoStart?: boolean;
 }
 
 export const useConversationFlowManager = ({
   onUserResponse,
   onConversationEnd,
-  onStateChange
+  onStateChange,
+  autoStart = false
 }: ConversationFlowManagerProps) => {
-  const [flowState, setFlowState] = useState<ConversationFlow>('ready');
+  const [flowState, setFlowState] = useState<'idle' | 'lumi_speaking' | 'user_speaking'>('idle');
   const [currentLumiMessage, setCurrentLumiMessage] = useState<string>('');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { toast } = useToast();
 
   // Initialize conversation context with persona state
   const {
@@ -41,11 +44,12 @@ export const useConversationFlowManager = ({
     conversationState,
     isSessionActive,
     startSession,
-    handleStartRecording,
-    handleStopRecording,
+    handleStartRecording: startRecording,
+    handleStopRecording: stopRecording,
     state: audioState,
     isListening,
     isProcessing,
+    isSpeaking,
   } = useAudioRecordingFeature({
     onTranscriptionComplete: (transcript: string) => {
       console.log('Transcription completed in flow manager:', transcript);
@@ -61,26 +65,45 @@ export const useConversationFlowManager = ({
     }
   });
 
+  // Generate initial Lumi response
+  const generateInitialResponse = async (): Promise<string> => {
+    // TODO: Replace with actual AI generation
+    return "Hello! I'm Lumi. How are you feeling today?";
+  };
+
+  // Generate Lumi's response to user input
+  const generateLumiResponse = async (userInput: string): Promise<string> => {
+    // TODO: Replace with actual AI generation
+    return `I understand you said: "${userInput}". Let me think about that...`;
+  };
+
   // Notify parent of state changes
   useEffect(() => {
     onStateChange?.(flowState);
   }, [flowState, onStateChange]);
 
-  // Sync audio conversation state with flow state
+  // Auto-start conversation if enabled
   useEffect(() => {
-    if (isListening && flowState !== 'user_recording') {
-      setFlowState('user_recording');
-    } else if (isProcessing && flowState !== 'processing') {
-      setFlowState('processing');
+    if (autoStart && !isSessionActive && !isTransitioning) {
+      handleStartConversation();
     }
-  }, [isListening, isProcessing, flowState]);
+  }, [autoStart, isSessionActive, isTransitioning]);
+
+  // Handle barge-in detection
+  useEffect(() => {
+    if (isListening && flowState === 'lumi_speaking') {
+      console.log('Barge-in detected - stopping Lumi and switching to user speaking');
+      // Stop Lumi's speech and switch to user speaking state
+      setFlowState('user_speaking');
+    }
+  }, [isListening, flowState]);
 
   // Handle errors
   useEffect(() => {
     if (error) {
       console.error('Conversation flow error:', error);
-      // Reset to ready state on error
-      setFlowState('ready');
+      // Reset to idle state on error
+      setFlowState('idle');
       setError(null);
     }
   }, [error]);
@@ -97,110 +120,58 @@ export const useConversationFlowManager = ({
     }
   }, [context, hasPersonaData]);
 
-  // Mock Lumi opening prompts - these will be replaced with persona-aware AI-generated content
-  const getOpeningPrompts = () => {
-    const basePrompts = [
-      "Hello! I'm Lumi. I'm here to listen and understand you better. What's been on your mind lately?",
-      "Hi there! I sense you might have something you'd like to explore today. What would you like to talk about?",
-      "Welcome back! I've been thinking about our previous conversations. How are you feeling right now?",
-      "Good to see you again! I'm curious - what's the most important thing happening in your life today?"
-    ];
-
-    // TODO: Use persona state to customize prompts
-    if (hasPersonaData) {
-      console.log('Using persona-aware prompt selection (placeholder)');
-    }
-
-    return basePrompts;
-  };
-
   const handleStartConversation = async () => {
     if (isTransitioning) return;
     
+    console.log('Starting conversation...');
     try {
       setIsTransitioning(true);
       setError(null);
-      console.log('Starting conversation...');
       
-      // Start audio session
-      await startSession();
+      // Start session if not active
+      if (!isSessionActive) {
+        await startSession();
+      }
       
-      setFlowState('lumi_speaking');
-      
-      // Select an opening prompt - in production this would come from persona-aware AI
-      const prompts = getOpeningPrompts();
-      const prompt = prompts[Math.floor(Math.random() * prompts.length)];
-      setCurrentLumiMessage(prompt);
-      
-      // Add to conversation history and context
-      setConversationHistory([{
-        speaker: 'lumi',
-        message: prompt,
-        timestamp: new Date()
-      }]);
-
-      // Add to conversation context - this will NOT trigger persona update (only assistant messages)
-      console.log('Adding Lumi opening message to context');
-      addMessage('assistant', prompt);
+      // Generate initial Lumi response
+      const initialResponse = await generateInitialResponse();
+      handleLumiResponse(initialResponse);
     } catch (error) {
       console.error('Error starting conversation:', error);
       setError(error instanceof Error ? error.message : 'Failed to start conversation');
-      setFlowState('ready');
+      setFlowState('idle');
     } finally {
       setIsTransitioning(false);
     }
   };
 
-  const handleLumiFinishedSpeaking = () => {
-    if (isTransitioning) return;
+  const handleLumiResponse = async (response: string) => {
+    setCurrentLumiMessage(response);
+    setFlowState('lumi_speaking');
     
-    console.log('Lumi finished speaking, waiting for user...');
-    setFlowState('waiting_for_user');
-  };
+    // Add Lumi's response to history
+    setConversationHistory(prev => [...prev, {
+      speaker: 'lumi',
+      message: response,
+      timestamp: new Date()
+    }]);
 
-  const handleUserStartRecording = async () => {
-    if (isTransitioning) return;
+    // Add to conversation context
+    addMessage('assistant', response);
     
-    console.log('User starting recording...');
-    try {
-      setIsTransitioning(true);
-      setError(null);
-      
-      // Always ensure session is started first
-      if (!isSessionActive) {
-        console.log('Starting new session before recording...');
-        await startSession();
-        // Add a small delay to ensure session is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 100));
+    // Update persona state
+    await updatePersonaFromConversation();
+    
+    // Automatically transition to user speaking after Lumi finishes
+    setTimeout(() => {
+      if (flowState === 'lumi_speaking') {
+        handleStartRecording();
       }
-      
-      // Now start recording
-      console.log('Starting recording...');
-      await handleStartRecording();
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      setError(error instanceof Error ? error.message : 'Failed to start recording');
-      // Reset flow state on error
-      setFlowState('ready');
-    } finally {
-      setIsTransitioning(false);
-    }
-  };
-
-  const handleUserStopRecording = () => {
-    if (isTransitioning) return;
-    
-    console.log('User stopping recording...');
-    try {
-      handleStopRecording();
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      setError(error instanceof Error ? error.message : 'Failed to stop recording');
-    }
+    }, 1000); // Small delay to ensure smooth transition
   };
 
   const handleUserResponse = (transcript: string) => {
-    console.log('Processing user response in flow manager:', transcript);
+    console.log('Processing user response:', transcript);
     
     // Add user response to history
     setConversationHistory(prev => [...prev, {
@@ -209,43 +180,58 @@ export const useConversationFlowManager = ({
       timestamp: new Date()
     }]);
 
-    // Add to conversation context - this WILL trigger persona update when followed by assistant message
-    console.log('Adding user message to conversation context');
+    // Add to conversation context
     addMessage('user', transcript);
     
     // Notify parent component
     onUserResponse?.(transcript);
+    
+    // Generate Lumi's response
+    generateLumiResponse(transcript).then(handleLumiResponse);
   };
 
-  const handleLumiResponse = async (aiResponse: string) => {
-    console.log('Processing Lumi response in flow manager:', aiResponse);
+  const handleStartRecording = async () => {
+    if (isTransitioning) return;
     
     try {
-      setCurrentLumiMessage(aiResponse);
+      setIsTransitioning(true);
+      setError(null);
       
-      setConversationHistory(prev => [...prev, {
-        speaker: 'lumi',
-        message: aiResponse,
-        timestamp: new Date()
-      }]);
-
-      // Add AI response to context - this WILL trigger persona update if preceded by user message
-      console.log('Adding Lumi response to conversation context');
-      addMessage('assistant', aiResponse);
-
-      // Manual persona update with basic insights (will be replaced by AI-generated insights)
-      const mockInsights = {
-        lastInteraction: new Date().toISOString(),
-        totalConversations: (context.personaState?.totalConversations || 0) + 1,
-      };
-
-      console.log('Applying manual persona insights:', mockInsights);
-      await updatePersonaFromConversation(mockInsights);
-      
-      setFlowState('lumi_speaking');
+      await startRecording();
+      setFlowState('user_speaking');
     } catch (error) {
-      console.error('Error processing Lumi response:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process Lumi response');
+      console.error('Error starting recording:', error);
+      setError(error instanceof Error ? error.message : 'Failed to start recording');
+      setFlowState('idle');
+    } finally {
+      setIsTransitioning(false);
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (isTransitioning) return;
+    
+    try {
+      stopRecording();
+      setFlowState('idle');
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setError(error instanceof Error ? error.message : 'Failed to stop recording');
+    }
+  };
+
+  const handleEndConversation = () => {
+    if (isTransitioning) return;
+    
+    try {
+      if (isListening) {
+        stopRecording();
+      }
+      setFlowState('idle');
+      onConversationEnd?.();
+    } catch (error) {
+      console.error('Error ending conversation:', error);
+      setError(error instanceof Error ? error.message : 'Failed to end conversation');
     }
   };
 
@@ -253,19 +239,13 @@ export const useConversationFlowManager = ({
     flowState,
     currentLumiMessage,
     conversationHistory,
-    context,
+    isTransitioning,
+    error,
     isPersonaLoading,
     hasPersonaData,
-    conversationState,
-    isSessionActive,
-    audioState,
-    isListening,
-    isProcessing,
-    error,
-    isTransitioning,
     handleStartConversation,
-    handleLumiFinishedSpeaking,
-    handleUserStartRecording,
-    handleUserStopRecording,
+    handleEndConversation,
+    handleStartRecording,
+    handleStopRecording
   };
 };

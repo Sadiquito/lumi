@@ -1,4 +1,3 @@
-
 export interface ConversationData {
   id: string;
   transcript: string;
@@ -46,5 +45,11 @@ export interface UseAudioRecordingFeatureProps {
   onAIResponse?: (response: string) => void;
   disabled?: boolean;
   maxDuration?: number;
+  onFallbackToText?: () => void;
+}
+
+export interface UseAudioConversationFlowProps {
+  onTranscriptionComplete?: (transcript: string) => void;
+  onAIResponse?: (response: string) => void;
   onFallbackToText?: () => void;
 }

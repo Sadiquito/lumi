@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useConversationFlowManager } from './ConversationFlow/ConversationFlowManager';
-import ConversationStateRenderer from './ConversationFlow/ConversationStateRenderer';
-import ConversationDebugPanels from './ConversationFlow/ConversationDebugPanels';
 import ConversationHistory from './ConversationHistory';
+import CentralConversationButton from './ConversationFlow/CentralConversationButton';
 import { useToast } from '@/hooks/use-toast';
 
 interface LumiInitiatedConversationProps {
   onUserResponse?: (transcript: string) => void;
   onConversationEnd?: () => void;
-  onStateChange?: (state: 'ready' | 'lumi_speaking' | 'waiting_for_user' | 'user_recording' | 'processing') => void;
+  onStateChange?: (state: 'idle' | 'lumi_speaking' | 'user_speaking') => void;
   autoStart?: boolean;
 }
 
@@ -25,60 +24,48 @@ const LumiInitiatedConversation = ({
     flowState,
     currentLumiMessage,
     conversationHistory,
-    context,
+    isTransitioning,
+    error,
     isPersonaLoading,
     hasPersonaData,
-    conversationState,
-    isSessionActive,
-    audioState,
-    isListening,
-    isProcessing,
     handleStartConversation,
-    handleLumiFinishedSpeaking,
-    handleUserStartRecording,
-    handleUserStopRecording,
-    error,
-    isTransitioning,
+    handleEndConversation,
+    handleStartRecording,
+    handleStopRecording
   } = useConversationFlowManager({
     onUserResponse,
     onConversationEnd,
-    onStateChange
+    onStateChange,
+    autoStart
   });
 
-  // Auto-start conversation when component mounts if autoStart is true
+  // Initialize component
   useEffect(() => {
-    const initializeConversation = async () => {
+    const initialize = async () => {
       try {
-        setIsInitializing(true);
-        if (autoStart && flowState === 'ready') {
-          await handleStartConversation();
-        }
+        // Any initialization logic here
+        setIsInitializing(false);
       } catch (error) {
         console.error('Error initializing conversation:', error);
         toast({
-          title: "Error",
-          description: "Failed to start conversation. Please try again.",
+          title: "Initialization Error",
+          description: "Failed to initialize conversation. Please try again.",
           variant: "destructive",
         });
-      } finally {
-        setIsInitializing(false);
       }
     };
 
-    initializeConversation();
-  }, [autoStart, flowState, handleStartConversation, toast]);
+    initialize();
+  }, []);
 
-  // Handle errors in conversation flow
-  useEffect(() => {
-    if (flowState === 'ready' && !isInitializing && autoStart) {
-      toast({
-        title: "Conversation Ended",
-        description: "The conversation has ended. You can start a new one.",
-        variant: "default",
-      });
-      onConversationEnd?.();
+  // Handle button click based on current state
+  const handleButtonClick = () => {
+    if (flowState === 'idle') {
+      handleStartConversation();
+    } else {
+      handleEndConversation();
     }
-  }, [flowState, isInitializing, autoStart, onConversationEnd, toast]);
+  };
 
   if (isInitializing) {
     return (
@@ -90,33 +77,32 @@ const LumiInitiatedConversation = ({
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      {/* Current Conversation State */}
-      <ConversationStateRenderer
-        flowState={flowState}
-        currentLumiMessage={currentLumiMessage}
-        isPersonaLoading={isPersonaLoading}
-        hasPersonaData={hasPersonaData}
-        onStartConversation={handleStartConversation}
-        onFinishedSpeaking={handleLumiFinishedSpeaking}
-        onStartRecording={handleUserStartRecording}
-        onStopRecording={handleUserStopRecording}
-        error={error}
-        isTransitioning={isTransitioning}
-      />
-      
+      {/* Central Conversation Button */}
+      <div className="flex justify-center mb-8">
+        <CentralConversationButton
+          state={flowState}
+          onClick={handleButtonClick}
+        />
+      </div>
+
+      {/* Current Message Display */}
+      {currentLumiMessage && (
+        <div className="text-center mb-8">
+          <p className="text-white/70" style={{ fontFamily: 'Crimson Pro' }}>
+            {currentLumiMessage}
+          </p>
+        </div>
+      )}
+
       {/* Conversation History */}
       <ConversationHistory conversationHistory={conversationHistory} />
-      
-      {/* Debug Panels (Development Only) */}
-      <ConversationDebugPanels
-        flowState={flowState}
-        conversationState={conversationState}
-        isSessionActive={isSessionActive}
-        isListening={isListening}
-        isProcessing={isProcessing}
-        audioRecording={audioState.isRecording}
-        personaState={context.personaState}
-      />
+
+      {/* Error Display */}
+      {error && (
+        <div className="text-center text-red-400 mb-4">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/SimpleAuthProvider';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAudioRecordingState } from '@/hooks/useAudioRecordingState';
@@ -6,10 +6,16 @@ import { useAudioRecordingHandlers } from '@/hooks/useAudioRecordingHandlers';
 import { useToast } from '@/hooks/use-toast';
 import { UseAudioRecordingFeatureProps } from '@/types/audioRecording';
 
+interface AudioRecordingState {
+  isRecording: boolean;
+  isPaused: boolean;
+  error: string | null;
+}
+
 export const useAudioRecordingCore = ({
   maxDuration,
   onFallbackToText
-}: Pick<UseAudioRecordingFeatureProps, 'maxDuration' | 'onFallbackToText'>) => {
+}: UseAudioRecordingFeatureProps) => {
   const { toast } = useToast();
   // Removed trial status - all users have full access
 
@@ -136,6 +142,57 @@ export const useAudioRecordingCore = ({
     }
   }, [audioLevel, setAudioQuality]);
 
+  // Check browser support
+  useEffect(() => {
+    const checkSupport = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        setIsSupported(true);
+      } catch (error) {
+        console.error('Audio recording not supported:', error);
+        setIsSupported(false);
+        onFallbackToText?.();
+      }
+    };
+
+    checkSupport();
+  }, [onFallbackToText]);
+
+  // Initialize audio context and analyzer
+  const initializeAudioContext = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const context = new AudioContext();
+      const analyserNode = context.createAnalyser();
+      const source = context.createMediaStreamSource(stream);
+      source.connect(analyserNode);
+
+      analyserNode.fftSize = 256;
+      const bufferLength = analyserNode.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const updateAudioLevel = () => {
+        if (!state.isRecording) return;
+
+        analyserNode.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+        setAudioLevel(average / 128); // Normalize to 0-1 range
+
+        requestAnimationFrame(updateAudioLevel);
+      };
+
+      setAudioContext(context);
+      setAnalyser(analyserNode);
+      updateAudioLevel();
+
+      return stream;
+    } catch (error) {
+      console.error('Error initializing audio context:', error);
+      throw error;
+    }
+  }, [state.isRecording]);
+
   const handleStartRecording = async () => {
     try {
       console.log('Starting recording - checking browser support:', isSupported);
@@ -245,6 +302,18 @@ export const useAudioRecordingCore = ({
       }
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      if (audioContext) {
+        audioContext.close();
+      }
+    };
+  }, [mediaRecorder, audioContext]);
 
   return {
     // Recording state

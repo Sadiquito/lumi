@@ -43,7 +43,6 @@ export const useAudioRecordingFeature = ({
     handleStopRecording: coreStopRecording,
     pauseRecording,
     resumeRecording,
-    // trialStatus removed
   } = useAudioRecordingCore({
     maxDuration,
     onFallbackToText
@@ -102,70 +101,33 @@ export const useAudioRecordingFeature = ({
     }
   };
 
-  // Enhanced stop recording that triggers transcription with safety checks
-  const handleStopRecording = () => {
+  // Enhanced stop recording that handles cleanup
+  const handleStopRecording = async () => {
     try {
-      coreStopRecording();
-      
-      // Wait for the recorded blob to be available with timeout
-      const checkForBlob = (attempts = 0) => {
-        const maxAttempts = 10; // 1 second total wait time
-        
-        if (attempts >= maxAttempts) {
-          console.error('Timeout waiting for recorded blob');
-          toast({
-            title: "Recording Error",
-            description: "The recording didn't complete properly. Please try again.",
-            variant: "destructive",
-          });
-          goIdle();
-          return;
-        }
-        
-        if (recordedBlob && recordedBlob.size > 0) {
-          console.log('Starting transcription with recorded blob:', {
-            size: recordedBlob.size,
-            type: recordedBlob.type,
-            duration,
-            audioQuality
-          });
-          
-          startProcessing();
-          handleTranscription(
-            recordedBlob, 
-            duration, 
-            audioQuality, 
-            networkStatus, 
-            isSessionActive, 
-            updateActivity, 
-            retryCount, 
-            setRetryCount
-          );
-        } else {
-          // Check again after a short delay
-          setTimeout(() => checkForBlob(attempts + 1), 100);
-        }
-      };
-      
-      checkForBlob();
+      await coreStopRecording();
+      if (recordedBlob) {
+        startProcessing();
+        await handleTranscription(recordedBlob);
+      }
     } catch (error) {
-      console.error('Critical error in stop recording:', error);
+      console.error('Failed to stop recording:', error);
       toast({
         title: "Recording Error",
-        description: "There was an error processing the recording. Please try again.",
+        description: "Failed to process recording. Please try again.",
         variant: "destructive",
       });
-      goIdle();
     }
   };
 
-  // Enhanced audio recorder with transcription handling
-  const enhancedAudioRecorder = {
-    ...state,
-    startRecording: handleStartRecording,
-    stopRecording: handleStopRecording,
-    pauseRecording,
-    resumeRecording,
+  // Handle barge-in detection
+  const handleBargeIn = async () => {
+    if (isSpeaking) {
+      console.log('Barge-in detected - stopping Lumi and switching to user input');
+      // Stop Lumi's speech
+      pauseRecording();
+      // Start listening to user
+      await handleStartRecording();
+    }
   };
 
   // Handle session end cleanup
@@ -185,10 +147,9 @@ export const useAudioRecordingFeature = ({
     transcriptionProgress,
     thinkingProgress,
     isSupported,
-    state: enhancedAudioRecorder,
+    state,
     audioLevel,
     duration,
-    // trialStatus removed
     audioQuality,
     networkStatus,
     retryCount,
@@ -214,6 +175,7 @@ export const useAudioRecordingFeature = ({
     // Actions
     handleStartRecording,
     handleStopRecording,
+    handleBargeIn,
     pauseRecording,
     resumeRecording,
     getStateDuration
