@@ -1,18 +1,12 @@
-
 import { AudioRecorderConfig, AudioChunk } from './AudioRecorderTypes';
 import { AudioRecorderPermissions } from './AudioRecorderPermissions';
 import { AudioRecorderStateManager } from './AudioRecorderState';
 
 export class AudioRecorderCore {
   private mediaStream: MediaStream | null = null;
-  private audioContext: AudioContext | null = null;
-  private audioSource: MediaStreamAudioSourceNode | null = null;
-  private scriptProcessor: ScriptProcessorNode | null = null;
-  private analyser: AnalyserNode | null = null;
-  private audioChunks: AudioChunk[] = [];
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
   private startTime: number = 0;
-  private animationFrame: number | null = null;
-
   private config: AudioRecorderConfig;
   private stateManager: AudioRecorderStateManager;
   private onAudioData: (chunk: AudioChunk) => void;
@@ -39,57 +33,40 @@ export class AudioRecorderCore {
         throw new Error('Failed to get media stream');
       }
 
-      // Create audio context with browser compatibility
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      this.audioContext = new AudioContextClass({
-        sampleRate: this.config.sampleRate,
-      });
+      // Create MediaRecorder
+      this.audioChunks = [];
+      this.mediaRecorder = new MediaRecorder(this.mediaStream);
 
-      // Create audio processing pipeline
-      this.audioSource = this.audioContext.createMediaStreamSource(this.mediaStream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
-      this.analyser.smoothingTimeConstant = 0.8;
-
-      // Create script processor for audio data (deprecated but widely supported)
-      this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
-      
-      this.scriptProcessor.onaudioprocess = (event) => {
-        try {
-          const inputBuffer = event.inputBuffer;
-          const audioData = inputBuffer.getChannelData(0);
-          
-          // Create a copy of the audio data
-          const chunk: AudioChunk = {
-            data: new Float32Array(audioData),
-            timestamp: Date.now(),
-          };
-          
-          this.audioChunks.push(chunk);
-          this.onAudioData(chunk);
-        } catch (error) {
-          console.error('Error processing audio data:', error);
-          this.stateManager.updateState({ error: 'Audio processing failed' });
+      this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data && event.data.size > 0) {
+          this.audioChunks.push(event.data);
         }
       };
 
-      // Connect the audio pipeline
-      this.audioSource.connect(this.analyser);
-      this.audioSource.connect(this.scriptProcessor);
-      this.scriptProcessor.connect(this.audioContext.destination);
+      this.mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        const chunk: AudioChunk = {
+          data: audioBlob,
+          timestamp: Date.now(),
+        };
+        this.onAudioData(chunk);
+        this.cleanupStream();
+      };
 
+      this.mediaRecorder.onerror = (event) => {
+        this.stateManager.updateState({ error: 'Audio recording error' });
+      };
+
+      this.mediaRecorder.start();
       this.startTime = Date.now();
-      this.audioChunks = [];
-      
-      this.stateManager.updateState({ 
-        isRecording: true, 
-        isPaused: false, 
+
+      this.stateManager.updateState({
+        isRecording: true,
+        isPaused: false,
         error: null,
-        hasPermission: true 
+        hasPermission: true
       });
-      
-      this.startAudioLevelMonitoring();
-      
+
       // Handle max duration
       if (this.config.maxDuration) {
         setTimeout(() => {
@@ -107,114 +84,53 @@ export class AudioRecorderCore {
     }
   }
 
-  stopRecording(): Float32Array | null {
+  stopRecording(): Blob | null {
     try {
-      this.cleanup();
-      
-      if (this.audioChunks.length === 0) {
-        this.stateManager.updateState({ error: 'No audio data recorded' });
-        return null;
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+      } else {
+        this.cleanupStream();
       }
-
-      // Combine all audio chunks
-      const totalLength = this.audioChunks.reduce((sum, chunk) => sum + chunk.data.length, 0);
-      const combinedAudio = new Float32Array(totalLength);
-      let offset = 0;
-
-      for (const chunk of this.audioChunks) {
-        combinedAudio.set(chunk.data, offset);
-        offset += chunk.data.length;
-      }
-
-      this.stateManager.updateState({ 
-        isRecording: false, 
-        isPaused: false, 
-        currentTime: 0, 
-        audioLevel: 0 
+      this.stateManager.updateState({
+        isRecording: false,
+        isPaused: false,
+        currentTime: 0,
+        audioLevel: 0
       });
-
-      return combinedAudio;
+      // The blob will be passed to onAudioData in onstop
+      return null;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to stop recording';
       this.stateManager.updateState({ error: errorMessage });
+      this.cleanupStream();
       return null;
     }
   }
 
   pauseRecording(): void {
-    if (this.scriptProcessor) {
-      this.scriptProcessor.disconnect();
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.pause();
+      this.stateManager.updateState({ isPaused: true });
     }
-    this.stateManager.updateState({ isPaused: true });
   }
 
   resumeRecording(): void {
-    if (this.scriptProcessor && this.audioContext) {
-      this.scriptProcessor.connect(this.audioContext.destination);
+    if (this.mediaRecorder && this.mediaRecorder.state === 'paused') {
+      this.mediaRecorder.resume();
+      this.stateManager.updateState({ isPaused: false });
     }
-    this.stateManager.updateState({ isPaused: false });
   }
 
-  private startAudioLevelMonitoring(): void {
-    if (!this.analyser) return;
-
-    const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    
-    const updateAudioLevel = () => {
-      if (!this.analyser || !this.stateManager.getState().isRecording) return;
-
-      this.analyser.getByteFrequencyData(dataArray);
-      
-      // Calculate RMS level
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        sum += dataArray[i] * dataArray[i];
-      }
-      const rms = Math.sqrt(sum / dataArray.length);
-      const audioLevel = rms / 255; // Normalize to 0-1
-
-      const currentTime = this.stateManager.getState().isRecording 
-        ? (Date.now() - this.startTime) / 1000 
-        : 0;
-
-      this.stateManager.updateState({ audioLevel, currentTime });
-      
-      this.animationFrame = requestAnimationFrame(updateAudioLevel);
-    };
-
-    updateAudioLevel();
-  }
-
-  private cleanup(): void {
-    if (this.animationFrame) {
-      cancelAnimationFrame(this.animationFrame);
-      this.animationFrame = null;
-    }
-
-    if (this.scriptProcessor) {
-      this.scriptProcessor.disconnect();
-      this.scriptProcessor = null;
-    }
-
-    if (this.audioSource) {
-      this.audioSource.disconnect();
-      this.audioSource = null;
-    }
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-
+  private cleanupStream(): void {
     if (this.mediaStream) {
       this.mediaStream.getTracks().forEach(track => track.stop());
       this.mediaStream = null;
     }
-
-    this.analyser = null;
+    this.mediaRecorder = null;
+    this.audioChunks = [];
   }
 
   destroy(): void {
-    this.cleanup();
+    this.cleanupStream();
   }
 }

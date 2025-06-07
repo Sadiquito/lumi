@@ -1,4 +1,3 @@
-
 export interface AudioRecorderConfig {
   sampleRate: number;
   channels: number;
@@ -7,7 +6,7 @@ export interface AudioRecorderConfig {
 }
 
 export interface AudioChunk {
-  data: Float32Array;
+  data: Blob;
   timestamp: number;
 }
 

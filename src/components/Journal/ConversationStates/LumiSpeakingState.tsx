@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,20 +9,13 @@ interface LumiSpeakingStateProps {
   onFinishedSpeaking: () => void;
 }
 
-const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
+function LumiSpeakingState({
   currentMessage,
   onFinishedSpeaking
-}) => {
+}: LumiSpeakingStateProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const { isSynthesizing, synthesisResult, error, hasVoiceSupport, handleSynthesis } = useAudioSynthesis({
-    onSynthesisComplete: (result) => {
-      // Auto-play the synthesized audio
-      if (audioRef.current && result.audioUrl) {
-        audioRef.current.src = result.audioUrl;
-        audioRef.current.play().catch(console.error);
-      }
-    },
     enableFallback: true
   });
 
@@ -33,6 +25,19 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
       handleSynthesis(currentMessage);
     }
   }, [currentMessage, handleSynthesis]);
+
+  // Play audio when synthesisResult?.audioUrl is ready
+  useEffect(() => {
+    if (
+      synthesisResult?.audioUrl &&
+      hasVoiceSupport &&
+      !error &&
+      audioRef.current
+    ) {
+      audioRef.current.src = synthesisResult.audioUrl;
+      audioRef.current.play().catch(console.error);
+    }
+  }, [synthesisResult?.audioUrl, hasVoiceSupport, error]);
 
   const handleAudioEnd = () => {
     console.log('Lumi finished speaking');
@@ -134,20 +139,19 @@ const LumiSpeakingState: React.FC<LumiSpeakingStateProps> = ({
         </Button>
       </div>
 
-      {/* Audio Element */}
-      {synthesisResult?.audioUrl && hasVoiceSupport && !error && (
-        <audio
-          ref={audioRef}
-          onEnded={handleAudioEnd}
-          onError={(e) => {
-            console.error('Audio playback error:', e);
-            onFinishedSpeaking();
-          }}
-          preload="metadata"
-        />
-      )}
+      {/* Audio Element - always rendered */}
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onError={(e) => {
+          console.error('Audio playback error:', e);
+          onFinishedSpeaking();
+        }}
+        preload="metadata"
+        style={{ display: 'none' }}
+      />
     </div>
   );
-};
+}
 
 export default LumiSpeakingState;
