@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AudioRecorder } from '@/components/AudioRecorder';
@@ -9,7 +9,7 @@ import { useLumiConversation } from '@/hooks/useLumiConversation';
 import { useTTS } from '@/hooks/useTTS';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Volume2 } from 'lucide-react';
+import { LogOut, Volume2, Mic, MicOff } from 'lucide-react';
 
 interface TranscriptEntry {
   id: string;
@@ -19,20 +19,23 @@ interface TranscriptEntry {
   confidence?: number;
 }
 
+type ConversationState = 'idle' | 'listening' | 'user_speaking' | 'processing' | 'lumi_speaking';
+
 const ConversationPage = () => {
   const { user, signOut } = useAuth();
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [currentUserText, setCurrentUserText] = useState('');
-  const [conversationState, setConversationState] = useState<'idle' | 'listening' | 'speaking'>('idle');
+  const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [conversationId, setConversationId] = useState<string | undefined>();
 
+  // TTS Management with interruption handling
   const handleTTSSpeechStart = useCallback(() => {
     console.log('Lumi started speaking');
-    setConversationState('speaking');
+    setConversationState('lumi_speaking');
   }, []);
 
   const handleTTSSpeechEnd = useCallback(() => {
-    console.log('Lumi finished speaking');
+    console.log('Lumi finished speaking - returning to listening');
     setConversationState('listening');
   }, []);
 
@@ -41,6 +44,7 @@ const ConversationPage = () => {
     onSpeechEnd: handleTTSSpeechEnd
   });
 
+  // Lumi conversation handling
   const handleLumiResponse = useCallback((response: any) => {
     console.log('Lumi response received:', response);
     
@@ -57,7 +61,7 @@ const ConversationPage = () => {
       // Convert Lumi's response to speech
       speakText(response.response);
       
-      // Add follow-up question if present
+      // Handle follow-up question if present
       if (response.followUpQuestion) {
         setTimeout(() => {
           const followUpEntry: TranscriptEntry = {
@@ -68,7 +72,7 @@ const ConversationPage = () => {
           };
           setTranscript(prev => [...prev, followUpEntry]);
           
-          // Speak the follow-up question after a brief pause
+          // Speak the follow-up question after current response ends
           setTimeout(() => {
             speakText(response.followUpQuestion);
           }, 500);
@@ -85,6 +89,7 @@ const ConversationPage = () => {
     onLumiResponse: handleLumiResponse
   });
 
+  // STT handling with turn management
   const handleSTTResult = useCallback((result: any) => {
     console.log('STT Result received:', result);
     
@@ -102,7 +107,10 @@ const ConversationPage = () => {
         setTranscript(prev => [...prev, newEntry]);
         setCurrentUserText(''); // Clear interim text
         
-        console.log('Added final transcript:', newEntry);
+        console.log('Added final transcript, sending to Lumi:', newEntry);
+        
+        // Transition to processing state
+        setConversationState('processing');
         
         // Send to Lumi for response
         sendToLumi(result.transcript.trim(), conversationId);
@@ -113,37 +121,79 @@ const ConversationPage = () => {
     }
   }, [sendToLumi, conversationId]);
 
-  const { processAudio, isProcessing, error: sttError } = useSTT({
+  const { processAudio, isProcessing: isSTTProcessing, error: sttError } = useSTT({
     onTranscript: handleSTTResult
   });
 
+  // Audio data handling with VAD
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
     console.log('Received audio data:', {
       audioLength: encodedAudio.length,
       isSpeech,
+      currentState: conversationState,
       timestamp: new Date().toISOString(),
     });
     
-    // Process audio through STT
-    processAudio(encodedAudio, isSpeech, Date.now());
-  }, [processAudio]);
+    // Only process audio if we're in a listening state
+    if (conversationState === 'listening' || conversationState === 'user_speaking') {
+      processAudio(encodedAudio, isSpeech, Date.now());
+    }
+  }, [processAudio, conversationState]);
 
-  const handleConversationStateChange = useCallback((state: 'idle' | 'listening' | 'speaking') => {
-    console.log('Conversation state changed to:', state);
+  // Critical: Speech detection with interruption logic
+  const handleSpeechStart = useCallback(() => {
+    console.log('User speech detected');
     
-    // If user starts speaking while Lumi is talking, interrupt Lumi
-    if (state === 'speaking' && isLumiSpeaking) {
-      console.log('User interrupted Lumi - stopping TTS');
+    // If Lumi is speaking, interrupt immediately
+    if (isLumiSpeaking && conversationState === 'lumi_speaking') {
+      console.log('Interrupting Lumi - user started speaking');
       stopSpeaking();
     }
     
-    setConversationState(state);
+    setConversationState('user_speaking');
+  }, [isLumiSpeaking, conversationState, stopSpeaking]);
+
+  const handleSpeechEnd = useCallback(() => {
+    console.log('User speech ended');
     
-    // Clear interim text when not speaking
-    if (state !== 'speaking') {
+    // Only transition to listening if we were in user_speaking state
+    if (conversationState === 'user_speaking') {
+      setConversationState('listening');
+    }
+  }, [conversationState]);
+
+  // Recording state management
+  const handleRecordingStateChange = useCallback((isRecording: boolean) => {
+    console.log('Recording state changed:', isRecording);
+    
+    if (isRecording) {
+      setConversationState('listening');
+    } else {
+      setConversationState('idle');
       setCurrentUserText('');
     }
-  }, [isLumiSpeaking, stopSpeaking]);
+  }, []);
+
+  // Status indicators
+  const getStatusInfo = () => {
+    switch (conversationState) {
+      case 'idle':
+        return { text: 'Ready to start conversation', color: 'text-gray-600', icon: MicOff };
+      case 'listening':
+        return { text: 'Listening for your voice...', color: 'text-blue-600', icon: Mic };
+      case 'user_speaking':
+        return { text: 'You are speaking', color: 'text-green-600', icon: Mic };
+      case 'processing':
+        return { text: 'Processing your message...', color: 'text-purple-600', icon: Mic };
+      case 'lumi_speaking':
+        return { text: 'Lumi is responding', color: 'text-orange-600', icon: Volume2 };
+      default:
+        return { text: 'Unknown state', color: 'text-gray-400', icon: MicOff };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+  const StatusIcon = statusInfo.icon;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-orange-50 p-4">
@@ -170,49 +220,69 @@ const ConversationPage = () => {
           <Card className="border-none shadow-lg bg-white/80 backdrop-blur-sm">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-2xl font-light text-gray-900">
-                Ready to talk with Lumi?
+                Voice Conversation with Lumi
               </CardTitle>
               <p className="text-gray-600">
-                Start speaking naturally - Lumi will automatically detect and transcribe your words
+                Natural turn-taking conversation with automatic interruption handling
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Audio Recorder Component */}
               <AudioRecorder
                 onAudioData={handleAudioData}
-                onConversationStateChange={handleConversationStateChange}
+                onSpeechStart={handleSpeechStart}
+                onSpeechEnd={handleSpeechEnd}
+                onRecordingStateChange={handleRecordingStateChange}
               />
               
-              {/* Status indicators */}
-              <div className="flex justify-center space-x-6 text-sm">
-                <div className={`flex items-center space-x-2 ${conversationState === 'speaking' && !isLumiSpeaking ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-3 h-3 rounded-full ${conversationState === 'speaking' && !isLumiSpeaking ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  <span>You Speaking</span>
+              {/* Enhanced Status Display */}
+              <div className="text-center space-y-4">
+                <div className={`flex items-center justify-center space-x-3 ${statusInfo.color}`}>
+                  <StatusIcon className="w-5 h-5" />
+                  <span className="text-lg font-medium">{statusInfo.text}</span>
                 </div>
-                <div className={`flex items-center space-x-2 ${isProcessing ? 'text-blue-600' : 'text-gray-400'}`}>
-                  <div className={`w-3 h-3 rounded-full ${isProcessing ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
-                  <span>Processing</span>
-                </div>
-                <div className={`flex items-center space-x-2 ${isLumiProcessing ? 'text-purple-600' : 'text-gray-400'}`}>
-                  <div className={`w-3 h-3 rounded-full ${isLumiProcessing ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
-                  <span>Lumi Thinking</span>
-                </div>
-                <div className={`flex items-center space-x-2 ${isLumiSpeaking ? 'text-orange-600' : 'text-gray-400'}`}>
-                  <div className={`w-3 h-3 rounded-full ${isLumiSpeaking ? 'bg-orange-500 animate-pulse' : 'bg-gray-300'}`} />
-                  <Volume2 className="w-3 h-3" />
-                  <span>Lumi Speaking</span>
+                
+                {/* Detailed Status Indicators */}
+                <div className="flex justify-center space-x-8 text-sm">
+                  <div className={`flex items-center space-x-2 ${conversationState === 'user_speaking' ? 'text-green-600' : 'text-gray-400'}`}>
+                    <div className={`w-3 h-3 rounded-full ${conversationState === 'user_speaking' ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <span>You Speaking</span>
+                  </div>
+                  
+                  <div className={`flex items-center space-x-2 ${isSTTProcessing ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-3 h-3 rounded-full ${isSTTProcessing ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <span>STT Processing</span>
+                  </div>
+                  
+                  <div className={`flex items-center space-x-2 ${isLumiProcessing ? 'text-purple-600' : 'text-gray-400'}`}>
+                    <div className={`w-3 h-3 rounded-full ${isLumiProcessing ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <span>Lumi Thinking</span>
+                  </div>
+                  
+                  <div className={`flex items-center space-x-2 ${isLumiSpeaking ? 'text-orange-600' : 'text-gray-400'}`}>
+                    <div className={`w-3 h-3 rounded-full ${isLumiSpeaking ? 'bg-orange-500 animate-pulse' : 'bg-gray-300'}`} />
+                    <Volume2 className="w-3 h-3" />
+                    <span>Lumi Speaking</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Error display */}
+              {/* Error Display */}
               {sttError && (
                 <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg text-center">
                   STT Error: {sttError}
                 </div>
               )}
 
-              <p className="text-sm text-gray-500 text-center">
-                Speech-to-text is enabled - your words will appear below in real-time
-              </p>
+              {/* Turn-taking Status */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Conversation Flow</h4>
+                <p className="text-sm text-gray-600">
+                  • Start speaking to interrupt Lumi at any time<br/>
+                  • Automatic turn detection with VAD<br/>
+                  • Real-time transcription and response generation
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -220,7 +290,7 @@ const ConversationPage = () => {
           <TranscriptDisplay
             transcript={transcript}
             currentUserText={currentUserText}
-            isUserSpeaking={conversationState === 'speaking' && !isLumiSpeaking}
+            isUserSpeaking={conversationState === 'user_speaking'}
             isLumiSpeaking={isLumiSpeaking}
           />
         </div>
