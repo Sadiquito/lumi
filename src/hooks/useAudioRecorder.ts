@@ -1,27 +1,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-
-interface AudioRecorderConfig {
-  sampleRate: number;
-  channelCount: number;
-  chunkDuration: number; // in milliseconds
-  vadThreshold: number;
-  silenceDuration: number; // ms of silence before considering speech ended
-}
-
-const DEFAULT_CONFIG: AudioRecorderConfig = {
-  sampleRate: 24000,
-  channelCount: 1,
-  chunkDuration: 500, // Increased for better processing
-  vadThreshold: 0.02, // Slightly higher threshold
-  silenceDuration: 1500,
-};
-
-export interface AudioChunk {
-  data: Float32Array;
-  timestamp: number;
-  isSpeech: boolean;
-}
+import { DEFAULT_CONFIG, type AudioRecorderConfig, type AudioChunk } from './audio/audioConfig';
+import { useVoiceActivityDetection } from './audio/vadUtils';
+import { useAudioProcessor } from './audio/audioProcessor';
+import { useSpeechStateManager } from './audio/speechStateManager';
 
 interface UseAudioRecorderProps {
   onAudioChunk?: (chunk: AudioChunk) => void;
@@ -40,38 +22,30 @@ export const useAudioRecorder = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const vadIntervalRef = useRef<number | null>(null);
-  const silenceTimeoutRef = useRef<number | null>(null);
-  const lastSpeechTimeRef = useRef<number>(0);
   
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
 
-  // Improved VAD using audio analysis
-  const detectVoiceActivity = useCallback(() => {
-    if (!analyserRef.current) {
-      console.log('No analyser available for VAD');
-      return false;
-    }
+  // Initialize VAD utilities
+  const { analyserRef, detectVoiceActivity } = useVoiceActivityDetection(fullConfig);
 
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
+  // Initialize audio processor
+  const { audioContextRef, processAudioChunk } = useAudioProcessor({
+    onAudioChunk,
+    detectVoiceActivity,
+  });
 
-    // Calculate RMS (Root Mean Square) for volume detection
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      sum += dataArray[i] * dataArray[i];
-    }
-    const rms = Math.sqrt(sum / dataArray.length) / 255;
+  // Initialize speech state manager
+  const { handleSpeechStateChange, clearTimeouts } = useSpeechStateManager({
+    isSpeaking,
+    silenceDuration: fullConfig.silenceDuration,
+    onSpeechStart,
+    onSpeechEnd,
+    setIsSpeaking,
+  });
 
-    console.log('VAD RMS:', rms, 'Threshold:', fullConfig.vadThreshold);
-    return rms > fullConfig.vadThreshold;
-  }, [fullConfig.vadThreshold]);
-
-  // Fixed audio data processing using ScriptProcessorNode for real-time processing
+  // Setup real-time audio processing with ScriptProcessorNode
   const setupRealtimeAudioProcessing = useCallback(() => {
     if (!audioContextRef.current || !streamRef.current) return;
 
@@ -84,30 +58,7 @@ export const useAudioRecorder = ({
       scriptProcessor.onaudioprocess = (event) => {
         const inputBuffer = event.inputBuffer;
         const inputData = inputBuffer.getChannelData(0);
-        
-        // Create a copy of the audio data
-        const audioData = new Float32Array(inputData.length);
-        audioData.set(inputData);
-        
-        // Check if this chunk contains speech
-        const isSpeech = detectVoiceActivity();
-        
-        // Only send audio chunks when speech is detected
-        if (isSpeech) {
-          const chunk: AudioChunk = {
-            data: audioData,
-            timestamp: Date.now(),
-            isSpeech,
-          };
-
-          console.log('Sending real-time audio chunk:', {
-            dataLength: audioData.length,
-            isSpeech,
-            timestamp: chunk.timestamp
-          });
-
-          onAudioChunk?.(chunk);
-        }
+        processAudioChunk(inputData);
       };
       
       // Connect the audio processing chain
@@ -120,45 +71,7 @@ export const useAudioRecorder = ({
       console.error('Error setting up real-time audio processing:', error);
       setError(`Real-time audio processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [detectVoiceActivity, onAudioChunk]);
-
-  // Handle speech state changes with logging
-  const handleSpeechStateChange = useCallback((isSpeech: boolean) => {
-    const currentTime = Date.now();
-
-    if (isSpeech && !isSpeaking) {
-      console.log('🎤 Speech detected - starting');
-      setIsSpeaking(true);
-      onSpeechStart?.();
-      lastSpeechTimeRef.current = currentTime;
-      
-      // Clear any existing silence timeout
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-        silenceTimeoutRef.current = null;
-      }
-    } else if (isSpeech) {
-      // Update last speech time
-      lastSpeechTimeRef.current = currentTime;
-      
-      // Clear silence timeout if speech continues
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-        silenceTimeoutRef.current = null;
-      }
-    } else if (!isSpeech && isSpeaking) {
-      // Start silence timeout
-      if (!silenceTimeoutRef.current) {
-        console.log('🔇 Starting silence timeout');
-        silenceTimeoutRef.current = window.setTimeout(() => {
-          console.log('🔇 Speech ended - silence detected');
-          setIsSpeaking(false);
-          onSpeechEnd?.();
-          silenceTimeoutRef.current = null;
-        }, fullConfig.silenceDuration);
-      }
-    }
-  }, [isSpeaking, onSpeechStart, onSpeechEnd, fullConfig.silenceDuration]);
+  }, [audioContextRef, processAudioChunk]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -213,11 +126,6 @@ export const useAudioRecorder = ({
   const stopRecording = useCallback(() => {
     console.log('🛑 Stopping recording...');
 
-    // Stop MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-
     // Clean up audio context
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
@@ -239,16 +147,13 @@ export const useAudioRecorder = ({
       vadIntervalRef.current = null;
     }
 
-    if (silenceTimeoutRef.current) {
-      clearTimeout(silenceTimeoutRef.current);
-      silenceTimeoutRef.current = null;
-    }
+    clearTimeouts();
 
     setIsRecording(false);
     setIsSpeaking(false);
     setError(null);
     console.log('✅ Recording stopped');
-  }, []);
+  }, [clearTimeouts]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -265,3 +170,5 @@ export const useAudioRecorder = ({
     stopRecording,
   };
 };
+
+export type { AudioChunk } from './audio/audioConfig';
