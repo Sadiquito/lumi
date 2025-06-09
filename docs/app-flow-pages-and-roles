@@ -1,0 +1,54 @@
+# Lumi – App Flow, Pages & Roles
+
+## User Roles
+- **Single Role**: Authenticated user via Google login
+- No admin interface, settings panel, or monetization tiers in prototype phase
+
+## Page List and Descriptions
+
+### 1. Landing Page
+- **Purpose**: Introduce Lumi and invite users to begin their first conversation
+- **Elements**:
+  - Hero section with app name, logo, and primary CTA: “Begin Your Conversation”
+  - Brief description of Lumi as a voice-first introspection companion
+  - Soothing artwork that matches the "cosmic sunset" aesthetic
+- **Flow**: CTA → Google OAuth Login → Redirect to Journaling Page
+
+### 2. Journaling Page (Post-login Default)
+- **Purpose**: Central hub for both conversation launching and journal review
+- **Elements**:
+  - One large animated button: "Start Conversation"
+    - Indicates Lumi's speaking/listening status via visual pulse
+  - List of prior conversations sorted by timestamp
+  - Transcript display styled by speaker (user vs Lumi)
+  - Top of each entry includes Lumi's short reflections or follow-up questions
+  - Empty state if no conversations yet: clear invitation to start
+- **Flow**: Redirect from login or post-session, navigable from anywhere in-app
+
+### 3. Conversation Experience (Triggered from Journaling Page)
+- **Purpose**: Facilitate hands-free, voice-only interaction with Lumi
+- **Flow Behavior**:
+  - Conversation begins with Lumi initiating: 
+    - “Do you want to tell me what’s on your mind today, or would you like me to propose a topic?”
+  - User responds via browser microphone capture
+  - VAD detects end-of-user speech and triggers GPT-4o + memory
+  - Lumi's reply is voiced via ElevenLabs TTS and transcribed
+  - User may interrupt Lumi at any time by speaking again
+  - The session ends when user says so, or Lumi infers natural close
+- **Displayed Elements**:
+  - Live, scrollable transcript (user and Lumi clearly differentiated)
+  - Optional subtle playback controls for user (pause/resume)
+  - Visual cue showing active listening/speaking states
+
+## User Flow Summary
+1. Visit site → See landing page  
+2. Click CTA → Google login  
+3. Authenticated → Land on Journaling Page  
+4. Click "Start Conversation" → Lumi speaks first  
+5. Voice-based interaction proceeds with turn-taking  
+6. Session ends → Transcript saved with reflections  
+7. Return visits → View journal or start new conversation
+
+---
+
+Lumi's flow prioritizes simplicity and immediacy: one entry point, one main interaction mode, one central relationship. Every screen should reinforce this rhythm and remove anything that distracts from the voice-based journaling experience.
