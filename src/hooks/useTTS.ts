@@ -56,6 +56,7 @@ export const useTTS = ({ onSpeechStart, onSpeechEnd }: UseTTSProps = {}) => {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
+      // Declare event handlers first
       const handleAudioEnd = () => {
         console.log('Audio playback ended');
         setIsSpeaking(false);
