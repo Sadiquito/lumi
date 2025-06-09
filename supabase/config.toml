@@ -34,6 +34,9 @@ verify_jwt = false
 [functions.lumi-conversation]
 verify_jwt = false
 
+[functions.text-to-speech]
+verify_jwt = false
+
 [storage]
 enabled = true
 port = 54323

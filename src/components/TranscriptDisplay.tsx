@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Volume2 } from 'lucide-react';
 
 interface TranscriptEntry {
   id: string;
@@ -14,12 +15,14 @@ interface TranscriptDisplayProps {
   transcript: TranscriptEntry[];
   currentUserText?: string;
   isUserSpeaking?: boolean;
+  isLumiSpeaking?: boolean;
 }
 
 export const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
   transcript,
   currentUserText,
-  isUserSpeaking
+  isUserSpeaking,
+  isLumiSpeaking
 }) => {
   return (
     <Card className="border-none shadow-sm bg-white/60 backdrop-blur-sm">
@@ -46,8 +49,11 @@ export const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({
                 }
               `}
             >
-              <div className="text-sm font-medium mb-1">
+              <div className="text-sm font-medium mb-1 flex items-center">
                 {entry.speaker === 'user' ? 'You' : 'Lumi'}
+                {entry.speaker === 'lumi' && isLumiSpeaking && (
+                  <Volume2 className="ml-2 w-3 h-3 text-orange-500 animate-pulse" />
+                )}
               </div>
               <div>{entry.text}</div>
               {entry.confidence && (

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -5,9 +6,10 @@ import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { useSTT } from '@/hooks/useSTT';
 import { useLumiConversation } from '@/hooks/useLumiConversation';
+import { useTTS } from '@/hooks/useTTS';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut } from 'lucide-react';
+import { LogOut, Volume2 } from 'lucide-react';
 
 interface TranscriptEntry {
   id: string;
@@ -24,6 +26,21 @@ const ConversationPage = () => {
   const [conversationState, setConversationState] = useState<'idle' | 'listening' | 'speaking'>('idle');
   const [conversationId, setConversationId] = useState<string | undefined>();
 
+  const handleTTSSpeechStart = useCallback(() => {
+    console.log('Lumi started speaking');
+    setConversationState('speaking');
+  }, []);
+
+  const handleTTSSpeechEnd = useCallback(() => {
+    console.log('Lumi finished speaking');
+    setConversationState('listening');
+  }, []);
+
+  const { speak: speakText, stopSpeaking, isSpeaking: isLumiSpeaking, isProcessing: isTTSProcessing } = useTTS({
+    onSpeechStart: handleTTSSpeechStart,
+    onSpeechEnd: handleTTSSpeechEnd
+  });
+
   const handleLumiResponse = useCallback((response: any) => {
     console.log('Lumi response received:', response);
     
@@ -37,6 +54,9 @@ const ConversationPage = () => {
       
       setTranscript(prev => [...prev, lumiEntry]);
       
+      // Convert Lumi's response to speech
+      speakText(response.response);
+      
       // Add follow-up question if present
       if (response.followUpQuestion) {
         setTimeout(() => {
@@ -47,6 +67,11 @@ const ConversationPage = () => {
             timestamp: Date.now()
           };
           setTranscript(prev => [...prev, followUpEntry]);
+          
+          // Speak the follow-up question after a brief pause
+          setTimeout(() => {
+            speakText(response.followUpQuestion);
+          }, 500);
         }, 1000);
       }
     }
@@ -54,7 +79,7 @@ const ConversationPage = () => {
     if (response.conversationId) {
       setConversationId(response.conversationId);
     }
-  }, []);
+  }, [speakText]);
 
   const { sendToLumi, isProcessing: isLumiProcessing } = useLumiConversation({
     onLumiResponse: handleLumiResponse
@@ -105,13 +130,20 @@ const ConversationPage = () => {
 
   const handleConversationStateChange = useCallback((state: 'idle' | 'listening' | 'speaking') => {
     console.log('Conversation state changed to:', state);
+    
+    // If user starts speaking while Lumi is talking, interrupt Lumi
+    if (state === 'speaking' && isLumiSpeaking) {
+      console.log('User interrupted Lumi - stopping TTS');
+      stopSpeaking();
+    }
+    
     setConversationState(state);
     
     // Clear interim text when not speaking
     if (state !== 'speaking') {
       setCurrentUserText('');
     }
-  }, []);
+  }, [isLumiSpeaking, stopSpeaking]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-orange-50 p-4">
@@ -152,9 +184,9 @@ const ConversationPage = () => {
               
               {/* Status indicators */}
               <div className="flex justify-center space-x-6 text-sm">
-                <div className={`flex items-center space-x-2 ${conversationState === 'speaking' ? 'text-green-600' : 'text-gray-400'}`}>
-                  <div className={`w-3 h-3 rounded-full ${conversationState === 'speaking' ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  <span>Speaking</span>
+                <div className={`flex items-center space-x-2 ${conversationState === 'speaking' && !isLumiSpeaking ? 'text-green-600' : 'text-gray-400'}`}>
+                  <div className={`w-3 h-3 rounded-full ${conversationState === 'speaking' && !isLumiSpeaking ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span>You Speaking</span>
                 </div>
                 <div className={`flex items-center space-x-2 ${isProcessing ? 'text-blue-600' : 'text-gray-400'}`}>
                   <div className={`w-3 h-3 rounded-full ${isProcessing ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
@@ -163,6 +195,11 @@ const ConversationPage = () => {
                 <div className={`flex items-center space-x-2 ${isLumiProcessing ? 'text-purple-600' : 'text-gray-400'}`}>
                   <div className={`w-3 h-3 rounded-full ${isLumiProcessing ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
                   <span>Lumi Thinking</span>
+                </div>
+                <div className={`flex items-center space-x-2 ${isLumiSpeaking ? 'text-orange-600' : 'text-gray-400'}`}>
+                  <div className={`w-3 h-3 rounded-full ${isLumiSpeaking ? 'bg-orange-500 animate-pulse' : 'bg-gray-300'}`} />
+                  <Volume2 className="w-3 h-3" />
+                  <span>Lumi Speaking</span>
                 </div>
               </div>
 
@@ -183,7 +220,8 @@ const ConversationPage = () => {
           <TranscriptDisplay
             transcript={transcript}
             currentUserText={currentUserText}
-            isUserSpeaking={conversationState === 'speaking'}
+            isUserSpeaking={conversationState === 'speaking' && !isLumiSpeaking}
+            isLumiSpeaking={isLumiSpeaking}
           />
         </div>
       </div>
