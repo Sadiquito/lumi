@@ -9,7 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          conversation_duration: number | null
+          created_at: string
+          id: string
+          lumi_question: string | null
+          lumi_reflection: string | null
+          psychological_insights: Json | null
+          session_summary: string | null
+          transcript: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_duration?: number | null
+          created_at?: string
+          id?: string
+          lumi_question?: string | null
+          lumi_reflection?: string | null
+          psychological_insights?: Json | null
+          session_summary?: string | null
+          transcript?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_duration?: number | null
+          created_at?: string
+          id?: string
+          lumi_question?: string | null
+          lumi_reflection?: string | null
+          psychological_insights?: Json | null
+          session_summary?: string | null
+          transcript?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          conversation_preferences: Json | null
+          created_at: string
+          id: string
+          psychological_profile: Json | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_preferences?: Json | null
+          created_at?: string
+          id: string
+          psychological_profile?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_preferences?: Json | null
+          created_at?: string
+          id?: string
+          psychological_profile?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

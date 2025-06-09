@@ -1,102 +1,80 @@
 
-import { Button } from "@/components/ui/button";
-import { Mic, Heart, Clock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 const Index = () => {
-  const navigate = useNavigate();
+  const { user, loading, signInWithGoogle } = useAuth();
 
-  return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url('/lovable-uploads/d9306ff2-3fe6-4446-9e42-41d493513f0e.png')`
-        }}
-      >
-        {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-black/20" />
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-orange-50">
+        <div className="animate-pulse text-lg text-gray-600">Loading...</div>
       </div>
+    );
+  }
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 text-center">
-        {/* Main Hero Section */}
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Logo/Title */}
-          <div className="space-y-2 animate-float">
-            <h1 className="text-6xl md:text-7xl font-light text-white tracking-wider">
-              LUMI
-            </h1>
-            <div className="space-y-1">
-              <p className="text-xl md:text-2xl text-white/90 font-light">
-                PERSONAL
-              </p>
-              <p className="text-xl md:text-2xl text-lumi-lavender font-medium">
-                SUPERINTELLIGENCE
-              </p>
-            </div>
-          </div>
+  // If user is authenticated, redirect to conversation page
+  if (user) {
+    return <Navigate to="/conversation" replace />;
+  }
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-white/80 font-light max-w-xl mx-auto leading-relaxed">
-            Your AI companion for daily reflection through natural conversation
+  // Landing page for unauthenticated users
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-orange-50 flex items-center justify-center p-4">
+      <div className="max-w-2xl mx-auto text-center space-y-8">
+        {/* Hero Section */}
+        <div className="space-y-4">
+          <h1 className="text-5xl md:text-6xl font-light text-gray-900 tracking-tight">
+            Lumi
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 font-light leading-relaxed">
+            Your voice-first companion for daily reflection through natural conversation
           </p>
+        </div>
 
-          {/* CTA Button */}
-          <div className="pt-4">
-            <Button
-              onClick={() => navigate('/conversation')}
-              size="lg"
-              className="bg-white/90 text-lumi-cosmic hover:bg-white transition-all duration-300 px-8 py-4 text-lg font-medium rounded-full backdrop-blur-sm border border-white/20"
-            >
-              Continue with Google
-            </Button>
+        {/* Value Proposition */}
+        <div className="space-y-6">
+          <p className="text-lg text-gray-700 leading-relaxed max-w-lg mx-auto">
+            Lumi listens with warmth and wisdom, creating a safe space for you to explore your thoughts, feelings, and experiences through meaningful dialogue.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-4 mt-8">
+            <Card className="border-none shadow-sm bg-white/70">
+              <CardContent className="p-6 text-center">
+                <div className="text-2xl mb-2">🎙️</div>
+                <p className="text-sm text-gray-600">Voice-first journaling that feels like a natural conversation</p>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm bg-white/70">
+              <CardContent className="p-6 text-center">
+                <div className="text-2xl mb-2">🧠</div>
+                <p className="text-sm text-gray-600">AI that remembers and grows with your personal journey</p>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm bg-white/70">
+              <CardContent className="p-6 text-center">
+                <div className="text-2xl mb-2">📖</div>
+                <p className="text-sm text-gray-600">Beautiful journal that captures your reflections</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        {/* Feature Cards */}
-        <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            {/* Voice First */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-lumi-lavender/20 flex items-center justify-center">
-                  <Mic className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <h3 className="text-white font-medium mb-2">Voice-First, Forever</h3>
-              <p className="text-white/70 text-sm">
-                Writing sucks. Just speak your mind.
-              </p>
-            </div>
-
-            {/* Thoughtful Guidance */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-lumi-lavender/20 flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <h3 className="text-white font-medium mb-2">Thoughtful Guidance</h3>
-              <p className="text-white/70 text-sm">
-                Let Lumi guide you when you don't know what to say
-              </p>
-            </div>
-
-            {/* Day In, Day Out */}
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-lumi-lavender/20 flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <h3 className="text-white font-medium mb-2">Day In, Day Out</h3>
-              <p className="text-white/70 text-sm">
-                Build a daily habit that will last until you croak
-              </p>
-            </div>
-          </div>
+        {/* Main CTA */}
+        <div className="space-y-4">
+          <Button
+            onClick={signInWithGoogle}
+            size="lg"
+            className="bg-indigo-400 hover:bg-indigo-500 text-white px-8 py-6 text-lg rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl"
+          >
+            Begin Your Conversation
+          </Button>
+          <p className="text-sm text-gray-500">
+            Sign in with Google to start your journey with Lumi
+          </p>
         </div>
       </div>
     </div>
