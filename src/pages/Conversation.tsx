@@ -1,10 +1,10 @@
-
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { useSTT } from '@/hooks/useSTT';
+import { useLumiConversation } from '@/hooks/useLumiConversation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
@@ -22,6 +22,43 @@ const ConversationPage = () => {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [currentUserText, setCurrentUserText] = useState('');
   const [conversationState, setConversationState] = useState<'idle' | 'listening' | 'speaking'>('idle');
+  const [conversationId, setConversationId] = useState<string | undefined>();
+
+  const handleLumiResponse = useCallback((response: any) => {
+    console.log('Lumi response received:', response);
+    
+    if (response.response) {
+      const lumiEntry: TranscriptEntry = {
+        id: `${Date.now()}-lumi-${Math.random()}`,
+        text: response.response,
+        speaker: 'lumi',
+        timestamp: Date.now()
+      };
+      
+      setTranscript(prev => [...prev, lumiEntry]);
+      
+      // Add follow-up question if present
+      if (response.followUpQuestion) {
+        setTimeout(() => {
+          const followUpEntry: TranscriptEntry = {
+            id: `${Date.now()}-lumi-followup-${Math.random()}`,
+            text: response.followUpQuestion,
+            speaker: 'lumi',
+            timestamp: Date.now()
+          };
+          setTranscript(prev => [...prev, followUpEntry]);
+        }, 1000);
+      }
+    }
+
+    if (response.conversationId) {
+      setConversationId(response.conversationId);
+    }
+  }, []);
+
+  const { sendToLumi, isProcessing: isLumiProcessing } = useLumiConversation({
+    onLumiResponse: handleLumiResponse
+  });
 
   const handleSTTResult = useCallback((result: any) => {
     console.log('STT Result received:', result);
@@ -41,12 +78,15 @@ const ConversationPage = () => {
         setCurrentUserText(''); // Clear interim text
         
         console.log('Added final transcript:', newEntry);
+        
+        // Send to Lumi for response
+        sendToLumi(result.transcript.trim(), conversationId);
       } else {
         // Update interim transcript
         setCurrentUserText(result.transcript);
       }
     }
-  }, []);
+  }, [sendToLumi, conversationId]);
 
   const { processAudio, isProcessing, error: sttError } = useSTT({
     onTranscript: handleSTTResult
@@ -119,6 +159,10 @@ const ConversationPage = () => {
                 <div className={`flex items-center space-x-2 ${isProcessing ? 'text-blue-600' : 'text-gray-400'}`}>
                   <div className={`w-3 h-3 rounded-full ${isProcessing ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
                   <span>Processing</span>
+                </div>
+                <div className={`flex items-center space-x-2 ${isLumiProcessing ? 'text-purple-600' : 'text-gray-400'}`}>
+                  <div className={`w-3 h-3 rounded-full ${isLumiProcessing ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`} />
+                  <span>Lumi Thinking</span>
                 </div>
               </div>
 
