@@ -32,23 +32,29 @@ const Index = () => {
       }}
     >
       {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/20"></div>
+      <div className="absolute inset-0 bg-black/30"></div>
       
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4 space-y-12">
         {/* Main heading */}
         <div className="space-y-6">
-          <h1 className="text-6xl md:text-8xl font-light text-white tracking-wider">
+          <h1 
+            className="text-6xl md:text-8xl font-cinzel font-medium text-white tracking-wider"
+            style={{
+              textShadow: '0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 60px rgba(255, 255, 255, 0.2)',
+              filter: 'blur(0.5px)'
+            }}
+          >
             LUMI
           </h1>
-          <div className="space-y-2">
-            <h2 className="text-2xl md:text-3xl font-light text-white">
+          <div className="space-y-2 font-cinzel">
+            <h2 className="text-2xl md:text-3xl font-medium text-white">
               PERSONAL
             </h2>
-            <h2 className="text-2xl md:text-3xl font-light text-cyan-300">
+            <h2 className="text-2xl md:text-3xl font-medium text-cyan-300">
               SUPERINTELLIGENCE
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-white/90 font-light max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-white/90 font-crimson font-normal max-w-2xl mx-auto leading-relaxed">
             Your AI companion for daily reflection through natural conversation
           </p>
         </div>
@@ -57,7 +63,7 @@ const Index = () => {
         <div className="space-y-4">
           <Button
             onClick={signInWithGoogle}
-            className="bg-white/90 hover:bg-white text-gray-800 px-8 py-3 text-lg font-medium rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl flex items-center gap-3 mx-auto"
+            className="bg-white/90 hover:bg-white text-gray-800 px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl flex items-center gap-3 mx-auto"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -75,8 +81,8 @@ const Index = () => {
             <div className="w-12 h-12 mx-auto bg-cyan-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <div className="text-2xl">🎙️</div>
             </div>
-            <h3 className="text-lg font-medium text-white">VOICE-FIRST, FOREVER</h3>
-            <p className="text-sm text-white/80 leading-relaxed">
+            <h3 className="text-lg font-crimson font-semibold text-white">VOICE-FIRST, FOREVER</h3>
+            <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Writing sucks. Just speak your mind.
             </p>
           </div>
@@ -85,8 +91,8 @@ const Index = () => {
             <div className="w-12 h-12 mx-auto bg-pink-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <div className="text-2xl">💚</div>
             </div>
-            <h3 className="text-lg font-medium text-white">THOUGHTFUL GUIDANCE</h3>
-            <p className="text-sm text-white/80 leading-relaxed">
+            <h3 className="text-lg font-crimson font-semibold text-white">THOUGHTFUL GUIDANCE</h3>
+            <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Let Lumi guide you when you don't know what to say
             </p>
           </div>
@@ -95,8 +101,8 @@ const Index = () => {
             <div className="w-12 h-12 mx-auto bg-orange-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
               <div className="text-2xl">⏰</div>
             </div>
-            <h3 className="text-lg font-medium text-white">DAY IN, DAY OUT</h3>
-            <p className="text-sm text-white/80 leading-relaxed">
+            <h3 className="text-lg font-crimson font-semibold text-white">DAY IN, DAY OUT</h3>
+            <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Build a daily habit that will last until you croak
             </p>
           </div>
