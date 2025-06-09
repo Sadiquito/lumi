@@ -9,7 +9,7 @@ import { useLumiConversation } from '@/hooks/useLumiConversation';
 import { useTTS } from '@/hooks/useTTS';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Volume2, Mic, MicOff } from 'lucide-react';
+import { LogOut, Volume2, Mic, MicOff, AlertCircle } from 'lucide-react';
 
 interface TranscriptEntry {
   id: string;
@@ -27,26 +27,35 @@ const ConversationPage = () => {
   const [currentUserText, setCurrentUserText] = useState('');
   const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  // Debug logging function
+  const addDebugLog = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `${timestamp}: ${message}`;
+    console.log('🐛', logMessage);
+    setDebugLogs(prev => [...prev.slice(-4), logMessage]); // Keep last 5 logs
+  }, []);
 
   // TTS Management with interruption handling
   const handleTTSSpeechStart = useCallback(() => {
-    console.log('Lumi started speaking');
+    addDebugLog('Lumi started speaking');
     setConversationState('lumi_speaking');
-  }, []);
+  }, [addDebugLog]);
 
   const handleTTSSpeechEnd = useCallback(() => {
-    console.log('Lumi finished speaking - returning to listening');
+    addDebugLog('Lumi finished speaking - returning to listening');
     setConversationState('listening');
-  }, []);
+  }, [addDebugLog]);
 
-  const { speak: speakText, stopSpeaking, isSpeaking: isLumiSpeaking, isProcessing: isTTSProcessing } = useTTS({
+  const { speak: speakText, stopSpeaking, isSpeaking: isLumiSpeaking, isProcessing: isTTSProcessing, error: ttsError } = useTTS({
     onSpeechStart: handleTTSSpeechStart,
     onSpeechEnd: handleTTSSpeechEnd
   });
 
   // Lumi conversation handling
   const handleLumiResponse = useCallback((response: any) => {
-    console.log('Lumi response received:', response);
+    addDebugLog(`Lumi response received: ${response.response?.substring(0, 50)}...`);
     
     if (response.response) {
       const lumiEntry: TranscriptEntry = {
@@ -83,15 +92,15 @@ const ConversationPage = () => {
     if (response.conversationId) {
       setConversationId(response.conversationId);
     }
-  }, [speakText]);
+  }, [speakText, addDebugLog]);
 
-  const { sendToLumi, isProcessing: isLumiProcessing } = useLumiConversation({
+  const { sendToLumi, isProcessing: isLumiProcessing, error: lumiError } = useLumiConversation({
     onLumiResponse: handleLumiResponse
   });
 
   // STT handling with turn management
   const handleSTTResult = useCallback((result: any) => {
-    console.log('STT Result received:', result);
+    addDebugLog(`STT Result: "${result.transcript}" (final: ${result.isFinal})`);
     
     if (result.transcript && result.transcript.trim()) {
       if (result.isFinal) {
@@ -107,7 +116,7 @@ const ConversationPage = () => {
         setTranscript(prev => [...prev, newEntry]);
         setCurrentUserText(''); // Clear interim text
         
-        console.log('Added final transcript, sending to Lumi:', newEntry);
+        addDebugLog(`Sending to Lumi: "${result.transcript.trim()}"`);
         
         // Transition to processing state
         setConversationState('processing');
@@ -119,60 +128,57 @@ const ConversationPage = () => {
         setCurrentUserText(result.transcript);
       }
     }
-  }, [sendToLumi, conversationId]);
+  }, [sendToLumi, conversationId, addDebugLog]);
 
   const { processAudio, isProcessing: isSTTProcessing, error: sttError } = useSTT({
     onTranscript: handleSTTResult
   });
 
-  // Audio data handling with VAD
+  // Audio data handling with enhanced logging
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
-    console.log('Received audio data:', {
-      audioLength: encodedAudio.length,
-      isSpeech,
-      currentState: conversationState,
-      timestamp: new Date().toISOString(),
-    });
+    addDebugLog(`Audio data: ${encodedAudio.length} chars, speech: ${isSpeech}, state: ${conversationState}`);
     
-    // Only process audio if we're in a listening state
-    if (conversationState === 'listening' || conversationState === 'user_speaking') {
+    // Only process audio if we're in a listening state and it contains speech
+    if ((conversationState === 'listening' || conversationState === 'user_speaking') && isSpeech) {
+      addDebugLog('Processing audio with STT');
       processAudio(encodedAudio, isSpeech, Date.now());
     }
-  }, [processAudio, conversationState]);
+  }, [processAudio, conversationState, addDebugLog]);
 
   // Critical: Speech detection with interruption logic
   const handleSpeechStart = useCallback(() => {
-    console.log('User speech detected');
+    addDebugLog('User speech detected');
     
     // If Lumi is speaking, interrupt immediately
     if (isLumiSpeaking && conversationState === 'lumi_speaking') {
-      console.log('Interrupting Lumi - user started speaking');
+      addDebugLog('Interrupting Lumi - user started speaking');
       stopSpeaking();
     }
     
     setConversationState('user_speaking');
-  }, [isLumiSpeaking, conversationState, stopSpeaking]);
+  }, [isLumiSpeaking, conversationState, stopSpeaking, addDebugLog]);
 
   const handleSpeechEnd = useCallback(() => {
-    console.log('User speech ended');
+    addDebugLog('User speech ended');
     
     // Only transition to listening if we were in user_speaking state
     if (conversationState === 'user_speaking') {
       setConversationState('listening');
     }
-  }, [conversationState]);
+  }, [conversationState, addDebugLog]);
 
   // Recording state management
   const handleRecordingStateChange = useCallback((isRecording: boolean) => {
-    console.log('Recording state changed:', isRecording);
+    addDebugLog(`Recording state changed: ${isRecording}`);
     
     if (isRecording) {
       setConversationState('listening');
+      setDebugLogs([]); // Clear debug logs on new session
     } else {
       setConversationState('idle');
       setCurrentUserText('');
     }
-  }, []);
+  }, [addDebugLog]);
 
   // Status indicators
   const getStatusInfo = () => {
@@ -194,6 +200,9 @@ const ConversationPage = () => {
 
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
+
+  // Collect all errors
+  const allErrors = [sttError, ttsError, lumiError].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-orange-50 p-4">
@@ -268,9 +277,26 @@ const ConversationPage = () => {
               </div>
 
               {/* Error Display */}
-              {sttError && (
-                <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg text-center">
-                  STT Error: {sttError}
+              {allErrors.length > 0 && (
+                <div className="space-y-2">
+                  {allErrors.map((error, index) => (
+                    <div key={index} className="text-red-600 text-sm bg-red-50 p-3 rounded-lg flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                      {error}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Debug Logs */}
+              {debugLogs.length > 0 && (
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm">Debug Info</h4>
+                  <div className="space-y-1 text-xs text-gray-600 font-mono">
+                    {debugLogs.map((log, index) => (
+                      <div key={index}>{log}</div>
+                    ))}
+                  </div>
                 </div>
               )}
 

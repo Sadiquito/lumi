@@ -12,9 +12,9 @@ interface AudioRecorderConfig {
 const DEFAULT_CONFIG: AudioRecorderConfig = {
   sampleRate: 24000,
   channelCount: 1,
-  chunkDuration: 250,
-  vadThreshold: 0.01,
-  silenceDuration: 1000,
+  chunkDuration: 500, // Increased for better processing
+  vadThreshold: 0.02, // Slightly higher threshold
+  silenceDuration: 1500,
 };
 
 export interface AudioChunk {
@@ -47,12 +47,16 @@ export const useAudioRecorder = ({
   const vadIntervalRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
   const lastSpeechTimeRef = useRef<number>(0);
+  const audioChunksRef = useRef<Blob[]>([]);
   
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
 
-  // VAD using audio analysis
+  // Improved VAD using audio analysis
   const detectVoiceActivity = useCallback(() => {
-    if (!analyserRef.current) return false;
+    if (!analyserRef.current) {
+      console.log('No analyser available for VAD');
+      return false;
+    }
 
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
@@ -64,17 +68,58 @@ export const useAudioRecorder = ({
     }
     const rms = Math.sqrt(sum / dataArray.length) / 255;
 
+    console.log('VAD RMS:', rms, 'Threshold:', fullConfig.vadThreshold);
     return rms > fullConfig.vadThreshold;
   }, [fullConfig.vadThreshold]);
 
-  // Process audio data for VAD and chunking
-  const processAudioData = useCallback((audioData: Float32Array) => {
-    const isSpeech = detectVoiceActivity();
+  // Improved audio data processing
+  const processAudioBlob = useCallback(async (blob: Blob) => {
+    try {
+      console.log('Processing audio blob:', blob.size, 'bytes');
+      
+      if (!audioContextRef.current) {
+        console.error('No audio context available');
+        return;
+      }
+
+      const arrayBuffer = await blob.arrayBuffer();
+      console.log('Audio array buffer size:', arrayBuffer.byteLength);
+      
+      // Decode audio data
+      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+      const audioData = audioBuffer.getChannelData(0);
+      
+      console.log('Decoded audio data length:', audioData.length);
+
+      // Check if this chunk contains speech
+      const isSpeech = detectVoiceActivity();
+      
+      const chunk: AudioChunk = {
+        data: new Float32Array(audioData),
+        timestamp: Date.now(),
+        isSpeech,
+      };
+
+      console.log('Sending audio chunk:', {
+        dataLength: audioData.length,
+        isSpeech,
+        timestamp: chunk.timestamp
+      });
+
+      onAudioChunk?.(chunk);
+      
+    } catch (error) {
+      console.error('Error processing audio blob:', error);
+      setError(`Audio processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [detectVoiceActivity, onAudioChunk]);
+
+  // Handle speech state changes with logging
+  const handleSpeechStateChange = useCallback((isSpeech: boolean) => {
     const currentTime = Date.now();
 
-    // Handle speech state changes
     if (isSpeech && !isSpeaking) {
-      console.log('Speech detected - starting');
+      console.log('🎤 Speech detected - starting');
       setIsSpeaking(true);
       onSpeechStart?.();
       lastSpeechTimeRef.current = currentTime;
@@ -96,29 +141,21 @@ export const useAudioRecorder = ({
     } else if (!isSpeech && isSpeaking) {
       // Start silence timeout
       if (!silenceTimeoutRef.current) {
+        console.log('🔇 Starting silence timeout');
         silenceTimeoutRef.current = window.setTimeout(() => {
-          console.log('Speech ended - silence detected');
+          console.log('🔇 Speech ended - silence detected');
           setIsSpeaking(false);
           onSpeechEnd?.();
           silenceTimeoutRef.current = null;
         }, fullConfig.silenceDuration);
       }
     }
-
-    // Send audio chunk regardless of speech detection for continuous processing
-    const chunk: AudioChunk = {
-      data: new Float32Array(audioData),
-      timestamp: currentTime,
-      isSpeech,
-    };
-
-    onAudioChunk?.(chunk);
-  }, [detectVoiceActivity, isSpeaking, onSpeechStart, onSpeechEnd, onAudioChunk, fullConfig.silenceDuration]);
+  }, [isSpeaking, onSpeechStart, onSpeechEnd, fullConfig.silenceDuration]);
 
   const startRecording = useCallback(async () => {
     try {
       setError(null);
-      console.log('Requesting microphone access...');
+      console.log('🎙️ Starting recording...');
 
       // Request microphone with specific constraints
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -132,6 +169,7 @@ export const useAudioRecorder = ({
       });
 
       streamRef.current = stream;
+      console.log('✅ Microphone access granted');
 
       // Create AudioContext for VAD
       audioContextRef.current = new AudioContext({
@@ -144,49 +182,55 @@ export const useAudioRecorder = ({
       analyserRef.current.smoothingTimeConstant = 0.8;
       source.connect(analyserRef.current);
 
-      // Set up MediaRecorder for chunked recording
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
+      console.log('✅ Audio analysis setup complete');
 
+      // Set up MediaRecorder for chunked recording
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
+
+      // Reset audio chunks
+      audioChunksRef.current = [];
 
       // Handle audio data chunks
       mediaRecorder.ondataavailable = async (event) => {
+        console.log('📦 Audio data available:', event.data.size, 'bytes');
+        
         if (event.data.size > 0) {
-          try {
-            // Convert blob to Float32Array for processing
-            const arrayBuffer = await event.data.arrayBuffer();
-            const audioContext = new AudioContext({ sampleRate: fullConfig.sampleRate });
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            const audioData = audioBuffer.getChannelData(0);
-            
-            processAudioData(audioData);
-          } catch (error) {
-            console.error('Error processing audio chunk:', error);
-          }
+          audioChunksRef.current.push(event.data);
+          await processAudioBlob(event.data);
         }
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        setError('Recording failed');
       };
 
       // Start recording with chunked intervals
       mediaRecorder.start(fullConfig.chunkDuration);
+      console.log('🔴 MediaRecorder started');
       
       // Start VAD monitoring
       vadIntervalRef.current = window.setInterval(() => {
-        detectVoiceActivity();
-      }, 50); // Check VAD every 50ms
+        const isSpeech = detectVoiceActivity();
+        handleSpeechStateChange(isSpeech);
+      }, 100); // Check VAD every 100ms
 
       setIsRecording(true);
-      console.log('Recording started successfully');
+      console.log('✅ Recording started successfully');
 
     } catch (err) {
-      console.error('Error starting recording:', err);
+      console.error('❌ Error starting recording:', err);
       setError(err instanceof Error ? err.message : 'Failed to start recording');
     }
-  }, [fullConfig, processAudioData, detectVoiceActivity]);
+  }, [fullConfig, processAudioBlob, detectVoiceActivity, handleSpeechStateChange]);
 
   const stopRecording = useCallback(() => {
-    console.log('Stopping recording...');
+    console.log('🛑 Stopping recording...');
 
     // Stop MediaRecorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -194,14 +238,17 @@ export const useAudioRecorder = ({
     }
 
     // Clean up audio context
-    if (audioContextRef.current) {
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
 
     // Stop media stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('🔇 Stopped audio track');
+      });
       streamRef.current = null;
     }
 
@@ -216,9 +263,13 @@ export const useAudioRecorder = ({
       silenceTimeoutRef.current = null;
     }
 
+    // Reset audio chunks
+    audioChunksRef.current = [];
+
     setIsRecording(false);
     setIsSpeaking(false);
     setError(null);
+    console.log('✅ Recording stopped');
   }, []);
 
   // Cleanup on unmount
