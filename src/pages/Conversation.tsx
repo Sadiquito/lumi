@@ -136,18 +136,22 @@ const ConversationPage = () => {
 
   // Audio data handling with enhanced logging
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
-    addDebugLog(`Audio data: ${encodedAudio.length} chars, speech: ${isSpeech}, state: ${conversationState}`);
+    addDebugLog(`Audio data received: ${encodedAudio.length} chars, speech: ${isSpeech}, state: ${conversationState}`);
     
-    // Only process audio if we're in a listening state and it contains speech
-    if ((conversationState === 'listening' || conversationState === 'user_speaking') && isSpeech) {
-      addDebugLog('Processing audio with STT');
+    // Process audio if we're in a state where we should listen and it contains speech
+    if (conversationState !== 'idle' && isSpeech) {
+      addDebugLog('Processing audio with STT service');
       processAudio(encodedAudio, isSpeech, Date.now());
+    } else if (conversationState === 'idle') {
+      addDebugLog('Ignoring audio - conversation not started');
+    } else if (!isSpeech) {
+      addDebugLog('Ignoring audio - no speech detected');
     }
   }, [processAudio, conversationState, addDebugLog]);
 
   // Critical: Speech detection with interruption logic
   const handleSpeechStart = useCallback(() => {
-    addDebugLog('User speech detected');
+    addDebugLog(`User speech detected - current state: ${conversationState}`);
     
     // If Lumi is speaking, interrupt immediately
     if (isLumiSpeaking && conversationState === 'lumi_speaking') {
@@ -155,11 +159,14 @@ const ConversationPage = () => {
       stopSpeaking();
     }
     
-    setConversationState('user_speaking');
+    // Only transition to user_speaking if we're in an active conversation
+    if (conversationState !== 'idle') {
+      setConversationState('user_speaking');
+    }
   }, [isLumiSpeaking, conversationState, stopSpeaking, addDebugLog]);
 
   const handleSpeechEnd = useCallback(() => {
-    addDebugLog('User speech ended');
+    addDebugLog(`User speech ended - current state: ${conversationState}`);
     
     // Only transition to listening if we were in user_speaking state
     if (conversationState === 'user_speaking') {
@@ -174,9 +181,11 @@ const ConversationPage = () => {
     if (isRecording) {
       setConversationState('listening');
       setDebugLogs([]); // Clear debug logs on new session
+      addDebugLog('Conversation started - now listening');
     } else {
       setConversationState('idle');
       setCurrentUserText('');
+      addDebugLog('Conversation stopped');
     }
   }, [addDebugLog]);
 
