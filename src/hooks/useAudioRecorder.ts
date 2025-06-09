@@ -47,7 +47,6 @@ export const useAudioRecorder = ({
   const vadIntervalRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
   const lastSpeechTimeRef = useRef<number>(0);
-  const audioChunksRef = useRef<Blob[]>([]);
   
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
 
@@ -72,45 +71,54 @@ export const useAudioRecorder = ({
     return rms > fullConfig.vadThreshold;
   }, [fullConfig.vadThreshold]);
 
-  // Improved audio data processing
-  const processAudioBlob = useCallback(async (blob: Blob) => {
+  // Fixed audio data processing using ScriptProcessorNode for real-time processing
+  const setupRealtimeAudioProcessing = useCallback(() => {
+    if (!audioContextRef.current || !streamRef.current) return;
+
     try {
-      console.log('Processing audio blob:', blob.size, 'bytes');
+      const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
       
-      if (!audioContextRef.current) {
-        console.error('No audio context available');
-        return;
-      }
+      // Create a ScriptProcessorNode for real-time audio processing
+      const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+      
+      scriptProcessor.onaudioprocess = (event) => {
+        const inputBuffer = event.inputBuffer;
+        const inputData = inputBuffer.getChannelData(0);
+        
+        // Create a copy of the audio data
+        const audioData = new Float32Array(inputData.length);
+        audioData.set(inputData);
+        
+        // Check if this chunk contains speech
+        const isSpeech = detectVoiceActivity();
+        
+        // Only send audio chunks when speech is detected
+        if (isSpeech) {
+          const chunk: AudioChunk = {
+            data: audioData,
+            timestamp: Date.now(),
+            isSpeech,
+          };
 
-      const arrayBuffer = await blob.arrayBuffer();
-      console.log('Audio array buffer size:', arrayBuffer.byteLength);
-      
-      // Decode audio data
-      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
-      
-      console.log('Decoded audio data length:', audioData.length);
+          console.log('Sending real-time audio chunk:', {
+            dataLength: audioData.length,
+            isSpeech,
+            timestamp: chunk.timestamp
+          });
 
-      // Check if this chunk contains speech
-      const isSpeech = detectVoiceActivity();
-      
-      const chunk: AudioChunk = {
-        data: new Float32Array(audioData),
-        timestamp: Date.now(),
-        isSpeech,
+          onAudioChunk?.(chunk);
+        }
       };
-
-      console.log('Sending audio chunk:', {
-        dataLength: audioData.length,
-        isSpeech,
-        timestamp: chunk.timestamp
-      });
-
-      onAudioChunk?.(chunk);
+      
+      // Connect the audio processing chain
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioContextRef.current.destination);
+      
+      console.log('✅ Real-time audio processing setup complete');
       
     } catch (error) {
-      console.error('Error processing audio blob:', error);
-      setError(`Audio processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error setting up real-time audio processing:', error);
+      setError(`Real-time audio processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, [detectVoiceActivity, onAudioChunk]);
 
@@ -171,7 +179,7 @@ export const useAudioRecorder = ({
       streamRef.current = stream;
       console.log('✅ Microphone access granted');
 
-      // Create AudioContext for VAD
+      // Create AudioContext for VAD and real-time processing
       audioContextRef.current = new AudioContext({
         sampleRate: fullConfig.sampleRate,
       });
@@ -184,35 +192,8 @@ export const useAudioRecorder = ({
 
       console.log('✅ Audio analysis setup complete');
 
-      // Set up MediaRecorder for chunked recording
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus' 
-        : 'audio/webm';
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-
-      // Reset audio chunks
-      audioChunksRef.current = [];
-
-      // Handle audio data chunks
-      mediaRecorder.ondataavailable = async (event) => {
-        console.log('📦 Audio data available:', event.data.size, 'bytes');
-        
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-          await processAudioBlob(event.data);
-        }
-      };
-
-      mediaRecorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
-        setError('Recording failed');
-      };
-
-      // Start recording with chunked intervals
-      mediaRecorder.start(fullConfig.chunkDuration);
-      console.log('🔴 MediaRecorder started');
+      // Setup real-time audio processing
+      setupRealtimeAudioProcessing();
       
       // Start VAD monitoring
       vadIntervalRef.current = window.setInterval(() => {
@@ -227,7 +208,7 @@ export const useAudioRecorder = ({
       console.error('❌ Error starting recording:', err);
       setError(err instanceof Error ? err.message : 'Failed to start recording');
     }
-  }, [fullConfig, processAudioBlob, detectVoiceActivity, handleSpeechStateChange]);
+  }, [fullConfig, setupRealtimeAudioProcessing, detectVoiceActivity, handleSpeechStateChange]);
 
   const stopRecording = useCallback(() => {
     console.log('🛑 Stopping recording...');
@@ -262,9 +243,6 @@ export const useAudioRecorder = ({
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
     }
-
-    // Reset audio chunks
-    audioChunksRef.current = [];
 
     setIsRecording(false);
     setIsSpeaking(false);
