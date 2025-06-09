@@ -2,16 +2,28 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AudioRecorder } from '@/components/AudioRecorder';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Mic } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 const ConversationPage = () => {
   const { user, signOut } = useAuth();
 
-  const handleStartConversation = () => {
+  const handleAudioData = (encodedAudio: string, isSpeech: boolean) => {
+    console.log('Received audio data:', {
+      audioLength: encodedAudio.length,
+      isSpeech,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // TODO: Send to backend for STT processing
     // This will be implemented in the next phase
-    console.log('Starting conversation...');
+  };
+
+  const handleConversationStateChange = (state: 'idle' | 'listening' | 'speaking') => {
+    console.log('Conversation state changed to:', state);
+    // TODO: Update UI state, send to backend for context
   };
 
   return (
@@ -42,20 +54,16 @@ const ConversationPage = () => {
                 Ready to talk with Lumi?
               </CardTitle>
               <p className="text-gray-600">
-                Share what's on your mind, or let Lumi offer a gentle prompt
+                Start speaking naturally - Lumi will automatically detect when you're talking
               </p>
             </CardHeader>
-            <CardContent className="text-center space-y-6">
-              <Button
-                onClick={handleStartConversation}
-                size="lg"
-                className="bg-indigo-400 hover:bg-indigo-500 text-white px-12 py-8 text-xl rounded-full shadow-lg transition-all duration-200 hover:shadow-xl animate-pulse"
-              >
-                <Mic className="w-6 h-6 mr-3" />
-                Start Conversation
-              </Button>
-              <p className="text-sm text-gray-500">
-                This will begin a hands-free voice conversation
+            <CardContent className="space-y-6">
+              <AudioRecorder
+                onAudioData={handleAudioData}
+                onConversationStateChange={handleConversationStateChange}
+              />
+              <p className="text-sm text-gray-500 text-center">
+                Voice Activity Detection is enabled - no need to click between turns
               </p>
             </CardContent>
           </Card>
@@ -64,7 +72,7 @@ const ConversationPage = () => {
           <Card className="border-none shadow-sm bg-white/60">
             <CardContent className="p-6">
               <p className="text-center text-gray-500">
-                Your conversation will appear here...
+                Your conversation transcript will appear here...
               </p>
             </CardContent>
           </Card>
