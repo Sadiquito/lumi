@@ -46,17 +46,16 @@ export const useTTS = ({ onSpeechStart, onSpeechEnd }: UseTTSProps = {}) => {
       
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      // Clean up previous audio
+      // Clean up previous audio if it exists
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.removeEventListener('ended', handleAudioEnd);
-        audioRef.current.removeEventListener('error', handleAudioError);
+        audioRef.current.src = '';
       }
 
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
-      // Declare event handlers first
+      // Define event handlers
       const handleAudioEnd = () => {
         console.log('Audio playback ended');
         setIsSpeaking(false);
@@ -72,6 +71,7 @@ export const useTTS = ({ onSpeechStart, onSpeechEnd }: UseTTSProps = {}) => {
         URL.revokeObjectURL(audioUrl);
       };
 
+      // Add event listeners
       audio.addEventListener('ended', handleAudioEnd);
       audio.addEventListener('error', handleAudioError);
 
