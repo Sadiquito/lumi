@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -74,33 +75,44 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Feature highlights */}
+        {/* Feature highlights with elegant redesigned icons */}
         <div className="grid md:grid-cols-3 gap-8 mt-16">
-          <div className="text-center space-y-3">
-            <div className="w-12 h-12 mx-auto bg-cyan-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <div className="text-2xl">🎙️</div>
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-cyan-400/30 shadow-[0_0_20px_rgba(34,211,238,0.15)]">
+              <svg className="w-8 h-8 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-pulse" />
+              </svg>
             </div>
-            <h3 className="text-lg font-crimson font-semibold text-white">VOICE-FIRST, FOREVER</h3>
+            <h3 className="text-lg font-cinzel font-medium text-white">VOICE-FIRST, FOREVER</h3>
             <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Writing sucks. Just speak your mind.
             </p>
           </div>
           
-          <div className="text-center space-y-3">
-            <div className="w-12 h-12 mx-auto bg-pink-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <div className="text-2xl">💚</div>
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-violet-400/20 to-purple-500/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-violet-400/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]">
+              <svg className="w-8 h-8 text-violet-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636" />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={1.5} fill="none" />
+                <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-glow" />
+              </svg>
             </div>
-            <h3 className="text-lg font-crimson font-semibold text-white">THOUGHTFUL GUIDANCE</h3>
+            <h3 className="text-lg font-cinzel font-medium text-white">THOUGHTFUL GUIDANCE</h3>
             <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Let Lumi guide you when you don't know what to say
             </p>
           </div>
           
-          <div className="text-center space-y-3">
-            <div className="w-12 h-12 mx-auto bg-orange-400/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <div className="text-2xl">⏰</div>
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-amber-400/20 to-orange-500/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+              <svg className="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                <circle cx="12" cy="12" r="2" fill="currentColor" className="animate-pulse" opacity="0.6" />
+              </svg>
             </div>
-            <h3 className="text-lg font-crimson font-semibold text-white">DAY IN, DAY OUT</h3>
+            <h3 className="text-lg font-cinzel font-medium text-white">DAY IN, DAY OUT</h3>
             <p className="text-sm text-white/80 font-crimson leading-relaxed">
               Build a daily habit that will last until you croak
             </p>
