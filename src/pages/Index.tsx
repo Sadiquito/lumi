@@ -31,34 +31,36 @@ const Index = () => {
         backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Subtle overlay to ensure text readability while preserving the magical atmosphere */}
-      <div className="absolute inset-0 bg-gradient-to-b from-lumi-cosmic/40 via-lumi-cosmic/20 to-lumi-cosmic/60"></div>
+      {/* Removed the overlay div that was causing the smoky effect */}
       
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4 space-y-12">
         {/* Main heading */}
         <div className="space-y-6">
           <h1 
-            className="text-6xl md:text-7xl font-cinzel font-bold text-lumi-starlight tracking-wider"
+            className="text-6xl md:text-7xl font-cinzel font-bold tracking-wider"
             style={{
-              textShadow: '0 0 30px rgba(248, 250, 252, 0.8), 0 0 60px rgba(248, 250, 252, 0.4), 0 0 90px rgba(248, 250, 252, 0.2)'
+              color: '#ffffff',
+              textShadow: 'none'
             }}
           >
             LUMI
           </h1>
           <div className="space-y-2 font-cinzel">
-            <h2 className="text-2xl md:text-3xl font-medium text-lumi-starlight drop-shadow-lg">
+            <h2 
+              className="text-2xl md:text-3xl font-medium"
+              style={{
+                color: '#ffffff'
+              }}
+            >
               PERSONAL
             </h2>
             <h2 
-              className="text-2xl md:text-3xl font-medium text-lumi-cyan drop-shadow-lg"
-              style={{
-                textShadow: '0 0 20px rgba(34, 211, 238, 0.6), 0 0 40px rgba(34, 211, 238, 0.3)'
-              }}
+              className="text-2xl md:text-3xl font-medium text-lumi-cyan"
             >
               SUPERINTELLIGENCE
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-lumi-starlight/95 font-crimson font-normal max-w-2xl mx-auto leading-relaxed drop-shadow-md">
+          <p className="text-lg md:text-xl font-crimson font-normal max-w-2xl mx-auto leading-relaxed" style={{ color: '#ffffff' }}>
             Your AI companion for daily reflection through natural conversation
           </p>
         </div>
@@ -68,9 +70,6 @@ const Index = () => {
           <Button
             onClick={signInWithGoogle}
             className="bg-lumi-starlight/95 hover:bg-lumi-starlight text-lumi-cosmic px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-3 mx-auto border border-lumi-starlight/30"
-            style={{
-              boxShadow: '0 0 20px rgba(248, 250, 252, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3)'
-            }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -91,8 +90,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-pulse" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">VOICE-FIRST, FOREVER</h3>
-            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
+            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>VOICE-FIRST, FOREVER</h3>
+            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
               Writing sucks. Just speak your mind.
             </p>
           </div>
@@ -105,8 +104,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-glow" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">THOUGHTFUL GUIDANCE</h3>
-            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
+            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>THOUGHTFUL GUIDANCE</h3>
+            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
               Let Lumi guide you when you don't know what to say
             </p>
           </div>
@@ -119,8 +118,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="2" fill="currentColor" className="animate-pulse" opacity="0.6" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">DAY IN, DAY OUT</h3>
-            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
+            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>DAY IN, DAY OUT</h3>
+            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
               Build a daily habit that will last until you croak
             </p>
           </div>
