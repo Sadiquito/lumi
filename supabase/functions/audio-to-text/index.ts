@@ -68,57 +68,89 @@ serve(async (req) => {
       throw new Error('Deepgram API key not configured');
     }
 
-    console.log('✅ Deepgram API key found, making request...');
+    console.log('✅ Deepgram API key found, making request with timeout...');
 
-    // Send to Deepgram
-    const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${deepgramApiKey}`,
-      },
-      body: formData,
-    })
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-    console.log('📡 Deepgram response status:', deepgramResponse.status);
+    try {
+      // Send to Deepgram with timeout
+      const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${deepgramApiKey}`,
+        },
+        body: formData,
+        signal: controller.signal,
+      })
 
-    if (!deepgramResponse.ok) {
-      const errorText = await deepgramResponse.text()
-      console.error('❌ Deepgram API error:', {
-        status: deepgramResponse.status,
-        statusText: deepgramResponse.statusText,
-        errorText
+      clearTimeout(timeoutId);
+      console.log('📡 Deepgram response status:', deepgramResponse.status);
+
+      if (!deepgramResponse.ok) {
+        const errorText = await deepgramResponse.text()
+        console.error('❌ Deepgram API error:', {
+          status: deepgramResponse.status,
+          statusText: deepgramResponse.statusText,
+          errorText
+        });
+        throw new Error(`Deepgram API error: ${deepgramResponse.status} ${errorText}`)
+      }
+
+      const result = await deepgramResponse.json()
+      console.log('✅ Deepgram response received:', {
+        hasResults: !!result.results,
+        channelsCount: result.results?.channels?.length || 0,
+        alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
       });
-      throw new Error(`Deepgram API error: ${deepgramResponse.status} ${errorText}`)
+
+      // Extract transcript from Deepgram response
+      const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
+      const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
+
+      console.log('📝 Extracted transcript:', {
+        transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+        confidence,
+        hasContent: transcript.length > 0,
+        fullLength: transcript.length
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          transcript,
+          isFinal: true,
+          confidence,
+          isSpeech: true,
+          timestamp
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ Deepgram request timed out after 15 seconds');
+        throw new Error('Speech recognition request timed out. Please try speaking more clearly or check your connection.');
+      }
+      
+      console.error('❌ Fetch error:', fetchError);
+      throw fetchError;
     }
 
-    const result = await deepgramResponse.json()
-    console.log('✅ Deepgram response:', result)
-
-    // Extract transcript from Deepgram response
-    const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
-    const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
-
-    console.log('📝 Extracted transcript:', {
-      transcript,
-      confidence,
-      hasContent: transcript.length > 0
+  } catch (error) {
+    console.error('❌ Error in audio-to-text function:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
     });
-
+    
     return new Response(
       JSON.stringify({ 
-        transcript,
-        isFinal: true,
-        confidence,
-        isSpeech: true,
-        timestamp
+        error: error.message,
+        type: error.name || 'UnknownError'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
-  } catch (error) {
-    console.error('❌ Error in audio-to-text function:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
