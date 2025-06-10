@@ -22,25 +22,35 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   autoStart = true,
 }) => {
   const handleAudioChunk = useCallback((chunk: AudioChunk) => {
-    console.log('Audio chunk received:', {
+    console.log('🎤 Audio chunk received in AudioRecorder:', {
       timestamp: chunk.timestamp,
       isSpeech: chunk.isSpeech,
       dataLength: chunk.data.length,
       rms: Math.sqrt(chunk.data.reduce((sum, val) => sum + val * val, 0) / chunk.data.length)
     });
 
-    // Encode audio for transmission
-    const encodedAudio = encodeAudioForTransmission(chunk.data);
-    onAudioData?.(encodedAudio, chunk.isSpeech);
+    // ALWAYS encode and send audio when there's a chunk, regardless of speech detection
+    // Let the STT service decide what to do with it
+    if (chunk.data && chunk.data.length > 0) {
+      const encodedAudio = encodeAudioForTransmission(chunk.data);
+      console.log('📤 Sending encoded audio:', {
+        originalLength: chunk.data.length,
+        encodedLength: encodedAudio.length,
+        isSpeech: chunk.isSpeech
+      });
+      onAudioData?.(encodedAudio, chunk.isSpeech);
+    } else {
+      console.warn('⚠️ Received empty audio chunk');
+    }
   }, [onAudioData]);
 
   const handleSpeechStart = useCallback(() => {
-    console.log('Speech detection: User started speaking');
+    console.log('🎤 Speech detection: User started speaking');
     onSpeechStart?.();
   }, [onSpeechStart]);
 
   const handleSpeechEnd = useCallback(() => {
-    console.log('Speech detection: User stopped speaking');
+    console.log('🔇 Speech detection: User stopped speaking');
     onSpeechEnd?.();
   }, [onSpeechEnd]);
 
@@ -63,13 +73,25 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   // Auto-start recording when component mounts if autoStart is true
   useEffect(() => {
     if (autoStart && !isRecording) {
-      console.log('Auto-starting recording...');
+      console.log('🎙️ Auto-starting recording...');
       startRecording();
     }
   }, [autoStart, isRecording, startRecording]);
 
+  // Auto-restart recording if it stops unexpectedly during auto mode
+  useEffect(() => {
+    if (autoStart && !isRecording && !error) {
+      console.log('🔄 Recording stopped unexpectedly, restarting...');
+      const timer = setTimeout(() => {
+        startRecording();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [autoStart, isRecording, error, startRecording]);
+
   // Notify parent of recording state changes
   useEffect(() => {
+    console.log('📡 Recording state changed:', isRecording);
     onRecordingStateChange?.(isRecording);
   }, [isRecording, onRecordingStateChange]);
 
@@ -103,6 +125,16 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (!isRecording) return 'Start Conversation';
     return 'Stop Conversation';
   };
+
+  // If in autoStart mode, render hidden component
+  if (autoStart) {
+    return (
+      <div style={{ display: 'none' }}>
+        {/* Component is running but hidden */}
+        {error && console.error('AudioRecorder error:', error)}
+      </div>
+    );
+  }
 
   return (
     <Card className="border-none shadow-lg bg-white/80 backdrop-blur-sm">

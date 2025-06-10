@@ -144,13 +144,27 @@ const JournalPage = () => {
     onError: (error) => handleError(error, 'STT')
   });
 
-  // Audio handling
+  // Audio handling - FIXED: Ensure audio data is actually processed
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
-    if (isSpeech && isSessionActive) {
+    console.log('📤 Audio data received in Journal:', {
+      encodedAudioLength: encodedAudio.length,
+      isSpeech,
+      isSessionActive,
+      conversationState
+    });
+
+    if (isSpeech && isSessionActive && encodedAudio && encodedAudio.length > 0) {
+      console.log('✅ Processing audio through STT...');
       resetSessionTimeout();
       processAudio(encodedAudio, isSpeech, Date.now());
+    } else {
+      console.log('⏭️ Skipping audio processing:', {
+        isSpeech,
+        isSessionActive,
+        hasAudioData: !!encodedAudio && encodedAudio.length > 0
+      });
     }
-  }, [processAudio, isSessionActive, resetSessionTimeout]);
+  }, [processAudio, isSessionActive, resetSessionTimeout, conversationState]);
 
   const handleSpeechStart = useCallback(() => {
     addDebugLog(`User speech detected`);
@@ -348,7 +362,7 @@ const JournalPage = () => {
         </div>
       </div>
 
-      {/* AudioRecorder component - now properly controlled */}
+      {/* AudioRecorder component - now properly controlled and ALWAYS active when conversation started */}
       {hasStartedConversation && (
         <div className="absolute bottom-0 left-0 w-1 h-1 overflow-hidden opacity-0 pointer-events-none">
           <AudioRecorder
@@ -356,6 +370,7 @@ const JournalPage = () => {
             onSpeechStart={handleSpeechStart}
             onSpeechEnd={handleSpeechEnd}
             onRecordingStateChange={handleRecordingStateChange}
+            autoStart={true}
           />
         </div>
       )}
