@@ -25,19 +25,25 @@ export const useLumiConversation = ({ onLumiResponse, sessionId }: UseLumiConver
     conversationId?: string,
     isSessionEnd: boolean = false
   ) => {
-    if (!user || !userTranscript.trim()) return;
+    if (!user || !userTranscript.trim()) {
+      console.log('❌ [LumiConversation] Missing user or empty transcript:', { hasUser: !!user, transcript: userTranscript });
+      return;
+    }
 
     try {
       setIsProcessing(true);
       setError(null);
 
-      console.log('Sending to Lumi:', {
-        userTranscript,
+      console.log('📤 [LumiConversation] Sending to Lumi:', {
+        userTranscript: userTranscript.substring(0, 100) + '...',
         userId: user.id,
         conversationId,
         sessionId,
-        isSessionEnd
+        isSessionEnd,
+        timestamp: new Date().toISOString()
       });
+
+      const startTime = Date.now();
 
       const { data, error } = await supabase.functions.invoke('lumi-conversation', {
         body: {
@@ -48,22 +54,41 @@ export const useLumiConversation = ({ onLumiResponse, sessionId }: UseLumiConver
         }
       });
 
+      const processingTime = Date.now() - startTime;
+
       if (error) {
-        console.error('Lumi conversation error:', error);
+        console.error('❌ [LumiConversation] Supabase function error:', error);
         throw new Error(error.message || 'Failed to get response from Lumi');
       }
 
-      console.log('Lumi response:', data);
+      console.log('✅ [LumiConversation] Lumi response received:', {
+        processingTime,
+        hasResponse: !!data?.response,
+        responseLength: data?.response?.length || 0,
+        responsePreview: data?.response?.substring(0, 100) + '...',
+        fullData: data
+      });
 
-      onLumiResponse?.(data);
+      if (data && data.response) {
+        console.log('📢 [LumiConversation] Calling onLumiResponse callback...');
+        onLumiResponse?.(data);
+      } else {
+        console.warn('⚠️ [LumiConversation] No response from Lumi:', data);
+      }
+
       return data;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to communicate with Lumi';
-      console.error('Lumi conversation error:', errorMessage);
+      console.error('❌ [LumiConversation] Processing error:', {
+        error: errorMessage,
+        userTranscript: userTranscript.substring(0, 50),
+        timestamp: new Date().toISOString()
+      });
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
+      console.log('🏁 [LumiConversation] Processing complete');
     }
   }, [user, onLumiResponse, sessionId]);
 
