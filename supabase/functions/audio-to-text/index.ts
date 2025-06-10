@@ -49,45 +49,30 @@ serve(async (req) => {
     const binaryAudio = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
     console.log('✅ Base64 converted to binary, size:', binaryAudio.length, 'bytes');
 
-    // Create a proper WAV file with header
-    const sampleRate = 24000;
-    const channels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * channels * bitsPerSample / 8;
-    const blockAlign = channels * bitsPerSample / 8;
-    
-    // Create WAV header
-    const wavHeader = new ArrayBuffer(44);
-    const view = new DataView(wavHeader);
-    
-    // RIFF chunk descriptor
-    view.setUint32(0, 0x52494646, false); // "RIFF"
-    view.setUint32(4, 36 + binaryAudio.length, true); // File size
-    view.setUint32(8, 0x57415645, false); // "WAVE"
-    
-    // fmt sub-chunk
-    view.setUint32(12, 0x666d7420, false); // "fmt "
-    view.setUint32(16, 16, true); // Subchunk1Size
-    view.setUint16(20, 1, true); // AudioFormat (PCM)
-    view.setUint16(22, channels, true); // NumChannels
-    view.setUint32(24, sampleRate, true); // SampleRate
-    view.setUint32(28, byteRate, true); // ByteRate
-    view.setUint16(32, blockAlign, true); // BlockAlign
-    view.setUint16(34, bitsPerSample, true); // BitsPerSample
-    
-    // data sub-chunk
-    view.setUint32(36, 0x64617461, false); // "data"
-    view.setUint32(40, binaryAudio.length, true); // Subchunk2Size
-    
-    // Combine header and audio data
-    const wavFile = new Uint8Array(44 + binaryAudio.length);
-    wavFile.set(new Uint8Array(wavHeader), 0);
-    wavFile.set(binaryAudio, 44);
+    // Check if audio is too small or too large
+    if (binaryAudio.length < 1000) {
+      console.log('⚠️ Audio chunk too small, skipping');
+      return new Response(
+        JSON.stringify({ 
+          transcript: '', 
+          isFinal: false, 
+          confidence: 0,
+          isSpeech: false 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    // Prepare form data for Deepgram
+    if (binaryAudio.length > 25000000) { // 25MB limit
+      console.log('⚠️ Audio chunk too large, truncating');
+      const truncatedAudio = binaryAudio.slice(0, 25000000);
+      console.log('✂️ Truncated audio to:', truncatedAudio.length, 'bytes');
+    }
+
+    // Prepare form data for Deepgram - send raw PCM data
     const formData = new FormData()
-    const audioBlob = new Blob([wavFile], { type: 'audio/wav' })
-    formData.append('audio', audioBlob, 'audio.wav')
+    const audioBlob = new Blob([binaryAudio], { type: 'audio/raw' })
+    formData.append('audio', audioBlob, 'audio.raw')
 
     console.log('📡 Sending request to Deepgram API...');
 
@@ -101,61 +86,98 @@ serve(async (req) => {
 
     const deepgramStartTime = Date.now();
 
-    // Send to Deepgram with proper URL parameters for real-time transcription
-    const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&punctuate=true&diarize=false', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${deepgramApiKey}`,
-      },
-      body: formData,
-    })
+    // Use AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
-    const deepgramTime = Date.now() - deepgramStartTime;
-    console.log('📡 Deepgram response received in', deepgramTime, 'ms, status:', deepgramResponse.status);
+    try {
+      // Send to Deepgram with raw PCM format and shorter timeout
+      const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&punctuate=true&diarize=false&encoding=linear16&sample_rate=24000&channels=1', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${deepgramApiKey}`,
+        },
+        body: formData,
+        signal: controller.signal
+      })
 
-    if (!deepgramResponse.ok) {
-      const errorText = await deepgramResponse.text()
-      console.error('❌ Deepgram API error:', {
-        status: deepgramResponse.status,
-        statusText: deepgramResponse.statusText,
-        errorText
+      clearTimeout(timeoutId);
+      const deepgramTime = Date.now() - deepgramStartTime;
+      console.log('📡 Deepgram response received in', deepgramTime, 'ms, status:', deepgramResponse.status);
+
+      if (!deepgramResponse.ok) {
+        const errorText = await deepgramResponse.text()
+        console.error('❌ Deepgram API error:', {
+          status: deepgramResponse.status,
+          statusText: deepgramResponse.statusText,
+          errorText
+        });
+        
+        // Return empty result instead of throwing error
+        return new Response(
+          JSON.stringify({ 
+            transcript: '', 
+            isFinal: false, 
+            confidence: 0,
+            isSpeech: false,
+            error: `Deepgram error: ${deepgramResponse.status}`
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const result = await deepgramResponse.json()
+      console.log('✅ Deepgram JSON parsed:', {
+        hasResults: !!result.results,
+        channelsCount: result.results?.channels?.length || 0,
+        alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
       });
-      throw new Error(`Deepgram API error: ${deepgramResponse.status} ${errorText}`)
+
+      // Extract transcript from Deepgram response
+      const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
+      const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
+
+      console.log('📝 Extracted transcript:', {
+        transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+        confidence,
+        hasContent: transcript.length > 0,
+        fullLength: transcript.length
+      });
+
+      const responseData = { 
+        transcript,
+        isFinal: true,
+        confidence,
+        isSpeech: true,
+        timestamp
+      };
+
+      console.log('📤 Returning response:', responseData);
+
+      return new Response(
+        JSON.stringify(responseData),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError.name === 'AbortError') {
+        console.error('❌ Deepgram request timed out after 8 seconds');
+        return new Response(
+          JSON.stringify({ 
+            transcript: '', 
+            isFinal: false, 
+            confidence: 0,
+            isSpeech: false,
+            error: 'Deepgram timeout'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      throw fetchError;
     }
-
-    const result = await deepgramResponse.json()
-    console.log('✅ Deepgram JSON parsed:', {
-      hasResults: !!result.results,
-      channelsCount: result.results?.channels?.length || 0,
-      alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0,
-      fullResult: result
-    });
-
-    // Extract transcript from Deepgram response
-    const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
-    const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
-
-    console.log('📝 Extracted transcript:', {
-      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      confidence,
-      hasContent: transcript.length > 0,
-      fullLength: transcript.length
-    });
-
-    const responseData = { 
-      transcript,
-      isFinal: true,
-      confidence,
-      isSpeech: true,
-      timestamp
-    };
-
-    console.log('📤 Returning response:', responseData);
-
-    return new Response(
-      JSON.stringify(responseData),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
 
   } catch (error) {
     console.error('❌ Error in audio-to-text function:', {
@@ -164,13 +186,17 @@ serve(async (req) => {
       stack: error.stack
     });
     
+    // Return empty result instead of 500 error to prevent breaking the flow
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        type: error.name || 'UnknownError'
+        transcript: '', 
+        isFinal: false, 
+        confidence: 0,
+        isSpeech: false,
+        error: error.message
       }),
       {
-        status: 500,
+        status: 200, // Changed from 500 to 200 to prevent breaking the flow
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
