@@ -31,36 +31,26 @@ const Index = () => {
         backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Removed the overlay div that was causing the smoky effect */}
-      
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4 space-y-12">
         {/* Main heading */}
         <div className="space-y-6">
           <h1 
-            className="text-6xl md:text-7xl font-cinzel font-bold tracking-wider"
+            className="text-6xl md:text-7xl font-cinzel font-bold tracking-wider text-white"
             style={{
-              color: '#ffffff',
-              textShadow: 'none'
+              textShadow: '0 0 20px rgba(248, 250, 252, 0.5), 0 0 40px rgba(248, 250, 252, 0.3), 0 0 60px rgba(248, 250, 252, 0.1)'
             }}
           >
             LUMI
           </h1>
           <div className="space-y-2 font-cinzel">
-            <h2 
-              className="text-2xl md:text-3xl font-medium"
-              style={{
-                color: '#ffffff'
-              }}
-            >
+            <h2 className="text-2xl md:text-3xl font-medium text-white">
               PERSONAL
             </h2>
-            <h2 
-              className="text-2xl md:text-3xl font-medium text-lumi-cyan"
-            >
+            <h2 className="text-2xl md:text-3xl font-medium text-lumi-cyan">
               SUPERINTELLIGENCE
             </h2>
           </div>
-          <p className="text-lg md:text-xl font-crimson font-normal max-w-2xl mx-auto leading-relaxed" style={{ color: '#ffffff' }}>
+          <p className="text-lg md:text-xl font-crimson font-normal max-w-2xl mx-auto leading-relaxed text-white">
             Your AI companion for daily reflection through natural conversation
           </p>
         </div>
@@ -69,7 +59,7 @@ const Index = () => {
         <div className="space-y-4">
           <Button
             onClick={signInWithGoogle}
-            className="bg-lumi-starlight/95 hover:bg-lumi-starlight text-lumi-cosmic px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-3 mx-auto border border-lumi-starlight/30"
+            className="bg-white hover:bg-gray-50 text-gray-900 px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-3 mx-auto border border-gray-200"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -90,8 +80,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-pulse" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>VOICE-FIRST, FOREVER</h3>
-            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
+            <h3 className="text-lg font-cinzel font-medium text-white">VOICE-FIRST, FOREVER</h3>
+            <p className="text-sm font-crimson leading-relaxed text-white">
               Writing sucks. Just speak your mind.
             </p>
           </div>
@@ -104,8 +94,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-glow" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>THOUGHTFUL GUIDANCE</h3>
-            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
+            <h3 className="text-lg font-cinzel font-medium text-white">THOUGHTFUL GUIDANCE</h3>
+            <p className="text-sm font-crimson leading-relaxed text-white">
               Let Lumi guide you when you don't know what to say
             </p>
           </div>
@@ -118,8 +108,8 @@ const Index = () => {
                 <circle cx="12" cy="12" r="2" fill="currentColor" className="animate-pulse" opacity="0.6" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium" style={{ color: '#ffffff' }}>DAY IN, DAY OUT</h3>
-            <p className="text-sm font-crimson leading-relaxed" style={{ color: '#ffffff' }}>
+            <h3 className="text-lg font-cinzel font-medium text-white">DAY IN, DAY OUT</h3>
+            <p className="text-sm font-crimson leading-relaxed text-white">
               Build a daily habit that will last until you croak
             </p>
           </div>
