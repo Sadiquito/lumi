@@ -7,9 +7,10 @@ import { TranscriptDisplay } from '@/components/TranscriptDisplay';
 import { useSTT } from '@/hooks/useSTT';
 import { useLumiConversation } from '@/hooks/useLumiConversation';
 import { useTTS } from '@/hooks/useTTS';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Volume2, Mic, MicOff, AlertCircle } from 'lucide-react';
+import { LogOut, Volume2, Mic, MicOff, AlertCircle, Clock } from 'lucide-react';
 
 interface TranscriptEntry {
   id: string;
@@ -19,22 +20,33 @@ interface TranscriptEntry {
   confidence?: number;
 }
 
-type ConversationState = 'idle' | 'listening' | 'user_speaking' | 'processing' | 'lumi_speaking';
+type ConversationState = 'idle' | 'listening' | 'user_speaking' | 'processing' | 'lumi_speaking' | 'ending_session';
 
 const ConversationPage = () => {
   const { user, signOut } = useAuth();
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [currentUserText, setCurrentUserText] = useState('');
   const [conversationState, setConversationState] = useState<ConversationState>('idle');
-  const [conversationId, setConversationId] = useState<string | undefined>();
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [sessionSummary, setSessionSummary] = useState<any>(null);
+
+  // Session Management
+  const { 
+    currentSession, 
+    startSession, 
+    addToTranscript, 
+    endSession, 
+    isSessionActive, 
+    isEndingSession,
+    resetSessionTimeout 
+  } = useSessionManagement();
 
   // Debug logging function
   const addDebugLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     const logMessage = `${timestamp}: ${message}`;
     console.log('🐛', logMessage);
-    setDebugLogs(prev => [...prev.slice(-4), logMessage]); // Keep last 5 logs
+    setDebugLogs(prev => [...prev.slice(-4), logMessage]);
   }, []);
 
   // TTS Management with interruption handling
@@ -45,15 +57,17 @@ const ConversationPage = () => {
 
   const handleTTSSpeechEnd = useCallback(() => {
     addDebugLog('Lumi finished speaking - returning to listening');
-    setConversationState('listening');
-  }, [addDebugLog]);
+    if (conversationState !== 'ending_session') {
+      setConversationState('listening');
+    }
+  }, [addDebugLog, conversationState]);
 
   const { speak: speakText, stopSpeaking, isSpeaking: isLumiSpeaking, isProcessing: isTTSProcessing, error: ttsError } = useTTS({
     onSpeechStart: handleTTSSpeechStart,
     onSpeechEnd: handleTTSSpeechEnd
   });
 
-  // Lumi conversation handling
+  // Enhanced Lumi conversation handling with session management
   const handleLumiResponse = useCallback((response: any) => {
     addDebugLog(`Lumi response received: ${response.response?.substring(0, 50)}...`);
     
@@ -66,6 +80,9 @@ const ConversationPage = () => {
       };
       
       setTranscript(prev => [...prev, lumiEntry]);
+      
+      // Add to session transcript
+      addToTranscript('lumi', response.response);
       
       // Convert Lumi's response to speech
       speakText(response.response);
@@ -80,8 +97,8 @@ const ConversationPage = () => {
             timestamp: Date.now()
           };
           setTranscript(prev => [...prev, followUpEntry]);
+          addToTranscript('lumi', response.followUpQuestion);
           
-          // Speak the follow-up question after current response ends
           setTimeout(() => {
             speakText(response.followUpQuestion);
           }, 500);
@@ -89,69 +106,85 @@ const ConversationPage = () => {
       }
     }
 
-    if (response.conversationId) {
-      setConversationId(response.conversationId);
+    // Handle session ending response
+    if (response.sessionSummary) {
+      setSessionSummary({
+        summary: response.sessionSummary,
+        reflection: response.lumiReflection,
+        followUpQuestion: response.followUpQuestion
+      });
     }
-  }, [speakText, addDebugLog]);
+  }, [speakText, addDebugLog, addToTranscript]);
 
   const { sendToLumi, isProcessing: isLumiProcessing, error: lumiError } = useLumiConversation({
     onLumiResponse: handleLumiResponse
   });
 
-  // STT handling with turn management
+  // Enhanced STT handling with session management
   const handleSTTResult = useCallback((result: any) => {
     addDebugLog(`STT Result: "${result.transcript}" (final: ${result.isFinal})`);
     
     if (result.transcript && result.transcript.trim()) {
       if (result.isFinal) {
+        const userText = result.transcript.trim();
+        
         // Add final transcript to history
         const newEntry: TranscriptEntry = {
           id: `${Date.now()}-${Math.random()}`,
-          text: result.transcript.trim(),
+          text: userText,
           speaker: 'user',
           timestamp: result.timestamp || Date.now(),
           confidence: result.confidence
         };
         
         setTranscript(prev => [...prev, newEntry]);
-        setCurrentUserText(''); // Clear interim text
+        setCurrentUserText('');
         
-        addDebugLog(`Sending to Lumi: "${result.transcript.trim()}"`);
+        // Add to session transcript
+        addToTranscript('user', userText);
+        
+        addDebugLog(`Sending to Lumi: "${userText}"`);
         
         // Transition to processing state
         setConversationState('processing');
         
         // Send to Lumi for response
-        sendToLumi(result.transcript.trim(), conversationId);
+        sendToLumi(userText);
       } else {
         // Update interim transcript
         setCurrentUserText(result.transcript);
       }
     }
-  }, [sendToLumi, conversationId, addDebugLog]);
+  }, [addToTranscript, sendToLumi, addDebugLog]);
 
   const { processAudio, isProcessing: isSTTProcessing, error: sttError } = useSTT({
     onTranscript: handleSTTResult
   });
 
-  // Audio data handling with enhanced logging
+  // Audio data handling with session activity tracking
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
     addDebugLog(`Audio data received: ${encodedAudio.length} chars, speech: ${isSpeech}, state: ${conversationState}`);
     
+    // Reset session timeout on voice activity
+    if (isSpeech && isSessionActive) {
+      resetSessionTimeout();
+    }
+    
     // Process audio if we're in a state where we should listen and it contains speech
-    if (conversationState !== 'idle' && isSpeech) {
+    if (conversationState !== 'idle' && conversationState !== 'ending_session' && isSpeech) {
       addDebugLog('Processing audio with STT service');
       processAudio(encodedAudio, isSpeech, Date.now());
-    } else if (conversationState === 'idle') {
-      addDebugLog('Ignoring audio - conversation not started');
-    } else if (!isSpeech) {
-      addDebugLog('Ignoring audio - no speech detected');
     }
-  }, [processAudio, conversationState, addDebugLog]);
+  }, [processAudio, conversationState, addDebugLog, isSessionActive, resetSessionTimeout]);
 
-  // Critical: Speech detection with interruption logic
+  // Enhanced speech detection with session management
   const handleSpeechStart = useCallback(() => {
     addDebugLog(`User speech detected - current state: ${conversationState}`);
+    
+    // Reset session timeout
+    if (isSessionActive) {
+      resetSessionTimeout();
+    }
     
     // If Lumi is speaking, interrupt immediately
     if (isLumiSpeaking && conversationState === 'lumi_speaking') {
@@ -160,10 +193,10 @@ const ConversationPage = () => {
     }
     
     // Only transition to user_speaking if we're in an active conversation
-    if (conversationState !== 'idle') {
+    if (conversationState !== 'idle' && conversationState !== 'ending_session') {
       setConversationState('user_speaking');
     }
-  }, [isLumiSpeaking, conversationState, stopSpeaking, addDebugLog]);
+  }, [isLumiSpeaking, conversationState, stopSpeaking, addDebugLog, isSessionActive, resetSessionTimeout]);
 
   const handleSpeechEnd = useCallback(() => {
     addDebugLog(`User speech ended - current state: ${conversationState}`);
@@ -174,22 +207,56 @@ const ConversationPage = () => {
     }
   }, [conversationState, addDebugLog]);
 
-  // Recording state management
+  // Enhanced recording state management with session handling
   const handleRecordingStateChange = useCallback((isRecording: boolean) => {
     addDebugLog(`Recording state changed: ${isRecording}`);
     
     if (isRecording) {
+      // Start new session
+      const session = startSession();
       setConversationState('listening');
-      setDebugLogs([]); // Clear debug logs on new session
+      setDebugLogs([]);
+      setSessionSummary(null);
       addDebugLog('Conversation started - now listening');
     } else {
-      setConversationState('idle');
-      setCurrentUserText('');
-      addDebugLog('Conversation stopped');
+      // End session
+      if (isSessionActive) {
+        setConversationState('ending_session');
+        addDebugLog('Ending session...');
+        
+        endSession().then((result) => {
+          if (result?.summary) {
+            setSessionSummary(result.summary);
+          }
+          setConversationState('idle');
+          setCurrentUserText('');
+          addDebugLog('Session ended gracefully');
+        });
+      } else {
+        setConversationState('idle');
+        setCurrentUserText('');
+        addDebugLog('Recording stopped');
+      }
     }
-  }, [addDebugLog]);
+  }, [addDebugLog, startSession, endSession, isSessionActive]);
 
-  // Status indicators
+  // Manual session end function
+  const handleManualSessionEnd = useCallback(async () => {
+    if (isSessionActive && !isEndingSession) {
+      setConversationState('ending_session');
+      addDebugLog('Manual session end initiated');
+      
+      const result = await endSession();
+      if (result?.summary) {
+        setSessionSummary(result.summary);
+      }
+      
+      setConversationState('idle');
+      addDebugLog('Session ended manually');
+    }
+  }, [isSessionActive, isEndingSession, endSession, addDebugLog]);
+
+  // Status indicators with session ending state
   const getStatusInfo = () => {
     switch (conversationState) {
       case 'idle':
@@ -202,6 +269,8 @@ const ConversationPage = () => {
         return { text: 'Processing your message...', color: 'text-purple-600', icon: Mic };
       case 'lumi_speaking':
         return { text: 'Lumi is responding', color: 'text-orange-600', icon: Volume2 };
+      case 'ending_session':
+        return { text: 'Ending session...', color: 'text-yellow-600', icon: Clock };
       default:
         return { text: 'Unknown state', color: 'text-gray-400', icon: MicOff };
     }
@@ -233,6 +302,22 @@ const ConversationPage = () => {
           </Button>
         </div>
 
+        {/* Session Summary Display */}
+        {sessionSummary && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-medium text-green-800 mb-3">Session Complete</h3>
+              <div className="space-y-3 text-green-700">
+                <p><strong>Summary:</strong> {sessionSummary.summary}</p>
+                <p><strong>Reflection:</strong> {sessionSummary.reflection}</p>
+                {sessionSummary.followUpQuestion && (
+                  <p><strong>For next time:</strong> {sessionSummary.followUpQuestion}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Conversation Area */}
         <div className="space-y-8">
           <Card className="border-none shadow-lg bg-white/80 backdrop-blur-sm">
@@ -241,7 +326,7 @@ const ConversationPage = () => {
                 Voice Conversation with Lumi
               </CardTitle>
               <p className="text-gray-600">
-                Natural turn-taking conversation with automatic interruption handling
+                Natural conversation with intelligent session management
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -252,6 +337,22 @@ const ConversationPage = () => {
                 onSpeechEnd={handleSpeechEnd}
                 onRecordingStateChange={handleRecordingStateChange}
               />
+              
+              {/* Session Controls */}
+              {isSessionActive && (
+                <div className="text-center">
+                  <Button
+                    onClick={handleManualSessionEnd}
+                    variant="outline"
+                    size="sm"
+                    disabled={isEndingSession}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    {isEndingSession ? 'Ending Session...' : 'End Session'}
+                  </Button>
+                </div>
+              )}
               
               {/* Enhanced Status Display */}
               <div className="text-center space-y-4">
@@ -297,6 +398,17 @@ const ConversationPage = () => {
                 </div>
               )}
 
+              {/* Session End Commands Help */}
+              {isSessionActive && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Session Commands</h4>
+                  <p className="text-sm text-blue-700">
+                    Say phrases like "That's all for today", "I'm done for now", or "Let's wrap up" to end the session naturally.
+                    Sessions also end automatically after 5 minutes of inactivity.
+                  </p>
+                </div>
+              )}
+
               {/* Debug Logs */}
               {debugLogs.length > 0 && (
                 <div className="bg-gray-100 p-3 rounded-lg">
@@ -308,16 +420,6 @@ const ConversationPage = () => {
                   </div>
                 </div>
               )}
-
-              {/* Turn-taking Status */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Conversation Flow</h4>
-                <p className="text-sm text-gray-600">
-                  • Start speaking to interrupt Lumi at any time<br/>
-                  • Automatic turn detection with VAD<br/>
-                  • Real-time transcription and response generation
-                </p>
-              </div>
             </CardContent>
           </Card>
 

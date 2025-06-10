@@ -18,7 +18,14 @@ serve(async (req) => {
   }
 
   try {
-    const { userTranscript, userId, conversationId, isSessionEnd = false } = await req.json();
+    const { 
+      userTranscript, 
+      userId, 
+      conversationId, 
+      isSessionEnd = false, 
+      fullTranscript = null,
+      requestType = 'conversation'
+    } = await req.json();
 
     if (!userTranscript || !userId) {
       throw new Error('Missing required parameters');
@@ -28,11 +35,18 @@ serve(async (req) => {
       userId,
       conversationId,
       transcriptLength: userTranscript.length,
-      isSessionEnd
+      isSessionEnd,
+      requestType,
+      hasFullTranscript: !!fullTranscript
     });
 
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Handle session summary requests
+    if (requestType === 'session_summary' && fullTranscript) {
+      return await generateSessionSummary(fullTranscript, userId);
+    }
 
     // Get user profile with psychological insights
     const { data: profile, error: profileError } = await supabase
@@ -115,8 +129,8 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
     console.log('Generated Lumi response:', lumiResponse);
 
     // If this is a session end, perform comprehensive session analysis
-    if (isSessionEnd && conversationHistory.length > 0) {
-      await performSessionAnalysis(supabase, userId, conversationHistory, profile?.psychological_profile || {});
+    if (isSessionEnd && (conversationHistory.length > 0 || fullTranscript)) {
+      await performSessionAnalysis(supabase, userId, fullTranscript || conversationHistory, profile?.psychological_profile || {});
     } else {
       // For ongoing conversation, do lightweight insight extraction
       const insights = extractPsychologicalInsights(userTranscript);
@@ -162,14 +176,96 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
   }
 });
 
+async function generateSessionSummary(fullTranscript: string, userId: string) {
+  try {
+    console.log('Generating session summary...');
+
+    const summaryPrompt = `You are Lumi, an emotionally intelligent AI companion. Analyze this conversation session and provide:
+
+1. A brief, warm session summary (2-3 sentences)
+2. A thoughtful reflection on what the user shared (2-3 sentences) 
+3. A gentle follow-up question for their next conversation
+
+Focus on being supportive and encouraging. Keep the tone warm but not overly enthusiastic.
+
+Conversation transcript:
+${fullTranscript}
+
+Respond in JSON format:
+{
+  "sessionSummary": "Brief summary of the session",
+  "lumiReflection": "Thoughtful reflection on what was shared",
+  "followUpQuestion": "Gentle question for next time"
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'user', content: summaryPrompt }
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate session summary');
+    }
+
+    const aiResponse = await response.json();
+    const summaryContent = aiResponse.choices[0].message.content;
+    
+    try {
+      const summaryData = JSON.parse(summaryContent);
+      return new Response(
+        JSON.stringify(summaryData),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (parseError) {
+      // Fallback if JSON parsing fails
+      return new Response(
+        JSON.stringify({
+          sessionSummary: "We had a meaningful conversation today.",
+          lumiReflection: "Thank you for sharing your thoughts and feelings with me.",
+          followUpQuestion: "What would you like to explore in our next conversation?"
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('Error generating session summary:', error);
+    return new Response(
+      JSON.stringify({
+        sessionSummary: "We had a meaningful conversation today.",
+        lumiReflection: "Thank you for sharing your thoughts and feelings with me.",
+        followUpQuestion: "What would you like to explore in our next conversation?"
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
+
 async function performSessionAnalysis(supabase: any, userId: string, conversationHistory: any[], currentProfile: any) {
   try {
     console.log('Performing comprehensive session analysis...');
     
     // Prepare full session transcript for analysis
-    const fullTranscript = conversationHistory
-      .map((entry: any) => `${entry.speaker}: ${entry.text}`)
-      .join('\n');
+    const fullTranscript = Array.isArray(conversationHistory) 
+      ? conversationHistory.map((entry: any) => `${entry.speaker}: ${entry.text}`).join('\n')
+      : conversationHistory;
 
     // Analyze session using GPT-4o
     const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
