@@ -95,6 +95,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     onRecordingStateChange?.(isRecording);
   }, [isRecording, onRecordingStateChange]);
 
+  // Log errors to console when they occur
+  useEffect(() => {
+    if (error) {
+      console.error('AudioRecorder error:', error);
+    }
+  }, [error]);
+
   const handleToggleRecording = async () => {
     if (isRecording) {
       stopRecording();
@@ -131,7 +138,6 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     return (
       <div style={{ display: 'none' }}>
         {/* Component is running but hidden */}
-        {error && console.error('AudioRecorder error:', error)}
       </div>
     );
   }
