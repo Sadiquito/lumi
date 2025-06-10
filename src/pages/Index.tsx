@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -15,9 +14,9 @@ const Index = () => {
     );
   }
 
-  // If user is authenticated, redirect to conversation page
+  // If user is authenticated, redirect to journal page
   if (user) {
-    return <Navigate to="/conversation" replace />;
+    return <Navigate to="/journal" replace />;
   }
 
   // Landing page for unauthenticated users
