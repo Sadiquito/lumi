@@ -7,7 +7,6 @@ export const useVoiceActivityDetection = (config: AudioRecorderConfig) => {
 
   const detectVoiceActivity = useCallback(() => {
     if (!analyserRef.current) {
-      console.log('No analyser available for VAD');
       return false;
     }
 
@@ -21,8 +20,17 @@ export const useVoiceActivityDetection = (config: AudioRecorderConfig) => {
     }
     const rms = Math.sqrt(sum / dataArray.length) / 255;
 
-    console.log('VAD RMS:', rms, 'Threshold:', config.vadThreshold);
-    return rms > config.vadThreshold;
+    // Also check for speech-like frequency patterns
+    const speechFrequencyRange = dataArray.slice(10, 100); // Focus on typical speech frequencies
+    const speechEnergy = speechFrequencyRange.reduce((acc, val) => acc + val, 0) / speechFrequencyRange.length;
+    
+    const isVoiceDetected = rms > config.vadThreshold && speechEnergy > 30;
+    
+    if (isVoiceDetected) {
+      console.log('🎤 Voice detected - RMS:', rms.toFixed(4), 'Speech Energy:', speechEnergy.toFixed(2), 'Threshold:', config.vadThreshold);
+    }
+    
+    return isVoiceDetected;
   }, [config.vadThreshold]);
 
   return {

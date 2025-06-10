@@ -20,13 +20,26 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
   const [error, setError] = useState<string | null>(null);
   const processingQueueRef = useRef<Promise<void>>(Promise.resolve());
   const retryCountRef = useRef(0);
+  const lastProcessedTimeRef = useRef(0);
 
   const processAudio = useCallback(async (
     audioData: string, 
     isSpeech: boolean, 
     timestamp: number
   ) => {
-    if (!audioData || !isSpeech) return;
+    // Only process speech and avoid processing too frequently
+    if (!audioData || !isSpeech) {
+      console.log('⏭️ Skipping non-speech audio chunk');
+      return;
+    }
+
+    // Throttle processing to avoid overwhelming the API
+    const now = Date.now();
+    if (now - lastProcessedTimeRef.current < 1000) {
+      console.log('⏱️ Throttling STT requests');
+      return;
+    }
+    lastProcessedTimeRef.current = now;
 
     // Queue processing to avoid overwhelming the API
     processingQueueRef.current = processingQueueRef.current.then(async () => {
@@ -34,14 +47,14 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
         setIsProcessing(true);
         setError(null);
 
-        console.log('🎤 Processing audio chunk:', {
+        console.log('🎤 Processing audio chunk for STT:', {
           audioLength: audioData.length,
           isSpeech,
           timestamp: new Date(timestamp).toISOString(),
-          queueDepth: 'processing'
+          processingStartTime: new Date().toISOString()
         });
 
-        const { data, error } = await supabase.functions.invoke('audio-to-text', {
+        const { data, error: functionError } = await supabase.functions.invoke('audio-to-text', {
           body: {
             audioData,
             isSpeech,
@@ -49,9 +62,17 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           }
         });
 
-        if (error) {
-          throw new Error(error.message || 'STT processing failed');
+        if (functionError) {
+          console.error('❌ STT function error:', functionError);
+          throw new Error(functionError.message || 'STT processing failed');
         }
+
+        if (!data) {
+          console.error('❌ No data returned from STT service');
+          throw new Error('No data returned from STT service');
+        }
+
+        console.log('✅ STT function response:', data);
 
         const result: OptimizedSTTResult = {
           transcript: data.transcript || '',
@@ -64,20 +85,26 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
         // Reset retry count on success
         retryCountRef.current = 0;
 
-        console.log('✅ STT result:', {
+        console.log('✅ STT result processed:', {
           transcript: result.transcript,
           confidence: result.confidence,
+          isFinal: result.isFinal,
           processingTime: Date.now() - timestamp
         });
 
-        onTranscript?.(result);
+        // Only call onTranscript if we have meaningful results
+        if (result.transcript && result.transcript.trim().length > 0) {
+          onTranscript?.(result);
+        } else {
+          console.log('⚠️ Empty transcript received, not calling onTranscript');
+        }
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'STT processing failed';
         console.error('❌ STT error:', errorMessage);
         
-        // Implement exponential backoff retry
-        if (retryCountRef.current < 3) {
+        // Implement exponential backoff retry for network errors
+        if (retryCountRef.current < 2 && errorMessage.includes('network')) {
           retryCountRef.current++;
           const delay = Math.pow(2, retryCountRef.current) * 1000;
           console.log(`🔄 Retrying STT in ${delay}ms (attempt ${retryCountRef.current})`);

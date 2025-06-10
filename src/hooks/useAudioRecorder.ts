@@ -24,6 +24,7 @@ export const useAudioRecorder = ({
   
   const streamRef = useRef<MediaStream | null>(null);
   const vadIntervalRef = useRef<number | null>(null);
+  const speechChunkCountRef = useRef(0);
   
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
 
@@ -32,7 +33,21 @@ export const useAudioRecorder = ({
 
   // Initialize audio processor
   const { audioContextRef, processAudioChunk } = useAudioProcessor({
-    onAudioChunk,
+    onAudioChunk: (chunk) => {
+      // Only send speech chunks and limit frequency
+      if (chunk.isSpeech) {
+        speechChunkCountRef.current++;
+        // Send every 3rd speech chunk to reduce load
+        if (speechChunkCountRef.current % 3 === 0) {
+          console.log('📤 Sending audio chunk to STT:', {
+            chunkNumber: speechChunkCountRef.current,
+            dataLength: chunk.data.length,
+            timestamp: chunk.timestamp
+          });
+          onAudioChunk?.(chunk);
+        }
+      }
+    },
     detectVoiceActivity,
   });
 
@@ -40,7 +55,11 @@ export const useAudioRecorder = ({
   const { handleSpeechStateChange, clearTimeouts } = useSpeechStateManager({
     isSpeaking,
     silenceDuration: fullConfig.silenceDuration,
-    onSpeechStart,
+    onSpeechStart: () => {
+      console.log('🎤 Speech started - resetting chunk counter');
+      speechChunkCountRef.current = 0;
+      onSpeechStart?.();
+    },
     onSpeechEnd,
     setIsSpeaking,
   });
@@ -90,7 +109,10 @@ export const useAudioRecorder = ({
       });
 
       streamRef.current = stream;
-      console.log('✅ Microphone access granted');
+      console.log('✅ Microphone access granted with constraints:', {
+        sampleRate: fullConfig.sampleRate,
+        channelCount: fullConfig.channelCount
+      });
 
       // Create AudioContext for VAD and real-time processing
       audioContextRef.current = new AudioContext({
@@ -103,18 +125,19 @@ export const useAudioRecorder = ({
       analyserRef.current.smoothingTimeConstant = 0.8;
       source.connect(analyserRef.current);
 
-      console.log('✅ Audio analysis setup complete');
+      console.log('✅ Audio analysis setup complete with VAD threshold:', fullConfig.vadThreshold);
 
       // Setup real-time audio processing
       setupRealtimeAudioProcessing();
       
-      // Start VAD monitoring
+      // Start VAD monitoring with more frequent checks
       vadIntervalRef.current = window.setInterval(() => {
         const isSpeech = detectVoiceActivity();
         handleSpeechStateChange(isSpeech);
-      }, 100); // Check VAD every 100ms
+      }, 50); // Check VAD every 50ms for better responsiveness
 
       setIsRecording(true);
+      speechChunkCountRef.current = 0;
       console.log('✅ Recording started successfully');
 
     } catch (err) {
@@ -152,6 +175,7 @@ export const useAudioRecorder = ({
     setIsRecording(false);
     setIsSpeaking(false);
     setError(null);
+    speechChunkCountRef.current = 0;
     console.log('✅ Recording stopped');
   }, [clearTimeouts]);
 
