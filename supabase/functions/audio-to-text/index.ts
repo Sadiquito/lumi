@@ -69,126 +69,127 @@ serve(async (req) => {
       throw new Error('AssemblyAI API key not configured');
     }
 
-    console.log('✅ AssemblyAI API key found, making request...');
-
-    // Prepare form data for AssemblyAI
-    const formData = new FormData()
-    const audioBlob = new Blob([binaryAudio], { type: 'audio/raw' })
-    formData.append('audio', audioBlob, 'audio.raw')
+    console.log('✅ AssemblyAI API key found, uploading audio file...');
 
     const assemblyStartTime = Date.now();
 
-    // Use AbortController for timeout handling
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    // Step 1: Upload the audio file to AssemblyAI
+    const uploadFormData = new FormData()
+    const audioBlob = new Blob([binaryAudio], { type: 'audio/webm' })
+    uploadFormData.append('audio', audioBlob, 'audio.webm')
 
-    try {
-      console.log('📡 Sending request to AssemblyAI API...');
+    console.log('📤 Uploading audio file to AssemblyAI...');
 
-      // Send to AssemblyAI with raw PCM format
-      const assemblyResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
-        method: 'POST',
-        headers: {
-          'Authorization': assemblyApiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          audio_url: `data:audio/raw;base64,${audioData}`,
-          speech_model: 'best',
-          language_detection: true,
-          punctuate: true,
-          format_text: true,
-        }),
-        signal: controller.signal
-      })
+    const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': assemblyApiKey,
+      },
+      body: uploadFormData
+    })
 
-      clearTimeout(timeoutId);
-      const assemblyTime = Date.now() - assemblyStartTime;
-      console.log('📡 AssemblyAI response received in', assemblyTime, 'ms, status:', assemblyResponse.status);
-
-      if (!assemblyResponse.ok) {
-        const errorText = await assemblyResponse.text()
-        console.error('❌ AssemblyAI API error:', {
-          status: assemblyResponse.status,
-          statusText: assemblyResponse.statusText,
-          errorText
-        });
-        
-        // Return empty result instead of throwing error
-        return new Response(
-          JSON.stringify({ 
-            transcript: '', 
-            isFinal: false, 
-            confidence: 0,
-            isSpeech: false,
-            error: `AssemblyAI error: ${assemblyResponse.status}`
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const result = await assemblyResponse.json()
-      console.log('✅ AssemblyAI JSON parsed:', {
-        hasId: !!result.id,
-        status: result.status,
-        hasText: !!result.text
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text()
+      console.error('❌ AssemblyAI upload error:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        errorText
       });
-
-      // For real-time, we need to poll for the result if it's still processing
-      let transcript = '';
-      let confidence = 0;
       
-      if (result.status === 'completed') {
-        transcript = result.text || '';
-        confidence = result.confidence || 0.8;
-      } else if (result.id) {
-        // Poll for result if still processing
-        const pollResult = await pollForTranscript(result.id, assemblyApiKey);
-        transcript = pollResult.text || '';
-        confidence = pollResult.confidence || 0.8;
-      }
-
-      console.log('📝 Extracted transcript:', {
-        transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-        confidence,
-        hasContent: transcript.length > 0,
-        fullLength: transcript.length
-      });
-
-      const responseData = { 
-        transcript,
-        isFinal: true,
-        confidence,
-        isSpeech: true,
-        timestamp
-      };
-
-      console.log('📤 Returning response:', responseData);
-
       return new Response(
-        JSON.stringify(responseData),
+        JSON.stringify({ 
+          transcript: '', 
+          isFinal: false, 
+          confidence: 0,
+          isSpeech: false,
+          error: `AssemblyAI upload error: ${uploadResponse.status}`
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === 'AbortError') {
-        console.error('❌ AssemblyAI request timed out after 8 seconds');
-        return new Response(
-          JSON.stringify({ 
-            transcript: '', 
-            isFinal: false, 
-            confidence: 0,
-            isSpeech: false,
-            error: 'AssemblyAI timeout'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      
-      throw fetchError;
     }
+
+    const uploadResult = await uploadResponse.json()
+    const audioUrl = uploadResult.upload_url
+    console.log('✅ Audio uploaded successfully, URL:', audioUrl);
+
+    // Step 2: Create transcription job
+    console.log('📡 Creating transcription job...');
+
+    const transcriptionResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: {
+        'Authorization': assemblyApiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audio_url: audioUrl,
+        speech_model: 'best',
+        language_detection: true,
+        punctuate: true,
+        format_text: true,
+      })
+    })
+
+    if (!transcriptionResponse.ok) {
+      const errorText = await transcriptionResponse.text()
+      console.error('❌ AssemblyAI transcription error:', {
+        status: transcriptionResponse.status,
+        statusText: transcriptionResponse.statusText,
+        errorText
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          transcript: '', 
+          isFinal: false, 
+          confidence: 0,
+          isSpeech: false,
+          error: `AssemblyAI transcription error: ${transcriptionResponse.status}`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const transcriptionResult = await transcriptionResponse.json()
+    console.log('✅ Transcription job created:', {
+      id: transcriptionResult.id,
+      status: transcriptionResult.status
+    });
+
+    // Step 3: Poll for completion
+    const transcriptId = transcriptionResult.id
+    let transcript = '';
+    let confidence = 0;
+
+    if (transcriptId) {
+      const pollResult = await pollForTranscript(transcriptId, assemblyApiKey);
+      transcript = pollResult.text || '';
+      confidence = pollResult.confidence || 0.8;
+    }
+
+    const processingTime = Date.now() - assemblyStartTime;
+    console.log('📝 Final transcript result:', {
+      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+      confidence,
+      hasContent: transcript.length > 0,
+      fullLength: transcript.length,
+      processingTime: `${processingTime}ms`
+    });
+
+    const responseData = { 
+      transcript,
+      isFinal: true,
+      confidence,
+      isSpeech: true,
+      timestamp
+    };
+
+    console.log('📤 Returning response:', responseData);
+
+    return new Response(
+      JSON.stringify(responseData),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('❌ Error in audio-to-text function:', {
@@ -215,7 +216,7 @@ serve(async (req) => {
 })
 
 // Helper function to poll for transcript result
-async function pollForTranscript(transcriptId: string, apiKey: string, maxAttempts = 10): Promise<any> {
+async function pollForTranscript(transcriptId: string, apiKey: string, maxAttempts = 30): Promise<any> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     console.log(`🔄 Polling AssemblyAI transcript ${transcriptId}, attempt ${attempt + 1}`);
     
@@ -240,8 +241,10 @@ async function pollForTranscript(transcriptId: string, apiKey: string, maxAttemp
       break;
     }
 
+    console.log(`⏳ Status: ${result.status}, waiting...`);
+    
     // Wait before next poll (shorter interval for real-time feel)
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   return { text: '', confidence: 0 };
