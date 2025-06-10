@@ -1,17 +1,17 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Button } from '@/components/ui/button';
 import { ConversationsList } from '@/components/ConversationsList';
 import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptDisplay } from '@/components/TranscriptDisplay';
-import { AudioWaveform } from '@/components/AudioWaveform';
 import { useOptimizedSTT } from '@/hooks/useOptimizedSTT';
 import { useLumiConversation } from '@/hooks/useLumiConversation';
 import { useOptimizedTTS } from '@/hooks/useOptimizedTTS';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
-import { Circle, CircleStop } from 'lucide-react';
+import { JournalLayout } from '@/components/journal/JournalLayout';
+import { JournalHeader } from '@/components/journal/JournalHeader';
+import { ConversationControl } from '@/components/journal/ConversationControl';
+import { ConversationSection } from '@/components/journal/ConversationSection';
 import { toast } from 'sonner';
 
 interface TranscriptEntry {
@@ -266,118 +266,46 @@ const JournalPage = () => {
   }, [conversationState, hasStartedConversation, isSessionActive, isRecordingActive, isLumiSpeaking, isSTTProcessing, isLumiProcessing, transcript.length]);
 
   return (
-    <div 
-      className="min-h-screen relative"
-      style={{
-        backgroundColor: 'rgb(15, 23, 42)', // Explicit background to prevent flash
-        backgroundImage: `url('/lovable-uploads/1e779805-c108-43d4-b827-10df1f9b34e9.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-black/60"></div>
-      
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header with sign out button */}
-        <div className="flex justify-end p-6">
-          <Button
-            onClick={signOut}
-            variant="ghost"
-            size="sm"
-            style={{ color: 'rgba(255, 255, 255, 0.8)' }} // Explicit white to prevent flash
-            className="hover:text-white hover:bg-white/10 font-crimson"
-          >
-            Sign Out
-          </Button>
-        </div>
+    <JournalLayout>
+      <JournalHeader onSignOut={signOut} />
 
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col items-center px-4 pb-8">
-          {/* Central conversation control */}
-          <div className="flex flex-col items-center space-y-6 mb-12">
-            <Button
-              onClick={handleStartConversation}
-              className={`
-                w-24 h-24 rounded-full transition-all duration-300 
-                ${hasStartedConversation 
-                  ? 'bg-red-500/20 hover:bg-red-500/30 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.3)]' 
-                  : 'bg-cyan-400/20 hover:bg-cyan-400/30 border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.3)]'
-                }
-                backdrop-blur-sm
-              `}
-            >
-              {hasStartedConversation ? (
-                <CircleStop className="w-8 h-8 text-red-400" />
-              ) : (
-                <Circle className="w-8 h-8 text-cyan-400" />
-              )}
-            </Button>
-            
-            <div className="text-center space-y-4">
-              <h2 className="text-lg font-cinzel mb-1" style={{ color: '#ffffff' }}>
-                {hasStartedConversation ? 'End Conversation' : 'Begin Conversation'}
-              </h2>
-              <p className="font-crimson text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {hasStartedConversation ? 'Lumi is listening...' : 'Start your daily reflection with Lumi'}
-              </p>
-            </div>
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col items-center px-4 pb-8">
+        {/* Central conversation control */}
+        <ConversationControl
+          hasStartedConversation={hasStartedConversation}
+          onToggleConversation={handleStartConversation}
+        />
 
-            {/* Audio Waveform and Controls (only show during conversation) */}
-            {hasStartedConversation && (
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <AudioWaveform
-                    audioData={currentAudioData}
-                    isRecording={conversationState !== 'idle'}
-                    isSpeaking={conversationState === 'user_speaking'}
-                    className="animate-fade-in"
-                  />
-                </div>
-                
-                {/* Status indicators */}
-                <div className="flex justify-center space-x-6 text-sm">
-                  <div className={`flex items-center space-x-2 ${conversationState === 'user_speaking' ? 'text-green-400' : 'text-white/40'}`}>
-                    <div className={`w-3 h-3 rounded-full ${conversationState === 'user_speaking' ? 'bg-green-500 animate-pulse' : 'bg-white/20'}`} />
-                    <span>Speaking</span>
-                  </div>
-                  
-                  <div className={`flex items-center space-x-2 ${isLumiSpeaking ? 'text-orange-400' : 'text-white/40'}`}>
-                    <div className={`w-3 h-3 rounded-full ${isLumiSpeaking ? 'bg-orange-500 animate-pulse' : 'bg-white/20'}`} />
-                    <span>Lumi</span>
-                  </div>
-                  
-                  <div className={`flex items-center space-x-2 ${isRecordingActive ? 'text-blue-400' : 'text-white/40'}`}>
-                    <div className={`w-3 h-3 rounded-full ${isRecordingActive ? 'bg-blue-500 animate-pulse' : 'bg-white/20'}`} />
-                    <span>Recording</span>
-                  </div>
-                </div>
-              </div>
-            )}
+        {/* Audio Waveform and Controls (only show during conversation) */}
+        <ConversationSection
+          hasStartedConversation={hasStartedConversation}
+          currentAudioData={currentAudioData}
+          conversationState={conversationState}
+          isLumiSpeaking={isLumiSpeaking}
+          isRecordingActive={isRecordingActive}
+        />
+
+        {/* Live transcript (only show during conversation) */}
+        {hasStartedConversation && transcript.length > 0 && (
+          <div className="w-full max-w-2xl mb-8">
+            <TranscriptDisplay
+              transcript={transcript}
+              currentUserText={currentUserText}
+              isUserSpeaking={conversationState === 'user_speaking'}
+              isLumiSpeaking={isLumiSpeaking}
+            />
           </div>
+        )}
 
-          {/* Live transcript (only show during conversation) */}
-          {hasStartedConversation && transcript.length > 0 && (
-            <div className="w-full max-w-2xl mb-8">
-              <TranscriptDisplay
-                transcript={transcript}
-                currentUserText={currentUserText}
-                isUserSpeaking={conversationState === 'user_speaking'}
-                isLumiSpeaking={isLumiSpeaking}
-              />
-            </div>
-          )}
-
-          {/* Journal entries section */}
-          <div className="w-full max-w-4xl flex-1">
-            <h3 className="text-xl font-cinzel text-center mb-6" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-              Your Conversations
-            </h3>
-            
-            <div className="h-[calc(100vh-400px)]">
-              <ConversationsList />
-            </div>
+        {/* Journal entries section */}
+        <div className="w-full max-w-4xl flex-1">
+          <h3 className="text-xl font-cinzel text-center mb-6" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+            Your Conversations
+          </h3>
+          
+          <div className="h-[calc(100vh-400px)]">
+            <ConversationsList />
           </div>
         </div>
       </div>
@@ -394,7 +322,7 @@ const JournalPage = () => {
           />
         </div>
       )}
-    </div>
+    </JournalLayout>
   );
 };
 
@@ -405,3 +333,5 @@ const Journal = () => (
 );
 
 export default Journal;
+
+}
