@@ -37,8 +37,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
       const now = Date.now();
       const timeSinceLastProcess = now - lastProcessTimeRef.current;
       
-      // Only process if enough time has passed and it's speech
-      if (timeSinceLastProcess >= 1000 && item.isSpeech) {
+      // Only process if enough time has passed and it's speech - increased interval to 2 seconds
+      if (timeSinceLastProcess >= 2000 && item.isSpeech) {
         console.log('🎯 [OptimizedSTT] Processing audio item:', {
           audioLength: item.audioData.length,
           isSpeech: item.isSpeech,
@@ -75,7 +75,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
             timestamp: item.timestamp
           };
 
-          if (onTranscript) {
+          if (onTranscript && result.transcript && result.transcript.trim()) {
             onTranscript(result);
             console.log('📤 [OptimizedSTT] Transcript sent to callback:', result.transcript);
           }
@@ -92,7 +92,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
         }
 
         // Wait a bit before processing next item
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
         console.log('⏭️ [OptimizedSTT] Skipping audio item:', {
           isSpeech: item.isSpeech,
@@ -123,12 +123,22 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
       return;
     }
 
-    // Add to queue
-    processingQueueRef.current.push({ audioData, isSpeech, timestamp });
-    console.log('📋 [OptimizedSTT] Added to queue, new length:', processingQueueRef.current.length);
+    // Only add speech chunks to queue to reduce processing load
+    if (isSpeech) {
+      // Clear old items from queue to prevent buildup
+      if (processingQueueRef.current.length > 3) {
+        processingQueueRef.current = processingQueueRef.current.slice(-2);
+        console.log('🧹 [OptimizedSTT] Cleared old queue items');
+      }
 
-    // Start processing queue
-    processQueue();
+      processingQueueRef.current.push({ audioData, isSpeech, timestamp });
+      console.log('📋 [OptimizedSTT] Added to queue, new length:', processingQueueRef.current.length);
+
+      // Start processing queue
+      processQueue();
+    } else {
+      console.log('⏭️ [OptimizedSTT] Skipping non-speech chunk');
+    }
   }, [processQueue]);
 
   return {

@@ -29,12 +29,6 @@ serve(async (req) => {
       throw new Error('No audio data provided')
     }
 
-    console.log('Processing audio chunk:', {
-      audioLength: audioData.length,
-      isSpeech,
-      timestamp: new Date(timestamp).toISOString()
-    })
-
     // Only process speech chunks
     if (!isSpeech) {
       console.log('⏭️ Skipping non-speech chunk');
@@ -55,10 +49,45 @@ serve(async (req) => {
     const binaryAudio = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
     console.log('✅ Base64 converted to binary, size:', binaryAudio.length, 'bytes');
 
+    // Create a proper WAV file with header
+    const sampleRate = 24000;
+    const channels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * channels * bitsPerSample / 8;
+    const blockAlign = channels * bitsPerSample / 8;
+    
+    // Create WAV header
+    const wavHeader = new ArrayBuffer(44);
+    const view = new DataView(wavHeader);
+    
+    // RIFF chunk descriptor
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + binaryAudio.length, true); // File size
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+    
+    // fmt sub-chunk
+    view.setUint32(12, 0x666d7420, false); // "fmt "
+    view.setUint32(16, 16, true); // Subchunk1Size
+    view.setUint16(20, 1, true); // AudioFormat (PCM)
+    view.setUint16(22, channels, true); // NumChannels
+    view.setUint32(24, sampleRate, true); // SampleRate
+    view.setUint32(28, byteRate, true); // ByteRate
+    view.setUint16(32, blockAlign, true); // BlockAlign
+    view.setUint16(34, bitsPerSample, true); // BitsPerSample
+    
+    // data sub-chunk
+    view.setUint32(36, 0x64617461, false); // "data"
+    view.setUint32(40, binaryAudio.length, true); // Subchunk2Size
+    
+    // Combine header and audio data
+    const wavFile = new Uint8Array(44 + binaryAudio.length);
+    wavFile.set(new Uint8Array(wavHeader), 0);
+    wavFile.set(binaryAudio, 44);
+
     // Prepare form data for Deepgram
     const formData = new FormData()
-    const audioBlob = new Blob([binaryAudio], { type: 'audio/wav' })
-    formData.append('audio', audioBlob)
+    const audioBlob = new Blob([wavFile], { type: 'audio/wav' })
+    formData.append('audio', audioBlob, 'audio.wav')
 
     console.log('📡 Sending request to Deepgram API...');
 
@@ -68,76 +97,57 @@ serve(async (req) => {
       throw new Error('Deepgram API key not configured');
     }
 
-    console.log('✅ Deepgram API key found, making request with timeout...');
+    console.log('✅ Deepgram API key found, making request...');
 
-    // Create an AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    // Send to Deepgram with proper URL parameters for real-time transcription
+    const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&punctuate=true&diarize=false', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${deepgramApiKey}`,
+      },
+      body: formData,
+    })
 
-    try {
-      // Send to Deepgram with timeout
-      const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${deepgramApiKey}`,
-        },
-        body: formData,
-        signal: controller.signal,
-      })
+    console.log('📡 Deepgram response status:', deepgramResponse.status);
 
-      clearTimeout(timeoutId);
-      console.log('📡 Deepgram response status:', deepgramResponse.status);
-
-      if (!deepgramResponse.ok) {
-        const errorText = await deepgramResponse.text()
-        console.error('❌ Deepgram API error:', {
-          status: deepgramResponse.status,
-          statusText: deepgramResponse.statusText,
-          errorText
-        });
-        throw new Error(`Deepgram API error: ${deepgramResponse.status} ${errorText}`)
-      }
-
-      const result = await deepgramResponse.json()
-      console.log('✅ Deepgram response received:', {
-        hasResults: !!result.results,
-        channelsCount: result.results?.channels?.length || 0,
-        alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
+    if (!deepgramResponse.ok) {
+      const errorText = await deepgramResponse.text()
+      console.error('❌ Deepgram API error:', {
+        status: deepgramResponse.status,
+        statusText: deepgramResponse.statusText,
+        errorText
       });
-
-      // Extract transcript from Deepgram response
-      const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
-      const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
-
-      console.log('📝 Extracted transcript:', {
-        transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-        confidence,
-        hasContent: transcript.length > 0,
-        fullLength: transcript.length
-      });
-
-      return new Response(
-        JSON.stringify({ 
-          transcript,
-          isFinal: true,
-          confidence,
-          isSpeech: true,
-          timestamp
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
-      if (fetchError.name === 'AbortError') {
-        console.error('❌ Deepgram request timed out after 15 seconds');
-        throw new Error('Speech recognition request timed out. Please try speaking more clearly or check your connection.');
-      }
-      
-      console.error('❌ Fetch error:', fetchError);
-      throw fetchError;
+      throw new Error(`Deepgram API error: ${deepgramResponse.status} ${errorText}`)
     }
+
+    const result = await deepgramResponse.json()
+    console.log('✅ Deepgram response received:', {
+      hasResults: !!result.results,
+      channelsCount: result.results?.channels?.length || 0,
+      alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
+    });
+
+    // Extract transcript from Deepgram response
+    const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
+    const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
+
+    console.log('📝 Extracted transcript:', {
+      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+      confidence,
+      hasContent: transcript.length > 0,
+      fullLength: transcript.length
+    });
+
+    return new Response(
+      JSON.stringify({ 
+        transcript,
+        isFinal: true,
+        confidence,
+        isSpeech: true,
+        timestamp
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('❌ Error in audio-to-text function:', {
