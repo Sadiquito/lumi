@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,8 +36,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
       const now = Date.now();
       const timeSinceLastProcess = now - lastProcessTimeRef.current;
       
-      // Only process if enough time has passed and it's speech - reduced interval to 1.5 seconds
-      if (timeSinceLastProcess >= 1500 && item.isSpeech) {
+      // Process speech chunks with reasonable timing
+      if (timeSinceLastProcess >= 1000 && item.isSpeech) {
         console.log('🎯 [OptimizedSTT] Processing audio item:', {
           audioLength: item.audioData.length,
           isSpeech: item.isSpeech,
@@ -69,25 +68,31 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
           const result: STTResult = {
             transcript: data.transcript || '',
-            isFinal: data.isFinal || false,
-            confidence: data.confidence || 0,
+            isFinal: data.isFinal || true, // Assume final by default
+            confidence: data.confidence || 0.8,
             isSpeech: data.isSpeech || false,
             timestamp: item.timestamp
           };
 
-          // IMPORTANT: Only call onTranscript if we have actual text content
-          if (onTranscript && result.transcript && result.transcript.trim().length > 0) {
-            console.log('📤 [OptimizedSTT] Sending transcript to callback:', {
+          // CRITICAL: Call onTranscript if we have meaningful content
+          if (result.transcript && result.transcript.trim().length > 0) {
+            console.log('📤 [OptimizedSTT] Calling onTranscript callback with:', {
               transcript: result.transcript,
               isFinal: result.isFinal,
-              confidence: result.confidence
+              confidence: result.confidence,
+              hasCallback: !!onTranscript
             });
-            onTranscript(result);
+            
+            if (onTranscript) {
+              onTranscript(result);
+              console.log('✅ [OptimizedSTT] onTranscript callback executed successfully');
+            } else {
+              console.error('❌ [OptimizedSTT] No onTranscript callback provided!');
+            }
           } else {
             console.log('⏭️ [OptimizedSTT] Skipping empty transcript:', {
               hasTranscript: !!result.transcript,
-              transcriptLength: result.transcript?.length || 0,
-              hasCallback: !!onTranscript
+              transcriptLength: result.transcript?.length || 0
             });
           }
 
@@ -102,8 +107,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           setIsProcessing(false);
         }
 
-        // Wait a bit before processing next item
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait before processing next item
+        await new Promise(resolve => setTimeout(resolve, 300));
       } else {
         console.log('⏭️ [OptimizedSTT] Skipping audio item:', {
           isSpeech: item.isSpeech,
@@ -134,18 +139,18 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
       return;
     }
 
-    // Only add speech chunks to queue to reduce processing load
+    // Only add speech chunks to queue
     if (isSpeech) {
-      // Clear old items from queue to prevent buildup
-      if (processingQueueRef.current.length > 2) {
-        processingQueueRef.current = processingQueueRef.current.slice(-1);
-        console.log('🧹 [OptimizedSTT] Cleared old queue items');
+      // Keep queue manageable
+      if (processingQueueRef.current.length > 1) {
+        processingQueueRef.current = [];
+        console.log('🧹 [OptimizedSTT] Cleared queue to prevent buildup');
       }
 
       processingQueueRef.current.push({ audioData, isSpeech, timestamp });
       console.log('📋 [OptimizedSTT] Added to queue, new length:', processingQueueRef.current.length);
 
-      // Start processing queue
+      // Start processing
       processQueue();
     } else {
       console.log('⏭️ [OptimizedSTT] Skipping non-speech chunk');

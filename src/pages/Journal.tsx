@@ -106,30 +106,36 @@ const JournalPage = () => {
     onLumiResponse: handleLumiResponse
   });
 
-  // STT handling - ENHANCED LOGGING AND PROCESSING
+  // CRITICAL STT Result Handler - This must work correctly
   const handleSTTResult = useCallback((result: any) => {
-    console.log('🎯 [Journal] STT Result received:', {
+    console.log('🎯 [Journal] STT Result received in Journal:', {
       transcript: result.transcript,
       isFinal: result.isFinal,
       confidence: result.confidence,
       transcriptLength: result.transcript?.length || 0,
       isSessionActive,
-      conversationState
+      conversationState,
+      hasStartedConversation
     });
     
-    if (result.transcript && result.transcript.trim() && isSessionActive) {
-      console.log('📝 [Journal] Processing STT transcript...');
+    if (!isSessionActive || !hasStartedConversation) {
+      console.log('⏭️ [Journal] Skipping STT - session not active');
+      return;
+    }
+
+    if (result.transcript && result.transcript.trim()) {
+      console.log('✅ [Journal] Valid transcript received, processing...');
       
-      if (result.isFinal && result.transcript.trim().length > 0) {
+      if (result.isFinal && result.transcript.trim().length > 3) {
         const userText = result.transcript.trim();
         
-        console.log('✅ [Journal] Creating transcript entry and sending to Lumi:', {
+        console.log('🗣️ [Journal] Final transcript - creating entry and sending to Lumi:', {
           userText: userText.substring(0, 100),
           fullLength: userText.length
         });
         
         const newEntry: TranscriptEntry = {
-          id: `${Date.now()}-${Math.random()}`,
+          id: `${Date.now()}-user-${Math.random()}`,
           text: userText,
           speaker: 'user',
           timestamp: result.timestamp || Date.now(),
@@ -140,26 +146,19 @@ const JournalPage = () => {
         setCurrentUserText('');
         addToTranscript('user', userText);
         
-        addDebugLog(`Sending to Lumi: "${userText}"`);
         setConversationState('processing');
         
-        // IMPORTANT: Actually send to Lumi
-        console.log('📤 [Journal] Calling sendToLumi...');
+        console.log('📤 [Journal] Calling sendToLumi with text:', userText);
         sendToLumi(userText);
+        
       } else if (!result.isFinal) {
-        // Show interim results
         console.log('📝 [Journal] Interim transcript:', result.transcript);
         setCurrentUserText(result.transcript);
       }
     } else {
-      console.log('⏭️ [Journal] Skipping STT result:', {
-        hasTranscript: !!result.transcript,
-        transcriptTrimmed: result.transcript?.trim(),
-        isSessionActive,
-        conversationState
-      });
+      console.log('⏭️ [Journal] Empty or invalid transcript, skipping');
     }
-  }, [addToTranscript, sendToLumi, addDebugLog, isSessionActive, conversationState]);
+  }, [addToTranscript, sendToLumi, addDebugLog, isSessionActive, conversationState, hasStartedConversation]);
 
   const { 
     processAudio, 
@@ -170,28 +169,26 @@ const JournalPage = () => {
     onError: (error) => handleError(error, 'STT')
   });
 
-  // Audio handling - ENHANCED DEBUGGING
+  // Audio handling
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
     console.log('📤 [Journal] Audio data received:', {
       encodedAudioLength: encodedAudio.length,
       isSpeech,
       isSessionActive,
       conversationState,
-      hasStartedConversation,
-      encodedPreview: encodedAudio.substring(0, 50) + '...'
+      hasStartedConversation
     });
 
-    if (isSpeech && isSessionActive && encodedAudio && encodedAudio.length > 0) {
-      console.log('✅ [Journal] Processing audio through STT...');
+    if (isSpeech && isSessionActive && hasStartedConversation && encodedAudio && encodedAudio.length > 0) {
+      console.log('✅ [Journal] Processing speech audio through STT...');
       resetSessionTimeout();
       processAudio(encodedAudio, isSpeech, Date.now());
     } else {
       console.log('⏭️ [Journal] Skipping audio processing:', {
         isSpeech,
         isSessionActive,
-        hasAudioData: !!encodedAudio && encodedAudio.length > 0,
         hasStartedConversation,
-        conversationState
+        hasAudioData: !!encodedAudio && encodedAudio.length > 0
       });
     }
   }, [processAudio, isSessionActive, resetSessionTimeout, conversationState, hasStartedConversation]);
