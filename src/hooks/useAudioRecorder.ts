@@ -37,14 +37,17 @@ export const useAudioRecorder = ({
       // Only send speech chunks and limit frequency
       if (chunk.isSpeech) {
         speechChunkCountRef.current++;
-        // Send every 3rd speech chunk to reduce load
-        if (speechChunkCountRef.current % 3 === 0) {
+        // Send every 2nd speech chunk to reduce load but ensure processing
+        if (speechChunkCountRef.current % 2 === 0) {
           console.log('📤 Sending audio chunk to STT:', {
             chunkNumber: speechChunkCountRef.current,
             dataLength: chunk.data.length,
-            timestamp: chunk.timestamp
+            timestamp: chunk.timestamp,
+            isSpeech: chunk.isSpeech
           });
           onAudioChunk?.(chunk);
+        } else {
+          console.log('⏭️ Skipping chunk to throttle processing:', speechChunkCountRef.current);
         }
       }
     },

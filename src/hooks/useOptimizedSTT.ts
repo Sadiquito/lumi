@@ -35,7 +35,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
     // Throttle processing to avoid overwhelming the API
     const now = Date.now();
-    if (now - lastProcessedTimeRef.current < 1000) {
+    if (now - lastProcessedTimeRef.current < 2000) { // Increased throttle to 2 seconds
       console.log('⏱️ Throttling STT requests');
       return;
     }
@@ -54,6 +54,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           processingStartTime: new Date().toISOString()
         });
 
+        console.log('📡 Calling Supabase function: audio-to-text');
+
         const { data, error: functionError } = await supabase.functions.invoke('audio-to-text', {
           body: {
             audioData,
@@ -61,6 +63,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
             timestamp
           }
         });
+
+        console.log('📡 Supabase function response:', { data, error: functionError });
 
         if (functionError) {
           console.error('❌ STT function error:', functionError);
@@ -94,6 +98,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
         // Only call onTranscript if we have meaningful results
         if (result.transcript && result.transcript.trim().length > 0) {
+          console.log('📤 Calling onTranscript with result:', result.transcript);
           onTranscript?.(result);
         } else {
           console.log('⚠️ Empty transcript received, not calling onTranscript');
