@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -107,13 +106,27 @@ const JournalPage = () => {
     onLumiResponse: handleLumiResponse
   });
 
-  // STT handling
+  // STT handling - ENHANCED LOGGING AND PROCESSING
   const handleSTTResult = useCallback((result: any) => {
-    addDebugLog(`STT Result: "${result.transcript}" (final: ${result.isFinal})`);
+    console.log('🎯 [Journal] STT Result received:', {
+      transcript: result.transcript,
+      isFinal: result.isFinal,
+      confidence: result.confidence,
+      transcriptLength: result.transcript?.length || 0,
+      isSessionActive,
+      conversationState
+    });
     
-    if (result.transcript && result.transcript.trim()) {
-      if (result.isFinal) {
+    if (result.transcript && result.transcript.trim() && isSessionActive) {
+      console.log('📝 [Journal] Processing STT transcript...');
+      
+      if (result.isFinal && result.transcript.trim().length > 0) {
         const userText = result.transcript.trim();
+        
+        console.log('✅ [Journal] Creating transcript entry and sending to Lumi:', {
+          userText: userText.substring(0, 100),
+          fullLength: userText.length
+        });
         
         const newEntry: TranscriptEntry = {
           id: `${Date.now()}-${Math.random()}`,
@@ -129,12 +142,24 @@ const JournalPage = () => {
         
         addDebugLog(`Sending to Lumi: "${userText}"`);
         setConversationState('processing');
+        
+        // IMPORTANT: Actually send to Lumi
+        console.log('📤 [Journal] Calling sendToLumi...');
         sendToLumi(userText);
-      } else {
+      } else if (!result.isFinal) {
+        // Show interim results
+        console.log('📝 [Journal] Interim transcript:', result.transcript);
         setCurrentUserText(result.transcript);
       }
+    } else {
+      console.log('⏭️ [Journal] Skipping STT result:', {
+        hasTranscript: !!result.transcript,
+        transcriptTrimmed: result.transcript?.trim(),
+        isSessionActive,
+        conversationState
+      });
     }
-  }, [addToTranscript, sendToLumi, addDebugLog]);
+  }, [addToTranscript, sendToLumi, addDebugLog, isSessionActive, conversationState]);
 
   const { 
     processAudio, 

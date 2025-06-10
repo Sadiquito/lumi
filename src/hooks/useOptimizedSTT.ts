@@ -37,8 +37,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
       const now = Date.now();
       const timeSinceLastProcess = now - lastProcessTimeRef.current;
       
-      // Only process if enough time has passed and it's speech - increased interval to 2 seconds
-      if (timeSinceLastProcess >= 2000 && item.isSpeech) {
+      // Only process if enough time has passed and it's speech - reduced interval to 1.5 seconds
+      if (timeSinceLastProcess >= 1500 && item.isSpeech) {
         console.log('🎯 [OptimizedSTT] Processing audio item:', {
           audioLength: item.audioData.length,
           isSpeech: item.isSpeech,
@@ -75,9 +75,20 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
             timestamp: item.timestamp
           };
 
-          if (onTranscript && result.transcript && result.transcript.trim()) {
+          // IMPORTANT: Only call onTranscript if we have actual text content
+          if (onTranscript && result.transcript && result.transcript.trim().length > 0) {
+            console.log('📤 [OptimizedSTT] Sending transcript to callback:', {
+              transcript: result.transcript,
+              isFinal: result.isFinal,
+              confidence: result.confidence
+            });
             onTranscript(result);
-            console.log('📤 [OptimizedSTT] Transcript sent to callback:', result.transcript);
+          } else {
+            console.log('⏭️ [OptimizedSTT] Skipping empty transcript:', {
+              hasTranscript: !!result.transcript,
+              transcriptLength: result.transcript?.length || 0,
+              hasCallback: !!onTranscript
+            });
           }
 
         } catch (err) {
@@ -92,7 +103,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
         }
 
         // Wait a bit before processing next item
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
       } else {
         console.log('⏭️ [OptimizedSTT] Skipping audio item:', {
           isSpeech: item.isSpeech,
@@ -126,8 +137,8 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
     // Only add speech chunks to queue to reduce processing load
     if (isSpeech) {
       // Clear old items from queue to prevent buildup
-      if (processingQueueRef.current.length > 3) {
-        processingQueueRef.current = processingQueueRef.current.slice(-2);
+      if (processingQueueRef.current.length > 2) {
+        processingQueueRef.current = processingQueueRef.current.slice(-1);
         console.log('🧹 [OptimizedSTT] Cleared old queue items');
       }
 
