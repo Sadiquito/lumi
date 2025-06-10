@@ -20,8 +20,8 @@
     --primary: 165 180 252;
     --primary-foreground: 30 41 59;
 
-    --secondary: 253 246 236;
-    --secondary-foreground: 120 113 108;
+    --secondary: 248 250 252;
+    --secondary-foreground: 71 85 105;
 
     --muted: 248 250 252;
     --muted-foreground: 100 116 139;
@@ -47,12 +47,12 @@
     --sidebar-border: 226 232 240;
     --sidebar-ring: 165 180 252;
 
-    /* Custom Lumi colors */
+    /* Custom Lumi colors - updated to be more neutral and soothing */
     --lumi-cosmic: 30 41 59;
     --lumi-twilight: 71 85 105;
     --lumi-lavender: 165 180 252;
-    --lumi-peach: 253 246 236;
-    --lumi-starlight: 248 250 252;
+    --lumi-peach: 248 250 252;
+    --lumi-starlight: 241 245 249;
   }
 
   .dark {
