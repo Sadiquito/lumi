@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -51,6 +52,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
           console.log('📡 [OptimizedSTT] Calling Supabase function audio-to-text...');
 
+          const startTime = Date.now();
           const { data, error: functionError } = await supabase.functions.invoke('audio-to-text', {
             body: {
               audioData: item.audioData,
@@ -59,28 +61,49 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
             }
           });
 
+          const requestTime = Date.now() - startTime;
+          console.log('⏱️ [OptimizedSTT] Supabase function call completed:', {
+            requestTime: `${requestTime}ms`,
+            hasData: !!data,
+            hasError: !!functionError,
+            errorMessage: functionError?.message
+          });
+
           if (functionError) {
             console.error('❌ [OptimizedSTT] Supabase function error:', functionError);
             throw new Error(functionError.message || 'Failed to process audio');
           }
 
-          console.log('✅ [OptimizedSTT] STT result received:', data);
+          console.log('✅ [OptimizedSTT] Raw STT result received:', {
+            data,
+            hasTranscript: !!data?.transcript,
+            transcriptLength: data?.transcript?.length || 0,
+            transcriptPreview: data?.transcript?.substring(0, 50) + '...'
+          });
 
           const result: STTResult = {
             transcript: data.transcript || '',
-            isFinal: data.isFinal || true, // Assume final by default
+            isFinal: data.isFinal !== undefined ? data.isFinal : true,
             confidence: data.confidence || 0.8,
             isSpeech: data.isSpeech || false,
             timestamp: item.timestamp
           };
 
+          console.log('📋 [OptimizedSTT] Processed STT result:', {
+            transcript: result.transcript,
+            isFinal: result.isFinal,
+            confidence: result.confidence,
+            isSpeech: result.isSpeech,
+            hasTranscript: !!result.transcript && result.transcript.trim().length > 0,
+            hasOnTranscriptCallback: !!onTranscript
+          });
+
           // CRITICAL: Call onTranscript if we have meaningful content
           if (result.transcript && result.transcript.trim().length > 0) {
-            console.log('📤 [OptimizedSTT] Calling onTranscript callback with:', {
+            console.log('📤 [OptimizedSTT] EXECUTING onTranscript callback with:', {
               transcript: result.transcript,
               isFinal: result.isFinal,
-              confidence: result.confidence,
-              hasCallback: !!onTranscript
+              confidence: result.confidence
             });
             
             if (onTranscript) {
@@ -92,13 +115,18 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           } else {
             console.log('⏭️ [OptimizedSTT] Skipping empty transcript:', {
               hasTranscript: !!result.transcript,
-              transcriptLength: result.transcript?.length || 0
+              transcriptLength: result.transcript?.length || 0,
+              trimmedLength: result.transcript?.trim().length || 0
             });
           }
 
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Failed to process audio';
-          console.error('❌ [OptimizedSTT] Processing error:', errorMessage);
+          console.error('❌ [OptimizedSTT] Processing error:', {
+            errorMessage,
+            errorStack: err instanceof Error ? err.stack : 'No stack',
+            timestamp: new Date().toISOString()
+          });
           setError(errorMessage);
           if (onError) {
             onError(errorMessage);

@@ -99,6 +99,8 @@ serve(async (req) => {
 
     console.log('✅ Deepgram API key found, making request...');
 
+    const deepgramStartTime = Date.now();
+
     // Send to Deepgram with proper URL parameters for real-time transcription
     const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&punctuate=true&diarize=false', {
       method: 'POST',
@@ -108,7 +110,8 @@ serve(async (req) => {
       body: formData,
     })
 
-    console.log('📡 Deepgram response status:', deepgramResponse.status);
+    const deepgramTime = Date.now() - deepgramStartTime;
+    console.log('📡 Deepgram response received in', deepgramTime, 'ms, status:', deepgramResponse.status);
 
     if (!deepgramResponse.ok) {
       const errorText = await deepgramResponse.text()
@@ -121,10 +124,11 @@ serve(async (req) => {
     }
 
     const result = await deepgramResponse.json()
-    console.log('✅ Deepgram response received:', {
+    console.log('✅ Deepgram JSON parsed:', {
       hasResults: !!result.results,
       channelsCount: result.results?.channels?.length || 0,
-      alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
+      alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0,
+      fullResult: result
     });
 
     // Extract transcript from Deepgram response
@@ -138,14 +142,18 @@ serve(async (req) => {
       fullLength: transcript.length
     });
 
+    const responseData = { 
+      transcript,
+      isFinal: true,
+      confidence,
+      isSpeech: true,
+      timestamp
+    };
+
+    console.log('📤 Returning response:', responseData);
+
     return new Response(
-      JSON.stringify({ 
-        transcript,
-        isFinal: true,
-        confidence,
-        isSpeech: true,
-        timestamp
-      }),
+      JSON.stringify(responseData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
