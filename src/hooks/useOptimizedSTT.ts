@@ -35,7 +35,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
     // Throttle processing to avoid overwhelming the API
     const now = Date.now();
-    if (now - lastProcessedTimeRef.current < 2000) { // Increased throttle to 2 seconds
+    if (now - lastProcessedTimeRef.current < 1000) { // Reduced throttle to 1 second
       console.log('⏱️ Throttling STT requests');
       return;
     }
@@ -54,8 +54,9 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           processingStartTime: new Date().toISOString()
         });
 
-        console.log('📡 Calling Supabase function: audio-to-text');
+        console.log('📡 About to call Supabase function: audio-to-text');
 
+        const functionStartTime = Date.now();
         const { data, error: functionError } = await supabase.functions.invoke('audio-to-text', {
           body: {
             audioData,
@@ -64,7 +65,11 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           }
         });
 
-        console.log('📡 Supabase function response:', { data, error: functionError });
+        console.log('📡 Supabase function completed:', {
+          duration: Date.now() - functionStartTime,
+          data,
+          error: functionError
+        });
 
         if (functionError) {
           console.error('❌ STT function error:', functionError);
@@ -76,7 +81,7 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
           throw new Error('No data returned from STT service');
         }
 
-        console.log('✅ STT function response:', data);
+        console.log('✅ STT function response received:', data);
 
         const result: OptimizedSTTResult = {
           transcript: data.transcript || '',
@@ -106,10 +111,10 @@ export const useOptimizedSTT = ({ onTranscript, onError }: UseOptimizedSTTProps 
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'STT processing failed';
-        console.error('❌ STT error:', errorMessage);
+        console.error('❌ STT error:', errorMessage, err);
         
         // Implement exponential backoff retry for network errors
-        if (retryCountRef.current < 2 && errorMessage.includes('network')) {
+        if (retryCountRef.current < 2 && (errorMessage.includes('network') || errorMessage.includes('fetch'))) {
           retryCountRef.current++;
           const delay = Math.pow(2, retryCountRef.current) * 1000;
           console.log(`🔄 Retrying STT in ${delay}ms (attempt ${retryCountRef.current})`);

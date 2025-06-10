@@ -68,6 +68,8 @@ serve(async (req) => {
       throw new Error('Deepgram API key not configured');
     }
 
+    console.log('✅ Deepgram API key found, making request...');
+
     // Send to Deepgram
     const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen', {
       method: 'POST',
