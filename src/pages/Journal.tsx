@@ -4,15 +4,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { ConversationsList } from '@/components/ConversationsList';
-import { Circle, CircleStop } from 'lucide-react';
+import { Circle, CircleStop, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const JournalPage = () => {
   const { user, signOut } = useAuth();
   const [isConversationActive, setIsConversationActive] = useState(false);
+  const navigate = useNavigate();
 
   const handleConversationToggle = () => {
     setIsConversationActive(!isConversationActive);
     // Here you would integrate with your conversation logic
+  };
+
+  const handleStartConversation = () => {
+    navigate('/conversation');
   };
 
   return (
@@ -63,13 +69,22 @@ const JournalPage = () => {
               )}
             </Button>
             
-            <div className="text-center">
+            <div className="text-center space-y-4">
               <h2 className="text-lg font-cinzel text-white mb-1">
                 {isConversationActive ? 'Stop Conversation' : 'Begin Conversation'}
               </h2>
               <p className="text-white/70 font-crimson text-sm">
                 {isConversationActive ? 'Lumi is listening...' : 'Start your daily reflection with Lumi'}
               </p>
+              
+              {/* New Start Conversation Button */}
+              <Button
+                onClick={handleStartConversation}
+                className="bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400 text-cyan-400 backdrop-blur-sm transition-all duration-300"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Start New Conversation
+              </Button>
             </div>
           </div>
 
