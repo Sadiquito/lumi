@@ -191,7 +191,7 @@ const JournalPage = () => {
       addDebugLog('Conversation started - Lumi will speak first');
       
       // Lumi's opening message
-      const openingMessage = "Hello! I'm here to listen and support you through your thoughts and feelings today. What's on your mind?";
+      const openingMessage = "Hello! What's on your mind?";
       
       const lumiEntry: TranscriptEntry = {
         id: `${Date.now()}-lumi-opening`,
