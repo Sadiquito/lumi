@@ -41,15 +41,22 @@ export const useConversations = () => {
         return;
       }
 
+      // Type cast the data to match our Conversation interface
+      const typedData: Conversation[] = (data || []).map(item => ({
+        ...item,
+        transcript: Array.isArray(item.transcript) ? item.transcript : [],
+        psychological_insights: item.psychological_insights || {}
+      }));
+
       if (reset) {
-        setConversations(data || []);
+        setConversations(typedData);
         setOffset(limit);
       } else {
-        setConversations(prev => [...prev, ...(data || [])]);
+        setConversations(prev => [...prev, ...typedData]);
         setOffset(prev => prev + limit);
       }
 
-      setHasMore((data || []).length === limit);
+      setHasMore(typedData.length === limit);
     } catch (error) {
       console.error('Error in fetchConversations:', error);
     } finally {
@@ -85,7 +92,12 @@ export const useConversations = () => {
         },
         (payload) => {
           console.log('New conversation added:', payload);
-          setConversations(prev => [payload.new as Conversation, ...prev]);
+          const newConversation: Conversation = {
+            ...payload.new as any,
+            transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
+            psychological_insights: payload.new.psychological_insights || {}
+          };
+          setConversations(prev => [newConversation, ...prev]);
         }
       )
       .on(
@@ -98,9 +110,14 @@ export const useConversations = () => {
         },
         (payload) => {
           console.log('Conversation updated:', payload);
+          const updatedConversation: Conversation = {
+            ...payload.new as any,
+            transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
+            psychological_insights: payload.new.psychological_insights || {}
+          };
           setConversations(prev => 
             prev.map(conv => 
-              conv.id === payload.new.id ? payload.new as Conversation : conv
+              conv.id === updatedConversation.id ? updatedConversation : conv
             )
           );
         }
