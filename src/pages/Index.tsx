@@ -25,14 +25,14 @@ const Index = () => {
     <div 
       className="min-h-screen relative flex items-center justify-center pt-16 md:pt-0"
       style={{
-        backgroundImage: `url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=2070&q=80')`,
+        backgroundImage: `url('/lovable-uploads/fbfb0793-0c42-477f-934a-ecfd4c1a8d02.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-lumi-cosmic/40"></div>
+      {/* Subtle overlay to ensure text readability while preserving the magical atmosphere */}
+      <div className="absolute inset-0 bg-gradient-to-b from-lumi-cosmic/20 via-transparent to-lumi-cosmic/30"></div>
       
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4 space-y-12">
         {/* Main heading */}
@@ -40,21 +40,21 @@ const Index = () => {
           <h1 
             className="text-6xl md:text-7xl font-cinzel font-bold text-lumi-starlight tracking-wider"
             style={{
-              textShadow: '0 0 20px rgba(241, 245, 249, 0.5), 0 0 40px rgba(241, 245, 249, 0.3), 0 0 60px rgba(241, 245, 249, 0.2)',
-              filter: 'blur(0.5px)'
+              textShadow: '0 0 30px rgba(165, 180, 252, 0.8), 0 0 60px rgba(165, 180, 252, 0.4), 0 0 90px rgba(165, 180, 252, 0.2)',
+              filter: 'blur(0.3px)'
             }}
           >
             LUMI
           </h1>
           <div className="space-y-2 font-cinzel">
-            <h2 className="text-2xl md:text-3xl font-medium text-lumi-starlight">
+            <h2 className="text-2xl md:text-3xl font-medium text-lumi-starlight drop-shadow-lg">
               PERSONAL
             </h2>
-            <h2 className="text-2xl md:text-3xl font-medium text-lumi-lavender">
+            <h2 className="text-2xl md:text-3xl font-medium text-lumi-lavender drop-shadow-lg">
               SUPERINTELLIGENCE
             </h2>
           </div>
-          <p className="text-lg md:text-xl text-lumi-starlight/90 font-crimson font-normal max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-lumi-starlight/95 font-crimson font-normal max-w-2xl mx-auto leading-relaxed drop-shadow-md">
             Your AI companion for daily reflection through natural conversation
           </p>
         </div>
@@ -63,7 +63,10 @@ const Index = () => {
         <div className="space-y-4">
           <Button
             onClick={signInWithGoogle}
-            className="bg-lumi-starlight/90 hover:bg-lumi-starlight text-lumi-cosmic px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 hover:shadow-xl flex items-center gap-3 mx-auto"
+            className="bg-gradient-to-r from-amber-600/90 to-orange-600/90 hover:from-amber-500 hover:to-orange-500 text-lumi-starlight px-8 py-3 text-lg font-crimson font-semibold rounded-lg shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-3 mx-auto border border-amber-500/30"
+            style={{
+              boxShadow: '0 0 20px rgba(245, 158, 11, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3)'
+            }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -75,45 +78,45 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Feature highlights with elegant redesigned icons */}
+        {/* Feature highlights with cosmic theme */}
         <div className="grid md:grid-cols-3 gap-8 mt-16">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-lumi-lavender/20 to-lumi-twilight/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-lumi-lavender/30 shadow-[0_0_20px_rgba(165,180,252,0.15)]">
-              <svg className="w-8 h-8 text-lumi-lavender" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500/30 to-purple-600/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-indigo-400/40 shadow-[0_0_25px_rgba(99,102,241,0.25)]">
+              <svg className="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-pulse" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight">VOICE-FIRST, FOREVER</h3>
-            <p className="text-sm text-lumi-starlight/80 font-crimson leading-relaxed">
+            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">VOICE-FIRST, FOREVER</h3>
+            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
               Writing sucks. Just speak your mind.
             </p>
           </div>
           
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-lumi-sage/20 to-lumi-twilight/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-lumi-sage/30 shadow-[0_0_20px_rgba(156,163,175,0.15)]">
-              <svg className="w-8 h-8 text-lumi-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-500/30 to-pink-600/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-purple-400/40 shadow-[0_0_25px_rgba(168,85,247,0.25)]">
+              <svg className="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636" />
                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={1.5} fill="none" />
                 <circle cx="12" cy="12" r="1" fill="currentColor" className="animate-glow" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight">THOUGHTFUL GUIDANCE</h3>
-            <p className="text-sm text-lumi-starlight/80 font-crimson leading-relaxed">
+            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">THOUGHTFUL GUIDANCE</h3>
+            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
               Let Lumi guide you when you don't know what to say
             </p>
           </div>
           
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-lumi-mist/30 to-lumi-twilight/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-lumi-mist/50 shadow-[0_0_20px_rgba(229,231,235,0.15)]">
-              <svg className="w-8 h-8 text-lumi-mist" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-blue-500/30 to-cyan-600/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-blue-400/40 shadow-[0_0_25px_rgba(59,130,246,0.25)]">
+              <svg className="w-8 h-8 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth={1.5} />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 <circle cx="12" cy="12" r="2" fill="currentColor" className="animate-pulse" opacity="0.6" />
               </svg>
             </div>
-            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight">DAY IN, DAY OUT</h3>
-            <p className="text-sm text-lumi-starlight/80 font-crimson leading-relaxed">
+            <h3 className="text-lg font-cinzel font-medium text-lumi-starlight drop-shadow-lg">DAY IN, DAY OUT</h3>
+            <p className="text-sm text-lumi-starlight/90 font-crimson leading-relaxed drop-shadow-sm">
               Build a daily habit that will last until you croak
             </p>
           </div>
