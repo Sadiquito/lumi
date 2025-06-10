@@ -19,36 +19,54 @@ export const useAudioRecorderState = ({
   autoStart = true,
 }: UseAudioRecorderStateProps) => {
   const handleAudioChunk = useCallback((chunk: AudioChunk) => {
-    console.log('🎤 Audio chunk received in AudioRecorder:', {
+    console.log('🎤 [AudioRecorderState] Audio chunk received:', {
       timestamp: chunk.timestamp,
       isSpeech: chunk.isSpeech,
       dataLength: chunk.data.length,
-      rms: Math.sqrt(chunk.data.reduce((sum, val) => sum + val * val, 0) / chunk.data.length)
+      rms: Math.sqrt(chunk.data.reduce((sum, val) => sum + val * val, 0) / chunk.data.length).toFixed(6),
+      hasOnAudioData: !!onAudioData
     });
 
     // ALWAYS encode and send audio when there's a chunk, regardless of speech detection
     // Let the STT service decide what to do with it
     if (chunk.data && chunk.data.length > 0) {
-      const encodedAudio = encodeAudioForTransmission(chunk.data);
-      console.log('📤 Sending encoded audio:', {
-        originalLength: chunk.data.length,
-        encodedLength: encodedAudio.length,
-        isSpeech: chunk.isSpeech
-      });
-      onAudioData?.(encodedAudio, chunk.isSpeech);
+      try {
+        const encodedAudio = encodeAudioForTransmission(chunk.data);
+        console.log('📤 [AudioRecorderState] Sending encoded audio:', {
+          originalLength: chunk.data.length,
+          encodedLength: encodedAudio.length,
+          isSpeech: chunk.isSpeech,
+          encodedPreview: encodedAudio.substring(0, 50) + '...'
+        });
+        
+        if (onAudioData) {
+          onAudioData(encodedAudio, chunk.isSpeech);
+          console.log('✅ [AudioRecorderState] Audio data sent to parent');
+        } else {
+          console.warn('⚠️ [AudioRecorderState] No onAudioData callback provided');
+        }
+      } catch (error) {
+        console.error('❌ [AudioRecorderState] Error encoding audio:', error);
+      }
     } else {
-      console.warn('⚠️ Received empty audio chunk');
+      console.warn('⚠️ [AudioRecorderState] Received empty audio chunk');
     }
   }, [onAudioData]);
 
   const handleSpeechStart = useCallback(() => {
-    console.log('🎤 Speech detection: User started speaking');
-    onSpeechStart?.();
+    console.log('🎤 [AudioRecorderState] Speech detection: User started speaking');
+    if (onSpeechStart) {
+      onSpeechStart();
+      console.log('✅ [AudioRecorderState] Speech start callback executed');
+    }
   }, [onSpeechStart]);
 
   const handleSpeechEnd = useCallback(() => {
-    console.log('🔇 Speech detection: User stopped speaking');
-    onSpeechEnd?.();
+    console.log('🔇 [AudioRecorderState] Speech detection: User stopped speaking');
+    if (onSpeechEnd) {
+      onSpeechEnd();
+      console.log('✅ [AudioRecorderState] Speech end callback executed');
+    }
   }, [onSpeechEnd]);
 
   const {
@@ -70,17 +88,25 @@ export const useAudioRecorderState = ({
   // Auto-start recording when component mounts if autoStart is true
   useEffect(() => {
     if (autoStart && !isRecording) {
-      console.log('🎙️ Auto-starting recording...');
-      startRecording();
+      console.log('🎙️ [AudioRecorderState] Auto-starting recording...');
+      startRecording().then(() => {
+        console.log('✅ [AudioRecorderState] Auto-start recording successful');
+      }).catch((error) => {
+        console.error('❌ [AudioRecorderState] Auto-start recording failed:', error);
+      });
     }
   }, [autoStart, isRecording, startRecording]);
 
   // Auto-restart recording if it stops unexpectedly during auto mode
   useEffect(() => {
     if (autoStart && !isRecording && !error) {
-      console.log('🔄 Recording stopped unexpectedly, restarting...');
+      console.log('🔄 [AudioRecorderState] Recording stopped unexpectedly, restarting...');
       const timer = setTimeout(() => {
-        startRecording();
+        startRecording().then(() => {
+          console.log('✅ [AudioRecorderState] Auto-restart recording successful');
+        }).catch((error) => {
+          console.error('❌ [AudioRecorderState] Auto-restart recording failed:', error);
+        });
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -88,22 +114,32 @@ export const useAudioRecorderState = ({
 
   // Notify parent of recording state changes
   useEffect(() => {
-    console.log('📡 Recording state changed:', isRecording);
-    onRecordingStateChange?.(isRecording);
+    console.log('📡 [AudioRecorderState] Recording state changed:', isRecording);
+    if (onRecordingStateChange) {
+      onRecordingStateChange(isRecording);
+      console.log('✅ [AudioRecorderState] Recording state callback executed');
+    }
   }, [isRecording, onRecordingStateChange]);
 
   // Log errors to console when they occur
   useEffect(() => {
     if (error) {
-      console.error('AudioRecorder error:', error);
+      console.error('❌ [AudioRecorderState] AudioRecorder error:', error);
     }
   }, [error]);
 
   const handleToggleRecording = async () => {
+    console.log('🎛️ [AudioRecorderState] Toggle recording requested, current state:', isRecording);
     if (isRecording) {
       stopRecording();
+      console.log('🛑 [AudioRecorderState] Stop recording called');
     } else {
-      await startRecording();
+      try {
+        await startRecording();
+        console.log('▶️ [AudioRecorderState] Start recording successful');
+      } catch (error) {
+        console.error('❌ [AudioRecorderState] Start recording failed:', error);
+      }
     }
   };
 

@@ -46,7 +46,7 @@ const JournalPage = () => {
 
   // Debug logging function
   const addDebugLog = useCallback((message: string) => {
-    console.log('🐛', message);
+    console.log('🐛 [Journal]', message);
   }, []);
 
   // Error handling
@@ -144,27 +144,31 @@ const JournalPage = () => {
     onError: (error) => handleError(error, 'STT')
   });
 
-  // Audio handling - FIXED: Ensure audio data is actually processed
+  // Audio handling - ENHANCED DEBUGGING
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
-    console.log('📤 Audio data received in Journal:', {
+    console.log('📤 [Journal] Audio data received:', {
       encodedAudioLength: encodedAudio.length,
       isSpeech,
       isSessionActive,
-      conversationState
+      conversationState,
+      hasStartedConversation,
+      encodedPreview: encodedAudio.substring(0, 50) + '...'
     });
 
     if (isSpeech && isSessionActive && encodedAudio && encodedAudio.length > 0) {
-      console.log('✅ Processing audio through STT...');
+      console.log('✅ [Journal] Processing audio through STT...');
       resetSessionTimeout();
       processAudio(encodedAudio, isSpeech, Date.now());
     } else {
-      console.log('⏭️ Skipping audio processing:', {
+      console.log('⏭️ [Journal] Skipping audio processing:', {
         isSpeech,
         isSessionActive,
-        hasAudioData: !!encodedAudio && encodedAudio.length > 0
+        hasAudioData: !!encodedAudio && encodedAudio.length > 0,
+        hasStartedConversation,
+        conversationState
       });
     }
-  }, [processAudio, isSessionActive, resetSessionTimeout, conversationState]);
+  }, [processAudio, isSessionActive, resetSessionTimeout, conversationState, hasStartedConversation]);
 
   const handleSpeechStart = useCallback(() => {
     addDebugLog(`User speech detected`);
@@ -246,6 +250,20 @@ const JournalPage = () => {
       setIsRecordingActive(true);
     }
   }, [hasStartedConversation, isLumiSpeaking, conversationState, isRecordingActive, addDebugLog]);
+
+  // Log all state changes for debugging
+  useEffect(() => {
+    console.log('🔍 [Journal] State update:', {
+      conversationState,
+      hasStartedConversation,
+      isSessionActive,
+      isRecordingActive,
+      isLumiSpeaking,
+      isSTTProcessing,
+      isLumiProcessing,
+      transcriptLength: transcript.length
+    });
+  }, [conversationState, hasStartedConversation, isSessionActive, isRecordingActive, isLumiSpeaking, isSTTProcessing, isLumiProcessing, transcript.length]);
 
   return (
     <div 
