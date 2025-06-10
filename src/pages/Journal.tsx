@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { ConversationsList } from '@/components/ConversationsList';
 import { Circle, CircleStop } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const JournalPage = () => {
   const { user, signOut } = useAuth();
@@ -29,9 +28,9 @@ const JournalPage = () => {
       {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-black/60"></div>
       
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-        {/* Simple sign out button in top right */}
-        <div className="absolute top-6 right-6">
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header with sign out button */}
+        <div className="flex justify-end p-6">
           <Button
             onClick={signOut}
             variant="ghost"
@@ -42,14 +41,14 @@ const JournalPage = () => {
           </Button>
         </div>
 
-        {/* Central conversation control */}
-        <div className="flex flex-col items-center space-y-12">
-          {/* Main conversation button */}
-          <div className="flex flex-col items-center space-y-6">
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col items-center px-4 pb-8">
+          {/* Central conversation control */}
+          <div className="flex flex-col items-center space-y-6 mb-12">
             <Button
               onClick={handleConversationToggle}
               className={`
-                w-32 h-32 rounded-full transition-all duration-300 
+                w-24 h-24 rounded-full transition-all duration-300 
                 ${isConversationActive 
                   ? 'bg-red-500/20 hover:bg-red-500/30 border-2 border-red-400 shadow-[0_0_30px_rgba(239,68,68,0.3)]' 
                   : 'bg-cyan-400/20 hover:bg-cyan-400/30 border-2 border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.3)]'
@@ -58,40 +57,31 @@ const JournalPage = () => {
               `}
             >
               {isConversationActive ? (
-                <CircleStop className="w-12 h-12 text-red-400" />
+                <CircleStop className="w-8 h-8 text-red-400" />
               ) : (
-                <Circle className="w-12 h-12 text-cyan-400" />
+                <Circle className="w-8 h-8 text-cyan-400" />
               )}
             </Button>
             
             <div className="text-center">
-              <h2 className="text-xl font-cinzel text-white mb-2">
+              <h2 className="text-lg font-cinzel text-white mb-1">
                 {isConversationActive ? 'Stop Conversation' : 'Begin Conversation'}
               </h2>
-              <p className="text-white/70 font-crimson">
+              <p className="text-white/70 font-crimson text-sm">
                 {isConversationActive ? 'Lumi is listening...' : 'Start your daily reflection with Lumi'}
               </p>
             </div>
           </div>
 
           {/* Journal entries section */}
-          <div className="w-full max-w-2xl space-y-4">
-            <h3 className="text-lg font-cinzel text-white/90 text-center mb-6">
+          <div className="w-full max-w-4xl flex-1">
+            <h3 className="text-xl font-cinzel text-white/90 text-center mb-6">
               Your Conversations
             </h3>
             
-            {/* Empty state for now */}
-            <Card className="bg-black/30 border-white/20 backdrop-blur-sm">
-              <CardContent className="p-8 text-center">
-                <div className="text-4xl mb-4">✨</div>
-                <h4 className="text-white font-crimson text-lg mb-2">
-                  Your journal awaits
-                </h4>
-                <p className="text-white/70 font-crimson">
-                  Each conversation with Lumi will appear here as a reflection entry
-                </p>
-              </CardContent>
-            </Card>
+            <div className="h-[calc(100vh-400px)]">
+              <ConversationsList />
+            </div>
           </div>
         </div>
       </div>
