@@ -1,9 +1,9 @@
-
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useConversations } from '@/hooks/useConversations';
 import { ConversationEntry } from './ConversationEntry';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, MessageSquare } from 'lucide-react';
+import { AudioRecorder } from '@/components/AudioRecorder';
 
 export const ConversationsList: React.FC = () => {
   const { conversations, loading, hasMore, loadMore } = useConversations();
@@ -20,6 +20,21 @@ export const ConversationsList: React.FC = () => {
     
     if (node) observerRef.current.observe(node);
   }, [loading, hasMore, loadMore]);
+
+  const handleAudioData = useCallback((encodedAudio, isSpeech) => {
+    console.log('Audio data received:', { encodedAudio, isSpeech });
+    // ...existing code
+  }, [processAudio, isSessionActive, resetSessionTimeout]);
+
+  const handleSpeechStart = useCallback(() => {
+    console.log('Speech started');
+    // ...existing code
+  }, [...]);
+
+  const handleSpeechEnd = useCallback(() => {
+    console.log('Speech ended');
+    // ...existing code
+  }, [...]);
 
   if (loading && conversations.length === 0) {
     return (
@@ -75,6 +90,9 @@ export const ConversationsList: React.FC = () => {
             </p>
           </div>
         )}
+      </div>
+      <div>
+        <AudioRecorder ... />
       </div>
     </ScrollArea>
   );
