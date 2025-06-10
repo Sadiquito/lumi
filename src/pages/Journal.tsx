@@ -269,6 +269,7 @@ const JournalPage = () => {
     <div 
       className="min-h-screen relative"
       style={{
+        backgroundColor: 'rgb(15, 23, 42)', // Explicit background to prevent flash
         backgroundImage: `url('/lovable-uploads/1e779805-c108-43d4-b827-10df1f9b34e9.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -285,7 +286,8 @@ const JournalPage = () => {
             onClick={signOut}
             variant="ghost"
             size="sm"
-            className="text-white/80 hover:text-white hover:bg-white/10 font-crimson"
+            style={{ color: 'rgba(255, 255, 255, 0.8)' }} // Explicit white to prevent flash
+            className="hover:text-white hover:bg-white/10 font-crimson"
           >
             Sign Out
           </Button>
@@ -314,10 +316,10 @@ const JournalPage = () => {
             </Button>
             
             <div className="text-center space-y-4">
-              <h2 className="text-lg font-cinzel text-white mb-1">
+              <h2 className="text-lg font-cinzel mb-1" style={{ color: '#ffffff' }}>
                 {hasStartedConversation ? 'End Conversation' : 'Begin Conversation'}
               </h2>
-              <p className="text-white/70 font-crimson text-sm">
+              <p className="font-crimson text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 {hasStartedConversation ? 'Lumi is listening...' : 'Start your daily reflection with Lumi'}
               </p>
             </div>
@@ -369,7 +371,7 @@ const JournalPage = () => {
 
           {/* Journal entries section */}
           <div className="w-full max-w-4xl flex-1">
-            <h3 className="text-xl font-cinzel text-white/90 text-center mb-6">
+            <h3 className="text-xl font-cinzel text-center mb-6" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
               Your Conversations
             </h3>
             
