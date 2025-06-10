@@ -23,7 +23,7 @@ const Index = () => {
   // Landing page for unauthenticated users
   return (
     <div 
-      className="min-h-screen relative flex items-center justify-center"
+      className="min-h-screen relative flex items-center justify-center pt-16 md:pt-0"
       style={{
         backgroundImage: `url('/lovable-uploads/8c8842f2-3e9e-4b69-9310-31278ea82e3b.png')`,
         backgroundSize: 'cover',
