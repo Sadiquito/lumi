@@ -105,8 +105,8 @@ const Index = () => {
           </div>
           
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-amber-400/20 to-orange-500/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
-              <svg className="w-8 h-8 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-lumi-sage/30 to-lumi-mist/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-lumi-sage/50 shadow-[0_0_20px_rgba(156,163,175,0.15)]">
+              <svg className="w-8 h-8 text-lumi-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth={1.5} />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 <circle cx="12" cy="12" r="2" fill="currentColor" className="animate-pulse" opacity="0.6" />

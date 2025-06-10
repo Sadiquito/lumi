@@ -74,6 +74,8 @@ export default {
 					lavender: 'hsl(var(--lumi-lavender))',
 					peach: 'hsl(var(--lumi-peach))',
 					starlight: 'hsl(var(--lumi-starlight))',
+					sage: 'hsl(var(--lumi-sage))',
+					mist: 'hsl(var(--lumi-mist))',
 				}
 			},
 			borderRadius: {

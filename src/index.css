@@ -47,12 +47,14 @@
     --sidebar-border: 226 232 240;
     --sidebar-ring: 165 180 252;
 
-    /* Custom Lumi colors - updated to be more neutral and soothing */
+    /* Custom Lumi colors - completely neutral and soothing palette */
     --lumi-cosmic: 30 41 59;
     --lumi-twilight: 71 85 105;
     --lumi-lavender: 165 180 252;
     --lumi-peach: 248 250 252;
     --lumi-starlight: 241 245 249;
+    --lumi-sage: 156 163 175;
+    --lumi-mist: 229 231 235;
   }
 
   .dark {
@@ -92,6 +94,10 @@
     --sidebar-accent-foreground: 248 250 252;
     --sidebar-border: 30 41 59;
     --sidebar-ring: 165 180 252;
+
+    /* Dark mode versions of neutral colors */
+    --lumi-sage: 107 114 128;
+    --lumi-mist: 55 65 81;
   }
 }
 
