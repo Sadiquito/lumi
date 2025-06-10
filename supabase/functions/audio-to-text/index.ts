@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🎤 Audio-to-text function called');
+    console.log('🎤 Audio-to-text function called (AssemblyAI)');
     
     const { audioData, isSpeech, timestamp } = await req.json()
 
@@ -43,13 +43,13 @@ serve(async (req) => {
       )
     }
 
-    console.log('🔊 Processing speech chunk, converting base64 to binary...');
+    console.log('🔊 Processing speech chunk with AssemblyAI...');
 
     // Convert base64 to binary
     const binaryAudio = Uint8Array.from(atob(audioData), c => c.charCodeAt(0))
     console.log('✅ Base64 converted to binary, size:', binaryAudio.length, 'bytes');
 
-    // Check if audio is too small or too large
+    // Check if audio is too small
     if (binaryAudio.length < 1000) {
       console.log('⚠️ Audio chunk too small, skipping');
       return new Response(
@@ -63,53 +63,54 @@ serve(async (req) => {
       )
     }
 
-    if (binaryAudio.length > 25000000) { // 25MB limit
-      console.log('⚠️ Audio chunk too large, truncating');
-      const truncatedAudio = binaryAudio.slice(0, 25000000);
-      console.log('✂️ Truncated audio to:', truncatedAudio.length, 'bytes');
+    const assemblyApiKey = Deno.env.get('ASSEMBLYAI_API_KEY');
+    if (!assemblyApiKey) {
+      console.error('❌ ASSEMBLYAI_API_KEY not found in environment');
+      throw new Error('AssemblyAI API key not configured');
     }
 
-    // Prepare form data for Deepgram - send raw PCM data
+    console.log('✅ AssemblyAI API key found, making request...');
+
+    // Prepare form data for AssemblyAI
     const formData = new FormData()
     const audioBlob = new Blob([binaryAudio], { type: 'audio/raw' })
     formData.append('audio', audioBlob, 'audio.raw')
 
-    console.log('📡 Sending request to Deepgram API...');
-
-    const deepgramApiKey = Deno.env.get('DEEPGRAM_API_KEY');
-    if (!deepgramApiKey) {
-      console.error('❌ DEEPGRAM_API_KEY not found in environment');
-      throw new Error('Deepgram API key not configured');
-    }
-
-    console.log('✅ Deepgram API key found, making request...');
-
-    const deepgramStartTime = Date.now();
+    const assemblyStartTime = Date.now();
 
     // Use AbortController for timeout handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
     try {
-      // Send to Deepgram with raw PCM format and shorter timeout
-      const deepgramResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=en-US&smart_format=true&punctuate=true&diarize=false&encoding=linear16&sample_rate=24000&channels=1', {
+      console.log('📡 Sending request to AssemblyAI API...');
+
+      // Send to AssemblyAI with raw PCM format
+      const assemblyResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${deepgramApiKey}`,
+          'Authorization': assemblyApiKey,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({
+          audio_url: `data:audio/raw;base64,${audioData}`,
+          speech_model: 'best',
+          language_detection: true,
+          punctuate: true,
+          format_text: true,
+        }),
         signal: controller.signal
       })
 
       clearTimeout(timeoutId);
-      const deepgramTime = Date.now() - deepgramStartTime;
-      console.log('📡 Deepgram response received in', deepgramTime, 'ms, status:', deepgramResponse.status);
+      const assemblyTime = Date.now() - assemblyStartTime;
+      console.log('📡 AssemblyAI response received in', assemblyTime, 'ms, status:', assemblyResponse.status);
 
-      if (!deepgramResponse.ok) {
-        const errorText = await deepgramResponse.text()
-        console.error('❌ Deepgram API error:', {
-          status: deepgramResponse.status,
-          statusText: deepgramResponse.statusText,
+      if (!assemblyResponse.ok) {
+        const errorText = await assemblyResponse.text()
+        console.error('❌ AssemblyAI API error:', {
+          status: assemblyResponse.status,
+          statusText: assemblyResponse.statusText,
           errorText
         });
         
@@ -120,22 +121,32 @@ serve(async (req) => {
             isFinal: false, 
             confidence: 0,
             isSpeech: false,
-            error: `Deepgram error: ${deepgramResponse.status}`
+            error: `AssemblyAI error: ${assemblyResponse.status}`
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      const result = await deepgramResponse.json()
-      console.log('✅ Deepgram JSON parsed:', {
-        hasResults: !!result.results,
-        channelsCount: result.results?.channels?.length || 0,
-        alternativesCount: result.results?.channels?.[0]?.alternatives?.length || 0
+      const result = await assemblyResponse.json()
+      console.log('✅ AssemblyAI JSON parsed:', {
+        hasId: !!result.id,
+        status: result.status,
+        hasText: !!result.text
       });
 
-      // Extract transcript from Deepgram response
-      const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
-      const confidence = result.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0
+      // For real-time, we need to poll for the result if it's still processing
+      let transcript = '';
+      let confidence = 0;
+      
+      if (result.status === 'completed') {
+        transcript = result.text || '';
+        confidence = result.confidence || 0.8;
+      } else if (result.id) {
+        // Poll for result if still processing
+        const pollResult = await pollForTranscript(result.id, assemblyApiKey);
+        transcript = pollResult.text || '';
+        confidence = pollResult.confidence || 0.8;
+      }
 
       console.log('📝 Extracted transcript:', {
         transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
@@ -163,14 +174,14 @@ serve(async (req) => {
       clearTimeout(timeoutId);
       
       if (fetchError.name === 'AbortError') {
-        console.error('❌ Deepgram request timed out after 8 seconds');
+        console.error('❌ AssemblyAI request timed out after 8 seconds');
         return new Response(
           JSON.stringify({ 
             transcript: '', 
             isFinal: false, 
             confidence: 0,
             isSpeech: false,
-            error: 'Deepgram timeout'
+            error: 'AssemblyAI timeout'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
@@ -202,3 +213,36 @@ serve(async (req) => {
     )
   }
 })
+
+// Helper function to poll for transcript result
+async function pollForTranscript(transcriptId: string, apiKey: string, maxAttempts = 10): Promise<any> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`🔄 Polling AssemblyAI transcript ${transcriptId}, attempt ${attempt + 1}`);
+    
+    const response = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+      headers: {
+        'Authorization': apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('❌ Error polling transcript:', response.status);
+      break;
+    }
+
+    const result = await response.json();
+    
+    if (result.status === 'completed') {
+      console.log('✅ Transcript completed');
+      return result;
+    } else if (result.status === 'error') {
+      console.error('❌ Transcript failed:', result.error);
+      break;
+    }
+
+    // Wait before next poll (shorter interval for real-time feel)
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return { text: '', confidence: 0 };
+}
