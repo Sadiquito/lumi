@@ -31,6 +31,7 @@ const JournalPage = () => {
   const [conversationState, setConversationState] = useState<ConversationState>('idle');
   const [currentAudioData, setCurrentAudioData] = useState<Float32Array | undefined>();
   const [hasStartedConversation, setHasStartedConversation] = useState(false);
+  const [isRecordingActive, setIsRecordingActive] = useState(false);
 
   // Session Management
   const { 
@@ -180,6 +181,11 @@ const JournalPage = () => {
     setCurrentAudioData(audioData);
   }, []);
 
+  const handleRecordingStateChange = useCallback((isRecording: boolean) => {
+    addDebugLog(`Recording state changed: ${isRecording}`);
+    setIsRecordingActive(isRecording);
+  }, [addDebugLog]);
+
   // Start conversation (Lumi speaks first)
   const handleStartConversation = useCallback(async () => {
     if (!hasStartedConversation) {
@@ -188,7 +194,7 @@ const JournalPage = () => {
       setConversationState('listening');
       setTranscript([]);
       
-      addDebugLog('Conversation started - Lumi will speak first');
+      addDebugLog('Conversation started - Lumi will speak first, then start recording');
       
       // Lumi's opening message
       const openingMessage = "Hello! What's on your mind?";
@@ -209,6 +215,7 @@ const JournalPage = () => {
         setConversationState('ending_session');
         addDebugLog('Ending session...');
         
+        setIsRecordingActive(false);
         await endSession();
         setConversationState('idle');
         setCurrentUserText('');
@@ -218,9 +225,13 @@ const JournalPage = () => {
     }
   }, [hasStartedConversation, startSession, endSession, isSessionActive, addDebugLog, speakText, addToTranscript]);
 
-  const handleRecordingStateChange = useCallback((isRecording: boolean) => {
-    // This is handled by the start/stop conversation button
-  }, []);
+  // Start recording when Lumi finishes speaking her opening message
+  useEffect(() => {
+    if (hasStartedConversation && !isLumiSpeaking && conversationState === 'listening' && !isRecordingActive) {
+      addDebugLog('Lumi finished speaking, starting recording...');
+      setIsRecordingActive(true);
+    }
+  }, [hasStartedConversation, isLumiSpeaking, conversationState, isRecordingActive, addDebugLog]);
 
   return (
     <div 
@@ -302,16 +313,11 @@ const JournalPage = () => {
                     <div className={`w-3 h-3 rounded-full ${isLumiSpeaking ? 'bg-orange-500 animate-pulse' : 'bg-white/20'}`} />
                     <span>Lumi</span>
                   </div>
-                </div>
-
-                {/* Hidden audio recorder for functionality */}
-                <div className="hidden">
-                  <AudioRecorder
-                    onAudioData={handleAudioData}
-                    onSpeechStart={handleSpeechStart}
-                    onSpeechEnd={handleSpeechEnd}
-                    onRecordingStateChange={handleRecordingStateChange}
-                  />
+                  
+                  <div className={`flex items-center space-x-2 ${isRecordingActive ? 'text-blue-400' : 'text-white/40'}`}>
+                    <div className={`w-3 h-3 rounded-full ${isRecordingActive ? 'bg-blue-500 animate-pulse' : 'bg-white/20'}`} />
+                    <span>Recording</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -341,6 +347,18 @@ const JournalPage = () => {
           </div>
         </div>
       </div>
+
+      {/* AudioRecorder component - now properly controlled */}
+      {hasStartedConversation && (
+        <div className="absolute bottom-0 left-0 w-1 h-1 overflow-hidden opacity-0 pointer-events-none">
+          <AudioRecorder
+            onAudioData={handleAudioData}
+            onSpeechStart={handleSpeechStart}
+            onSpeechEnd={handleSpeechEnd}
+            onRecordingStateChange={handleRecordingStateChange}
+          />
+        </div>
+      )}
     </div>
   );
 };

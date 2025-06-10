@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAudioRecorder, AudioChunk } from '@/hooks/useAudioRecorder';
 import { encodeAudioForTransmission } from '@/utils/audioUtils';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ interface AudioRecorderProps {
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
   onRecordingStateChange?: (isRecording: boolean) => void;
+  autoStart?: boolean;
 }
 
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({
@@ -18,6 +19,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   onSpeechStart,
   onSpeechEnd,
   onRecordingStateChange,
+  autoStart = true,
 }) => {
   const handleAudioChunk = useCallback((chunk: AudioChunk) => {
     console.log('Audio chunk received:', {
@@ -58,13 +60,24 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   });
 
+  // Auto-start recording when component mounts if autoStart is true
+  useEffect(() => {
+    if (autoStart && !isRecording) {
+      console.log('Auto-starting recording...');
+      startRecording();
+    }
+  }, [autoStart, isRecording, startRecording]);
+
+  // Notify parent of recording state changes
+  useEffect(() => {
+    onRecordingStateChange?.(isRecording);
+  }, [isRecording, onRecordingStateChange]);
+
   const handleToggleRecording = async () => {
     if (isRecording) {
       stopRecording();
-      onRecordingStateChange?.(false);
     } else {
       await startRecording();
-      onRecordingStateChange?.(true);
     }
   };
 
