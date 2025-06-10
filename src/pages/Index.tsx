@@ -40,8 +40,7 @@ const Index = () => {
           <h1 
             className="text-6xl md:text-7xl font-cinzel font-bold text-lumi-starlight tracking-wider"
             style={{
-              textShadow: '0 0 30px rgba(248, 250, 252, 0.8), 0 0 60px rgba(248, 250, 252, 0.4), 0 0 90px rgba(248, 250, 252, 0.2)',
-              filter: 'blur(0.3px)'
+              textShadow: '0 0 30px rgba(248, 250, 252, 0.8), 0 0 60px rgba(248, 250, 252, 0.4), 0 0 90px rgba(248, 250, 252, 0.2)'
             }}
           >
             LUMI
