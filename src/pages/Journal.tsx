@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -106,7 +107,7 @@ const JournalPage = () => {
     onLumiResponse: handleLumiResponse
   });
 
-  // CRITICAL STT Result Handler - This must work correctly
+  // CRITICAL STT Result Handler
   const handleSTTResult = useCallback((result: any) => {
     console.log('🎯 [Journal] STT Result received in Journal:', {
       transcript: result.transcript,
@@ -169,26 +170,31 @@ const JournalPage = () => {
     onError: (error) => handleError(error, 'STT')
   });
 
-  // Audio handling
+  // FIXED: Audio handling - ensure proper connection to STT
   const handleAudioData = useCallback((encodedAudio: string, isSpeech: boolean) => {
-    console.log('📤 [Journal] Audio data received:', {
-      encodedAudioLength: encodedAudio.length,
+    console.log('📤 [Journal] Audio data received for STT processing:', {
+      encodedAudioLength: encodedAudio?.length || 0,
       isSpeech,
       isSessionActive,
       conversationState,
       hasStartedConversation
     });
 
+    // Only process speech audio when session is active
     if (isSpeech && isSessionActive && hasStartedConversation && encodedAudio && encodedAudio.length > 0) {
-      console.log('✅ [Journal] Processing speech audio through STT...');
+      console.log('✅ [Journal] Sending audio to STT processAudio...');
       resetSessionTimeout();
+      
+      // CRITICAL: Call processAudio directly with proper parameters
       processAudio(encodedAudio, isSpeech, Date.now());
+      
     } else {
       console.log('⏭️ [Journal] Skipping audio processing:', {
         isSpeech,
         isSessionActive,
         hasStartedConversation,
-        hasAudioData: !!encodedAudio && encodedAudio.length > 0
+        hasAudioData: !!encodedAudio && encodedAudio.length > 0,
+        reason: !isSpeech ? 'not speech' : !isSessionActive ? 'session not active' : !hasStartedConversation ? 'conversation not started' : 'no audio data'
       });
     }
   }, [processAudio, isSessionActive, resetSessionTimeout, conversationState, hasStartedConversation]);
@@ -345,7 +351,7 @@ const JournalPage = () => {
           </div>
         </div>
 
-        {/* AudioRecorder component - now properly controlled and ALWAYS active when conversation started */}
+        {/* AudioRecorder component - ALWAYS active when conversation started */}
         {hasStartedConversation && (
           <div className="absolute bottom-0 left-0 w-1 h-1 overflow-hidden opacity-0 pointer-events-none">
             <AudioRecorder
