@@ -47,11 +47,11 @@
     --sidebar-border: 226 232 240;
     --sidebar-ring: 56 189 248;
 
-    /* Cosmic color scheme matching the screenshot */
+    /* Cosmic theme from reference image */
     --lumi-cosmic: 15 23 42;        /* Deep space blue-black */
     --lumi-twilight: 30 41 59;      /* Darker cosmic blue */
     --lumi-nebula: 51 65 85;        /* Medium cosmic blue */
-    --lumi-cyan: 34 211 238;        /* Bright cyan like "SUPERINTELLIGENCE" */
+    --lumi-cyan: 34 211 238;        /* Bright cyan for "SUPERINTELLIGENCE" */
     --lumi-starlight: 248 250 252;  /* Pure white for main text */
     --lumi-lavender: 139 92 246;    /* Purple accent for cosmic feel */
     --lumi-sage: 156 163 175;       /* Muted gray for secondary text */
