@@ -6,6 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to create WAV header
+function createWavHeader(dataLength: number, sampleRate: number = 24000, channels: number = 1, bitsPerSample: number = 16): Uint8Array {
+  const byteRate = sampleRate * channels * bitsPerSample / 8;
+  const blockAlign = channels * bitsPerSample / 8;
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+
+  // RIFF header
+  view.setUint32(0, 0x52494646, false); // "RIFF"
+  view.setUint32(4, 36 + dataLength, true); // File size
+  view.setUint32(8, 0x57415645, false); // "WAVE"
+
+  // Format chunk
+  view.setUint32(12, 0x666d7420, false); // "fmt "
+  view.setUint32(16, 16, true); // Chunk size
+  view.setUint16(20, 1, true); // Audio format (PCM)
+  view.setUint16(22, channels, true); // Number of channels
+  view.setUint32(24, sampleRate, true); // Sample rate
+  view.setUint32(28, byteRate, true); // Byte rate
+  view.setUint16(32, blockAlign, true); // Block align
+  view.setUint16(34, bitsPerSample, true); // Bits per sample
+
+  // Data chunk
+  view.setUint32(36, 0x64617461, false); // "data"
+  view.setUint32(40, dataLength, true); // Data size
+
+  return new Uint8Array(header);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -69,16 +98,24 @@ serve(async (req) => {
       throw new Error('AssemblyAI API key not configured');
     }
 
-    console.log('✅ AssemblyAI API key found, uploading audio file...');
+    console.log('✅ AssemblyAI API key found, creating WAV file...');
+
+    // Create proper WAV file
+    const wavHeader = createWavHeader(binaryAudio.length);
+    const wavFile = new Uint8Array(wavHeader.length + binaryAudio.length);
+    wavFile.set(wavHeader, 0);
+    wavFile.set(binaryAudio, wavHeader.length);
+
+    console.log('🎵 Created WAV file, total size:', wavFile.length, 'bytes');
 
     const assemblyStartTime = Date.now();
 
     // Step 1: Upload the audio file to AssemblyAI
     const uploadFormData = new FormData()
-    const audioBlob = new Blob([binaryAudio], { type: 'audio/webm' })
-    uploadFormData.append('audio', audioBlob, 'audio.webm')
+    const audioBlob = new Blob([wavFile], { type: 'audio/wav' })
+    uploadFormData.append('audio', audioBlob, 'audio.wav')
 
-    console.log('📤 Uploading audio file to AssemblyAI...');
+    console.log('📤 Uploading WAV audio file to AssemblyAI...');
 
     const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
