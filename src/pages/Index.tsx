@@ -25,7 +25,7 @@ const Index = () => {
     <div 
       className="min-h-screen relative flex items-center justify-center pt-16 md:pt-0"
       style={{
-        backgroundImage: `url('/lovable-uploads/c9b9d83a-1c65-462b-94b8-a61831effb6a.png')`,
+        backgroundImage: `url('/lovable-uploads/bdc3bda7-af34-486a-bbfa-a981143b27c6.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -83,7 +83,7 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Feature highlights with cosmic theme */}
+        {/* Feature highlights with clean cosmic theme */}
         <div className="grid md:grid-cols-3 gap-8 mt-16">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 mx-auto bg-gradient-to-br from-lumi-cyan/30 to-lumi-lavender/30 rounded-full flex items-center justify-center backdrop-blur-sm border border-lumi-cyan/40 shadow-[0_0_25px_rgba(34,211,238,0.25)]">

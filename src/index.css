@@ -47,7 +47,7 @@
     --sidebar-border: 226 232 240;
     --sidebar-ring: 56 189 248;
 
-    /* Cosmic theme from reference image */
+    /* Clean cosmic theme - NO YELLOW ANYWHERE */
     --lumi-cosmic: 15 23 42;        /* Deep space blue-black */
     --lumi-twilight: 30 41 59;      /* Darker cosmic blue */
     --lumi-nebula: 51 65 85;        /* Medium cosmic blue */
@@ -96,7 +96,7 @@
     --sidebar-border: 30 41 59;
     --sidebar-ring: 56 189 248;
 
-    /* Dark mode versions maintain cosmic theme */
+    /* Dark mode versions maintain clean cosmic theme - NO YELLOW */
     --lumi-sage: 107 114 128;
     --lumi-mist: 55 65 81;
   }
@@ -112,7 +112,7 @@
   }
 }
 
-/* Custom animations */
+/* Custom animations - clean and minimal */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
