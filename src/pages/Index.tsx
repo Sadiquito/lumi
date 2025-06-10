@@ -9,8 +9,22 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-lumi-cosmic">
-        <div className="animate-pulse text-lg text-lumi-starlight">Loading...</div>
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          backgroundColor: 'rgb(15, 23, 42)', // Explicit cosmic color to prevent flash
+          backgroundImage: `url('/lovable-uploads/bdc3bda7-af34-486a-bbfa-a981143b27c6.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        <div 
+          className="animate-pulse text-lg"
+          style={{ color: '#ffffff' }} // Explicit white to prevent yellow flash
+        >
+          Loading...
+        </div>
       </div>
     );
   }
@@ -25,6 +39,7 @@ const Index = () => {
     <div 
       className="min-h-screen relative flex items-center justify-center pt-16 md:pt-0"
       style={{
+        backgroundColor: 'rgb(15, 23, 42)', // Explicit background to prevent flash
         backgroundImage: `url('/lovable-uploads/bdc3bda7-af34-486a-bbfa-a981143b27c6.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
