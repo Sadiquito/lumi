@@ -71,9 +71,10 @@ export default {
 				lumi: {
 					cosmic: 'hsl(var(--lumi-cosmic))',
 					twilight: 'hsl(var(--lumi-twilight))',
-					lavender: 'hsl(var(--lumi-lavender))',
-					peach: 'hsl(var(--lumi-peach))',
+					nebula: 'hsl(var(--lumi-nebula))',
+					cyan: 'hsl(var(--lumi-cyan))',
 					starlight: 'hsl(var(--lumi-starlight))',
+					lavender: 'hsl(var(--lumi-lavender))',
 					sage: 'hsl(var(--lumi-sage))',
 					mist: 'hsl(var(--lumi-mist))',
 				}

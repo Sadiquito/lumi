@@ -17,8 +17,8 @@
     --popover: 255 255 255;
     --popover-foreground: 51 65 85;
 
-    --primary: 165 180 252;
-    --primary-foreground: 30 41 59;
+    --primary: 56 189 248;
+    --primary-foreground: 15 23 42;
 
     --secondary: 248 250 252;
     --secondary-foreground: 71 85 105;
@@ -26,35 +26,36 @@
     --muted: 248 250 252;
     --muted-foreground: 100 116 139;
 
-    --accent: 165 180 252;
-    --accent-foreground: 30 41 59;
+    --accent: 56 189 248;
+    --accent-foreground: 15 23 42;
 
     --destructive: 239 68 68;
     --destructive-foreground: 248 250 252;
 
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 165 180 252;
+    --ring: 56 189 248;
 
     --radius: 0.75rem;
 
     --sidebar-background: 255 255 255;
     --sidebar-foreground: 51 65 85;
-    --sidebar-primary: 165 180 252;
-    --sidebar-primary-foreground: 30 41 59;
+    --sidebar-primary: 56 189 248;
+    --sidebar-primary-foreground: 15 23 42;
     --sidebar-accent: 248 250 252;
     --sidebar-accent-foreground: 51 65 85;
     --sidebar-border: 226 232 240;
-    --sidebar-ring: 165 180 252;
+    --sidebar-ring: 56 189 248;
 
-    /* Custom Lumi colors - completely neutral and soothing palette */
-    --lumi-cosmic: 30 41 59;
-    --lumi-twilight: 71 85 105;
-    --lumi-lavender: 165 180 252;
-    --lumi-peach: 248 250 252;
-    --lumi-starlight: 241 245 249;
-    --lumi-sage: 156 163 175;
-    --lumi-mist: 229 231 235;
+    /* Cosmic color scheme matching the screenshot */
+    --lumi-cosmic: 15 23 42;        /* Deep space blue-black */
+    --lumi-twilight: 30 41 59;      /* Darker cosmic blue */
+    --lumi-nebula: 51 65 85;        /* Medium cosmic blue */
+    --lumi-cyan: 34 211 238;        /* Bright cyan like "SUPERINTELLIGENCE" */
+    --lumi-starlight: 248 250 252;  /* Pure white for main text */
+    --lumi-lavender: 139 92 246;    /* Purple accent for cosmic feel */
+    --lumi-sage: 156 163 175;       /* Muted gray for secondary text */
+    --lumi-mist: 203 213 225;       /* Light gray for subtle elements */
   }
 
   .dark {
@@ -67,7 +68,7 @@
     --popover: 15 23 42;
     --popover-foreground: 248 250 252;
 
-    --primary: 165 180 252;
+    --primary: 56 189 248;
     --primary-foreground: 15 23 42;
 
     --secondary: 30 41 59;
@@ -84,18 +85,18 @@
 
     --border: 30 41 59;
     --input: 30 41 59;
-    --ring: 165 180 252;
+    --ring: 56 189 248;
 
     --sidebar-background: 15 23 42;
     --sidebar-foreground: 248 250 252;
-    --sidebar-primary: 165 180 252;
+    --sidebar-primary: 56 189 248;
     --sidebar-primary-foreground: 15 23 42;
     --sidebar-accent: 30 41 59;
     --sidebar-accent-foreground: 248 250 252;
     --sidebar-border: 30 41 59;
-    --sidebar-ring: 165 180 252;
+    --sidebar-ring: 56 189 248;
 
-    /* Dark mode versions of neutral colors */
+    /* Dark mode versions maintain cosmic theme */
     --lumi-sage: 107 114 128;
     --lumi-mist: 55 65 81;
   }
@@ -136,7 +137,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(165, 180, 252, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
