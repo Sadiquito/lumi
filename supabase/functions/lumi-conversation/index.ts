@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -19,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userTranscript, userId, conversationId } = await req.json();
+    const { userTranscript, userId, conversationId, isSessionEnd = false } = await req.json();
 
     if (!userTranscript || !userId) {
       throw new Error('Missing required parameters');
@@ -28,13 +27,14 @@ serve(async (req) => {
     console.log('Processing conversation:', {
       userId,
       conversationId,
-      transcriptLength: userTranscript.length
+      transcriptLength: userTranscript.length,
+      isSessionEnd
     });
 
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user profile
+    // Get user profile with psychological insights
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('psychological_profile, conversation_preferences')
@@ -60,7 +60,10 @@ serve(async (req) => {
       }
     }
 
-    // Build system prompt
+    // Extract top psychological insights for context
+    const memoryInsights = extractTopInsights(profile?.psychological_profile || {});
+
+    // Build system prompt with memory context
     const systemPrompt = `You are Lumi, an emotionally intelligent AI companion designed for introspective conversations. Your core traits:
 
 - Emotionally neutral yet warmly present
@@ -70,8 +73,10 @@ serve(async (req) => {
 - You reflect back what you hear to help users process their emotions
 - You maintain appropriate boundaries as an AI companion
 
-User's psychological profile: ${JSON.stringify(profile?.psychological_profile || {})}
 User's conversation preferences: ${JSON.stringify(profile?.conversation_preferences || {})}
+
+Key psychological insights from previous sessions:
+${memoryInsights.map(insight => `- ${insight}`).join('\n')}
 
 Recent conversation context: ${conversationHistory.slice(-10).map((entry: any) => `${entry.speaker}: ${entry.text}`).join('\n')}
 
@@ -109,21 +114,26 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
 
     console.log('Generated Lumi response:', lumiResponse);
 
-    // Extract psychological insights (simple keyword analysis for now)
-    const insights = extractPsychologicalInsights(userTranscript);
+    // If this is a session end, perform comprehensive session analysis
+    if (isSessionEnd && conversationHistory.length > 0) {
+      await performSessionAnalysis(supabase, userId, conversationHistory, profile?.psychological_profile || {});
+    } else {
+      // For ongoing conversation, do lightweight insight extraction
+      const insights = extractPsychologicalInsights(userTranscript);
+      
+      // Update user profile with new insights
+      const updatedProfile = {
+        ...profile?.psychological_profile,
+        lastInteraction: new Date().toISOString(),
+        totalInteractions: (profile?.psychological_profile?.totalInteractions || 0) + 1,
+        ...insights
+      };
 
-    // Update user profile with new insights
-    const updatedProfile = {
-      ...profile?.psychological_profile,
-      lastInteraction: new Date().toISOString(),
-      totalInteractions: (profile?.psychological_profile?.totalInteractions || 0) + 1,
-      ...insights
-    };
-
-    await supabase
-      .from('profiles')
-      .update({ psychological_profile: updatedProfile })
-      .eq('id', userId);
+      await supabase
+        .from('profiles')
+        .update({ psychological_profile: updatedProfile })
+        .eq('id', userId);
+    }
 
     // Generate follow-up question (occasionally)
     const shouldAskFollowUp = Math.random() < 0.3; // 30% chance
@@ -133,7 +143,6 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
       JSON.stringify({
         response: lumiResponse,
         followUpQuestion,
-        insights: insights,
         conversationId
       }),
       {
@@ -153,13 +162,203 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
   }
 });
 
+async function performSessionAnalysis(supabase: any, userId: string, conversationHistory: any[], currentProfile: any) {
+  try {
+    console.log('Performing comprehensive session analysis...');
+    
+    // Prepare full session transcript for analysis
+    const fullTranscript = conversationHistory
+      .map((entry: any) => `${entry.speaker}: ${entry.text}`)
+      .join('\n');
+
+    // Analyze session using GPT-4o
+    const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a psychological analyst. Analyze this conversation session and extract key insights in JSON format:
+            {
+              "emotionalTone": "string (primary emotional state)",
+              "majorConcerns": ["array of main concerns/topics"],
+              "reflectiveThemes": ["recurring patterns or insights"],
+              "growthAreas": ["areas for personal development"],
+              "copingStrategies": ["observed coping mechanisms"],
+              "energyLevel": "string (high/medium/low)",
+              "selfAwareness": "string (high/medium/low)",
+              "sessionSummary": "2-3 sentence summary of the session"
+            }`
+          },
+          {
+            role: 'user',
+            content: `Analyze this conversation session:\n\n${fullTranscript}`
+          }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!analysisResponse.ok) {
+      throw new Error('Failed to analyze session');
+    }
+
+    const analysisResult = await analysisResponse.json();
+    const sessionInsights = JSON.parse(analysisResult.choices[0].message.content);
+
+    // Apply weighted memory logic
+    const updatedProfile = applyWeightedMemory(currentProfile, sessionInsights);
+
+    // Update the profile with comprehensive analysis
+    await supabase
+      .from('profiles')
+      .update({ psychological_profile: updatedProfile })
+      .eq('id', userId);
+
+    console.log('Session analysis completed and profile updated');
+
+  } catch (error) {
+    console.error('Error in session analysis:', error);
+  }
+}
+
+function applyWeightedMemory(currentProfile: any, sessionInsights: any): any {
+  const now = new Date().toISOString();
+  
+  // Initialize profile structure if empty
+  if (!currentProfile.sessions) {
+    currentProfile.sessions = [];
+  }
+  if (!currentProfile.aggregatedInsights) {
+    currentProfile.aggregatedInsights = {
+      dominantEmotions: {},
+      recurringThemes: {},
+      copingStrategies: {},
+      growthAreas: {},
+      lastUpdated: now
+    };
+  }
+
+  // Add new session with timestamp
+  const newSession = {
+    ...sessionInsights,
+    timestamp: now,
+    recency: 'recent' // Will be updated in the weighting process
+  };
+
+  currentProfile.sessions.push(newSession);
+
+  // Keep only last 50 sessions to prevent bloat
+  if (currentProfile.sessions.length > 50) {
+    currentProfile.sessions = currentProfile.sessions.slice(-50);
+  }
+
+  // Apply temporal weights: 70% recent (last 7 days), 20% medium (7-30 days), 10% long-term (30+ days)
+  const cutoffRecent = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const cutoffMedium = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const weightedInsights = {
+    dominantEmotions: {},
+    recurringThemes: {},
+    copingStrategies: {},
+    growthAreas: {},
+    lastUpdated: now
+  };
+
+  // Process each session with appropriate weight
+  currentProfile.sessions.forEach((session: any) => {
+    const sessionDate = new Date(session.timestamp);
+    let weight = 0.1; // long-term weight
+
+    if (sessionDate > cutoffRecent) {
+      weight = 0.7; // recent weight
+      session.recency = 'recent';
+    } else if (sessionDate > cutoffMedium) {
+      weight = 0.2; // medium-term weight
+      session.recency = 'medium';
+    } else {
+      session.recency = 'long-term';
+    }
+
+    // Apply weights to emotional tone
+    if (session.emotionalTone) {
+      weightedInsights.dominantEmotions[session.emotionalTone] = 
+        (weightedInsights.dominantEmotions[session.emotionalTone] || 0) + weight;
+    }
+
+    // Apply weights to themes
+    session.reflectiveThemes?.forEach((theme: string) => {
+      weightedInsights.recurringThemes[theme] = 
+        (weightedInsights.recurringThemes[theme] || 0) + weight;
+    });
+
+    // Apply weights to coping strategies
+    session.copingStrategies?.forEach((strategy: string) => {
+      weightedInsights.copingStrategies[strategy] = 
+        (weightedInsights.copingStrategies[strategy] || 0) + weight;
+    });
+
+    // Apply weights to growth areas
+    session.growthAreas?.forEach((area: string) => {
+      weightedInsights.growthAreas[area] = 
+        (weightedInsights.growthAreas[area] || 0) + weight;
+    });
+  });
+
+  currentProfile.aggregatedInsights = weightedInsights;
+  currentProfile.totalSessions = currentProfile.sessions.length;
+  currentProfile.lastSessionAnalysis = now;
+
+  return currentProfile;
+}
+
+function extractTopInsights(profile: any): string[] {
+  if (!profile.aggregatedInsights) return [];
+
+  const insights: string[] = [];
+  
+  // Get top emotional patterns
+  const topEmotions = Object.entries(profile.aggregatedInsights.dominantEmotions || {})
+    .sort(([,a], [,b]) => (b as number) - (a as number))
+    .slice(0, 2);
+  
+  topEmotions.forEach(([emotion, weight]) => {
+    insights.push(`Often experiences ${emotion} emotions (significance: ${(weight as number).toFixed(1)})`);
+  });
+
+  // Get top recurring themes
+  const topThemes = Object.entries(profile.aggregatedInsights.recurringThemes || {})
+    .sort(([,a], [,b]) => (b as number) - (a as number))
+    .slice(0, 2);
+  
+  topThemes.forEach(([theme, weight]) => {
+    insights.push(`Frequently reflects on ${theme} (significance: ${(weight as number).toFixed(1)})`);
+  });
+
+  // Get primary coping strategy
+  const topCoping = Object.entries(profile.aggregatedInsights.copingStrategies || {})
+    .sort(([,a], [,b]) => (b as number) - (a as number))
+    .slice(0, 1);
+  
+  topCoping.forEach(([strategy, weight]) => {
+    insights.push(`Primary coping approach: ${strategy} (significance: ${(weight as number).toFixed(1)})`);
+  });
+
+  return insights.slice(0, 5); // Return top 5 insights
+}
+
 function extractPsychologicalInsights(transcript: string): any {
   const insights: any = {};
   const text = transcript.toLowerCase();
 
   // Simple sentiment analysis
-  const positiveWords = ['happy', 'good', 'great', 'excited', 'love', 'wonderful'];
-  const negativeWords = ['sad', 'bad', 'angry', 'frustrated', 'hate', 'terrible'];
+  const positiveWords = ['happy', 'good', 'great', 'excited', 'love', 'wonderful', 'grateful', 'joy'];
+  const negativeWords = ['sad', 'bad', 'angry', 'frustrated', 'hate', 'terrible', 'anxious', 'worried'];
   
   const positiveCount = positiveWords.filter(word => text.includes(word)).length;
   const negativeCount = negativeWords.filter(word => text.includes(word)).length;
@@ -173,14 +372,22 @@ function extractPsychologicalInsights(transcript: string): any {
   }
 
   // Topic detection
+  const topics = [];
   if (text.includes('work') || text.includes('job') || text.includes('career')) {
-    insights.topics = [...(insights.topics || []), 'work'];
+    topics.push('work');
   }
   if (text.includes('family') || text.includes('parent') || text.includes('child')) {
-    insights.topics = [...(insights.topics || []), 'family'];
+    topics.push('family');
   }
   if (text.includes('relationship') || text.includes('partner') || text.includes('friend')) {
-    insights.topics = [...(insights.topics || []), 'relationships'];
+    topics.push('relationships');
+  }
+  if (text.includes('stress') || text.includes('overwhelm') || text.includes('pressure')) {
+    topics.push('stress');
+  }
+  
+  if (topics.length > 0) {
+    insights.topics = topics;
   }
 
   return insights;

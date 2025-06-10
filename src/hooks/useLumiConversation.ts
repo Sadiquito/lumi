@@ -12,16 +12,18 @@ interface LumiResponse {
 
 interface UseLumiConversationProps {
   onLumiResponse?: (response: LumiResponse) => void;
+  sessionId?: string;
 }
 
-export const useLumiConversation = ({ onLumiResponse }: UseLumiConversationProps = {}) => {
+export const useLumiConversation = ({ onLumiResponse, sessionId }: UseLumiConversationProps = {}) => {
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sendToLumi = useCallback(async (
     userTranscript: string,
-    conversationId?: string
+    conversationId?: string,
+    isSessionEnd: boolean = false
   ) => {
     if (!user || !userTranscript.trim()) return;
 
@@ -32,14 +34,17 @@ export const useLumiConversation = ({ onLumiResponse }: UseLumiConversationProps
       console.log('Sending to Lumi:', {
         userTranscript,
         userId: user.id,
-        conversationId
+        conversationId,
+        sessionId,
+        isSessionEnd
       });
 
       const { data, error } = await supabase.functions.invoke('lumi-conversation', {
         body: {
           userTranscript: userTranscript.trim(),
           userId: user.id,
-          conversationId
+          conversationId,
+          isSessionEnd
         }
       });
 
@@ -60,7 +65,7 @@ export const useLumiConversation = ({ onLumiResponse }: UseLumiConversationProps
     } finally {
       setIsProcessing(false);
     }
-  }, [user, onLumiResponse]);
+  }, [user, onLumiResponse, sessionId]);
 
   return {
     sendToLumi,
