@@ -38,7 +38,7 @@ const Index = () => {
         {/* Main heading */}
         <div className="space-y-6">
           <h1 
-            className="text-6xl md:text-8xl font-cinzel font-medium text-white tracking-wider"
+            className="text-6xl md:text-7xl font-cinzel font-bold text-white tracking-wider"
             style={{
               textShadow: '0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3), 0 0 60px rgba(255, 255, 255, 0.2)',
               filter: 'blur(0.5px)'
