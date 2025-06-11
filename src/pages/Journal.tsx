@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ConversationsList } from '@/components/ConversationsList';
 import { RealtimeConversation } from '@/components/RealtimeConversation';
 import { JournalHeader } from '@/components/journal/JournalHeader';
