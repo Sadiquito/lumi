@@ -204,7 +204,8 @@ export class RealtimeChat {
 
   private async connectWebSocket(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wsUrl = `wss://uzaeyfougoeohqlysbkn.functions.supabase.co/functions/v1/openai-realtime`;
+      // Use the exact URL structure for Supabase Edge Functions
+      const wsUrl = `wss://uzaeyfougoeohqlysbkn.supabase.co/functions/v1/openai-realtime`;
       console.log('🔌 Connecting to WebSocket:', wsUrl);
       
       this.ws = new WebSocket(wsUrl);
@@ -213,7 +214,7 @@ export class RealtimeChat {
         console.error('❌ WebSocket connection timeout');
         this.ws?.close();
         reject(new Error('WebSocket connection timeout'));
-      }, 10000);
+      }, 30000); // Increased timeout
 
       this.ws.onopen = () => {
         clearTimeout(connectionTimeout);
@@ -223,40 +224,44 @@ export class RealtimeChat {
       };
 
       this.ws.onmessage = async (event) => {
-        const message = JSON.parse(event.data);
-        console.log('📥 WebSocket message received:', message.type);
+        try {
+          const message = JSON.parse(event.data);
+          console.log('📥 WebSocket message received:', message.type);
 
-        if (message.type === 'response.audio.delta') {
-          // Play audio delta
-          const binaryString = atob(message.delta);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+          if (message.type === 'response.audio.delta') {
+            // Play audio delta
+            const binaryString = atob(message.delta);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            await this.audioQueue!.addToQueue(bytes);
+            this.onSpeakingChangeCallback?.(true);
+            
+          } else if (message.type === 'response.audio.done') {
+            console.log('🎵 Audio response complete');
+            this.onSpeakingChangeCallback?.(false);
+            
+          } else if (message.type === 'input_audio_buffer.speech_started') {
+            console.log('🎤 User started speaking');
+            
+          } else if (message.type === 'input_audio_buffer.speech_stopped') {
+            console.log('🔇 User stopped speaking');
+            
+          } else if (message.type === 'session.created') {
+            console.log('✅ Session created');
+            
+          } else if (message.type === 'session.updated') {
+            console.log('✅ Session updated');
+            
+          } else if (message.type === 'error') {
+            console.error('❌ OpenAI API error:', message);
           }
-          await this.audioQueue!.addToQueue(bytes);
-          this.onSpeakingChangeCallback?.(true);
-          
-        } else if (message.type === 'response.audio.done') {
-          console.log('🎵 Audio response complete');
-          this.onSpeakingChangeCallback?.(false);
-          
-        } else if (message.type === 'input_audio_buffer.speech_started') {
-          console.log('🎤 User started speaking');
-          
-        } else if (message.type === 'input_audio_buffer.speech_stopped') {
-          console.log('🔇 User stopped speaking');
-          
-        } else if (message.type === 'session.created') {
-          console.log('✅ Session created');
-          
-        } else if (message.type === 'session.updated') {
-          console.log('✅ Session updated');
-          
-        } else if (message.type === 'error') {
-          console.error('❌ OpenAI API error:', message);
-        }
 
-        this.onMessageCallback?.(message);
+          this.onMessageCallback?.(message);
+        } catch (error) {
+          console.error('❌ Error processing WebSocket message:', error);
+        }
       };
 
       this.ws.onerror = (error) => {

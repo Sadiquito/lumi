@@ -39,7 +39,7 @@ serve(async (req) => {
     });
   }
 
-  console.log('✅ OpenAI API key found');
+  console.log('✅ OpenAI API key found, length:', openAIApiKey.length);
 
   try {
     const { socket, response } = Deno.upgradeWebSocket(req);
@@ -63,18 +63,19 @@ serve(async (req) => {
     };
 
     openAISocket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('📥 OpenAI message:', message.type);
+      try {
+        const message = JSON.parse(event.data);
+        console.log('📥 OpenAI message:', message.type);
 
-      // Configure session after connection
-      if (message.type === 'session.created' && !sessionConfigured) {
-        console.log('🔧 Configuring session...');
-        
-        const sessionConfig = {
-          type: "session.update",
-          session: {
-            modalities: ["text", "audio"],
-            instructions: `You are Lumi, an emotionally intelligent AI companion designed for introspective conversations. Your core traits:
+        // Configure session after connection
+        if (message.type === 'session.created' && !sessionConfigured) {
+          console.log('🔧 Configuring session...');
+          
+          const sessionConfig = {
+            type: "session.update",
+            session: {
+              modalities: ["text", "audio"],
+              instructions: `You are Lumi, an emotionally intelligent AI companion designed for introspective conversations. Your core traits:
 
 - Emotionally neutral yet warmly present
 - Calm, thoughtful, and reflective in all responses
@@ -84,40 +85,46 @@ serve(async (req) => {
 - You maintain appropriate boundaries as an AI companion
 
 Keep responses conversational, typically 1-2 sentences. Focus on being a supportive presence that encourages self-reflection.`,
-            voice: "alloy",
-            input_audio_format: "pcm16",
-            output_audio_format: "pcm16",
-            input_audio_transcription: {
-              model: "whisper-1"
-            },
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 1500
-            },
-            temperature: 0.7,
-            max_response_output_tokens: 300
-          }
-        };
+              voice: "alloy",
+              input_audio_format: "pcm16",
+              output_audio_format: "pcm16",
+              input_audio_transcription: {
+                model: "whisper-1"
+              },
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 1500
+              },
+              temperature: 0.7,
+              max_response_output_tokens: 300
+            }
+          };
 
-        openAISocket.send(JSON.stringify(sessionConfig));
-        sessionConfigured = true;
-        console.log('✅ Session configured');
-      }
+          openAISocket.send(JSON.stringify(sessionConfig));
+          sessionConfigured = true;
+          console.log('✅ Session configured');
+        }
 
-      // Forward all messages to client
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(event.data);
-      } else {
-        console.warn('⚠️ Client socket not open, message dropped');
+        // Forward all messages to client
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(event.data);
+        } else {
+          console.warn('⚠️ Client socket not open, message dropped');
+        }
+      } catch (error) {
+        console.error('❌ Error processing OpenAI message:', error);
       }
     };
 
     openAISocket.onerror = (error) => {
       console.error('❌ OpenAI WebSocket error:', error);
       if (socket.readyState === WebSocket.OPEN) {
-        socket.close(1011, 'OpenAI connection error');
+        socket.send(JSON.stringify({
+          type: 'error',
+          error: 'OpenAI connection error'
+        }));
       }
     };
 
@@ -134,12 +141,20 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
     };
 
     socket.onmessage = (event) => {
-      console.log('📤 Forwarding client message to OpenAI');
-      // Forward client messages to OpenAI
-      if (openAISocket.readyState === WebSocket.OPEN) {
-        openAISocket.send(event.data);
-      } else {
-        console.warn('⚠️ OpenAI socket not open, message dropped');
+      try {
+        console.log('📤 Forwarding client message to OpenAI');
+        // Forward client messages to OpenAI
+        if (openAISocket.readyState === WebSocket.OPEN) {
+          openAISocket.send(event.data);
+        } else {
+          console.warn('⚠️ OpenAI socket not open, current state:', openAISocket.readyState);
+          socket.send(JSON.stringify({
+            type: 'error',
+            error: 'OpenAI connection not ready'
+          }));
+        }
+      } catch (error) {
+        console.error('❌ Error forwarding client message:', error);
       }
     };
 
@@ -161,7 +176,7 @@ Keep responses conversational, typically 1-2 sentences. Focus on being a support
 
   } catch (error) {
     console.error('❌ WebSocket upgrade failed:', error);
-    return new Response('WebSocket upgrade failed', { 
+    return new Response(`WebSocket upgrade failed: ${error.message}`, { 
       status: 500,
       headers: corsHeaders 
     });
