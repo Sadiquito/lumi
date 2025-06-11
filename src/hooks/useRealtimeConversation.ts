@@ -11,13 +11,20 @@ interface TranscriptEntry {
 
 export const useRealtimeConversation = () => {
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isLumiSpeaking, setIsLumiSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const chatRef = useRef<RealtimeChat | null>(null);
 
   const handleMessage = useCallback((message: any) => {
-    console.log('📨 Realtime message:', message.type);
+    console.log('📨 Realtime message received:', message.type);
+
+    if (message.type === 'error') {
+      console.error('❌ OpenAI API error:', message);
+      setError(message.error || 'An error occurred with the AI service');
+      return;
+    }
 
     if (message.type === 'response.audio_transcript.delta') {
       // Handle live transcript from Lumi
@@ -58,42 +65,79 @@ export const useRealtimeConversation = () => {
           timestamp: Date.now()
         }]);
       }
+    } else if (message.type === 'session.created') {
+      console.log('✅ Session created successfully');
+      setIsConnected(true);
+      setIsConnecting(false);
+      setError(null);
+    } else if (message.type === 'session.updated') {
+      console.log('✅ Session updated successfully');
     }
   }, []);
 
   const handleSpeakingChange = useCallback((speaking: boolean) => {
+    console.log('🗣️ Speaking state changed:', speaking);
     setIsLumiSpeaking(speaking);
   }, []);
 
   const startConversation = useCallback(async () => {
+    if (isConnecting || isConnected) {
+      console.log('⚠️ Already connecting or connected');
+      return;
+    }
+
     try {
+      console.log('🚀 Starting conversation...');
       setError(null);
+      setIsConnecting(true);
+      
       chatRef.current = new RealtimeChat();
       await chatRef.current.init(handleMessage, handleSpeakingChange);
-      setIsConnected(true);
+      
+      console.log('✅ Conversation started successfully');
 
-      // Send initial greeting
+      // Send initial greeting after a short delay to ensure session is ready
       setTimeout(() => {
-        chatRef.current?.sendTextMessage("Hello! What's on your mind?");
-      }, 1000);
+        if (chatRef.current) {
+          console.log('👋 Sending initial greeting');
+          chatRef.current.sendTextMessage("Hello! I'm Lumi. What's on your mind today?");
+        }
+      }, 2000);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start conversation';
-      setError(errorMessage);
       console.error('❌ Error starting conversation:', err);
+      setError(errorMessage);
+      setIsConnecting(false);
+      setIsConnected(false);
     }
-  }, [handleMessage, handleSpeakingChange]);
+  }, [handleMessage, handleSpeakingChange, isConnecting, isConnected]);
 
   const endConversation = useCallback(() => {
-    chatRef.current?.disconnect();
+    console.log('🛑 Ending conversation...');
+    
+    if (chatRef.current) {
+      chatRef.current.disconnect();
+      chatRef.current = null;
+    }
+    
     setIsConnected(false);
+    setIsConnecting(false);
     setIsLumiSpeaking(false);
     setTranscript([]);
+    setError(null);
+    
+    console.log('✅ Conversation ended');
   }, []);
 
   const sendTextMessage = useCallback(async (text: string) => {
     try {
-      await chatRef.current?.sendTextMessage(text);
+      if (!chatRef.current) {
+        throw new Error('Chat not initialized');
+      }
+      
+      console.log('📤 Sending text message:', text);
+      await chatRef.current.sendTextMessage(text);
     } catch (err) {
       console.error('❌ Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
@@ -102,12 +146,16 @@ export const useRealtimeConversation = () => {
 
   useEffect(() => {
     return () => {
-      chatRef.current?.disconnect();
+      if (chatRef.current) {
+        console.log('🧹 Cleaning up chat connection');
+        chatRef.current.disconnect();
+      }
     };
   }, []);
 
   return {
     isConnected,
+    isConnecting,
     isLumiSpeaking,
     transcript,
     error,

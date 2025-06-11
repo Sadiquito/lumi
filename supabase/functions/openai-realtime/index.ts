@@ -8,51 +8,73 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('🚀 OpenAI Realtime function called:', req.method, req.url);
+
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('✅ Handling CORS preflight request');
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Check for WebSocket upgrade
   const { headers } = req;
   const upgradeHeader = headers.get("upgrade") || "";
 
   if (upgradeHeader.toLowerCase() !== "websocket") {
-    return new Response("Expected WebSocket connection", { status: 400 });
+    console.log('❌ Not a WebSocket request, upgrade header:', upgradeHeader);
+    return new Response("Expected WebSocket connection", { 
+      status: 400,
+      headers: corsHeaders 
+    });
   }
 
-  console.log('🚀 OpenAI Realtime WebSocket connection initiated');
+  console.log('🔌 WebSocket upgrade requested');
 
-  const { socket, response } = Deno.upgradeWebSocket(req);
-  
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openAIApiKey) {
     console.error('❌ OPENAI_API_KEY not configured');
-    socket.close(1011, 'OpenAI API key not configured');
-    return response;
+    return new Response('OpenAI API key not configured', { 
+      status: 500,
+      headers: corsHeaders 
+    });
   }
 
-  // Connect to OpenAI Realtime API
-  const openAISocket = new WebSocket(
-    "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17",
-    ["realtime", `openai-insecure-api-key.${openAIApiKey}`]
-  );
+  console.log('✅ OpenAI API key found');
 
-  console.log('🔌 Connecting to OpenAI Realtime API...');
+  try {
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    console.log('✅ WebSocket upgrade successful');
 
-  let sessionConfigured = false;
+    // Connect to OpenAI Realtime API
+    const openAIUrl = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17";
+    console.log('🔌 Connecting to OpenAI:', openAIUrl);
+    
+    const openAISocket = new WebSocket(
+      openAIUrl,
+      ["realtime", `openai-insecure-api-key.${openAIApiKey}`]
+    );
 
-  openAISocket.onopen = () => {
-    console.log('✅ Connected to OpenAI Realtime API');
-  };
+    let sessionConfigured = false;
+    let isConnected = false;
 
-  openAISocket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    console.log('📥 OpenAI message:', message.type);
+    openAISocket.onopen = () => {
+      console.log('✅ Connected to OpenAI Realtime API');
+      isConnected = true;
+    };
 
-    // Configure session after connection
-    if (message.type === 'session.created' && !sessionConfigured) {
-      console.log('🔧 Configuring session...');
-      
-      const sessionConfig = {
-        type: "session.update",
-        session: {
-          modalities: ["text", "audio"],
-          instructions: `You are Lumi, an emotionally intelligent AI companion designed for introspective conversations. Your core traits:
+    openAISocket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log('📥 OpenAI message:', message.type);
+
+      // Configure session after connection
+      if (message.type === 'session.created' && !sessionConfigured) {
+        console.log('🔧 Configuring session...');
+        
+        const sessionConfig = {
+          type: "session.update",
+          session: {
+            modalities: ["text", "audio"],
+            instructions: `You are Lumi, an emotionally intelligent AI companion designed for introspective conversations. Your core traits:
 
 - Emotionally neutral yet warmly present
 - Calm, thoughtful, and reflective in all responses
@@ -62,64 +84,86 @@ serve(async (req) => {
 - You maintain appropriate boundaries as an AI companion
 
 Keep responses conversational, typically 1-2 sentences. Focus on being a supportive presence that encourages self-reflection.`,
-          voice: "alloy",
-          input_audio_format: "pcm16",
-          output_audio_format: "pcm16",
-          input_audio_transcription: {
-            model: "whisper-1"
-          },
-          turn_detection: {
-            type: "server_vad",
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 1500
-          },
-          temperature: 0.7,
-          max_response_output_tokens: 300
-        }
-      };
+            voice: "alloy",
+            input_audio_format: "pcm16",
+            output_audio_format: "pcm16",
+            input_audio_transcription: {
+              model: "whisper-1"
+            },
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1500
+            },
+            temperature: 0.7,
+            max_response_output_tokens: 300
+          }
+        };
 
-      openAISocket.send(JSON.stringify(sessionConfig));
-      sessionConfigured = true;
-      console.log('✅ Session configured');
-    }
+        openAISocket.send(JSON.stringify(sessionConfig));
+        sessionConfigured = true;
+        console.log('✅ Session configured');
+      }
 
-    // Forward all messages to client
-    socket.send(event.data);
-  };
+      // Forward all messages to client
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(event.data);
+      } else {
+        console.warn('⚠️ Client socket not open, message dropped');
+      }
+    };
 
-  openAISocket.onerror = (error) => {
-    console.error('❌ OpenAI WebSocket error:', error);
-    socket.close(1011, 'OpenAI connection error');
-  };
+    openAISocket.onerror = (error) => {
+      console.error('❌ OpenAI WebSocket error:', error);
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close(1011, 'OpenAI connection error');
+      }
+    };
 
-  openAISocket.onclose = (event) => {
-    console.log('🔌 OpenAI WebSocket closed:', event.code, event.reason);
-    socket.close(event.code, event.reason);
-  };
+    openAISocket.onclose = (event) => {
+      console.log('🔌 OpenAI WebSocket closed:', event.code, event.reason);
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close(event.code, event.reason);
+      }
+    };
 
-  // Handle messages from client
-  socket.onopen = () => {
-    console.log('✅ Client WebSocket connected');
-  };
+    // Handle messages from client
+    socket.onopen = () => {
+      console.log('✅ Client WebSocket connected');
+    };
 
-  socket.onmessage = (event) => {
-    console.log('📤 Forwarding client message to OpenAI');
-    // Forward client messages to OpenAI
-    if (openAISocket.readyState === WebSocket.OPEN) {
-      openAISocket.send(event.data);
-    }
-  };
+    socket.onmessage = (event) => {
+      console.log('📤 Forwarding client message to OpenAI');
+      // Forward client messages to OpenAI
+      if (openAISocket.readyState === WebSocket.OPEN) {
+        openAISocket.send(event.data);
+      } else {
+        console.warn('⚠️ OpenAI socket not open, message dropped');
+      }
+    };
 
-  socket.onclose = () => {
-    console.log('🔌 Client WebSocket closed');
-    openAISocket.close();
-  };
+    socket.onclose = () => {
+      console.log('🔌 Client WebSocket closed');
+      if (openAISocket.readyState === WebSocket.OPEN) {
+        openAISocket.close();
+      }
+    };
 
-  socket.onerror = (error) => {
-    console.error('❌ Client WebSocket error:', error);
-    openAISocket.close();
-  };
+    socket.onerror = (error) => {
+      console.error('❌ Client WebSocket error:', error);
+      if (openAISocket.readyState === WebSocket.OPEN) {
+        openAISocket.close();
+      }
+    };
 
-  return response;
+    return response;
+
+  } catch (error) {
+    console.error('❌ WebSocket upgrade failed:', error);
+    return new Response('WebSocket upgrade failed', { 
+      status: 500,
+      headers: corsHeaders 
+    });
+  }
 });
