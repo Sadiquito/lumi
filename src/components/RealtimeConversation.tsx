@@ -85,7 +85,7 @@ export const RealtimeConversation: React.FC = () => {
         
         <div className="text-center space-y-2">
           <h2 className="text-lg font-cinzel text-white">
-            {isConnecting ? 'Connecting...' : isConnected ? 'End Conversation' : 'Begin Real-time Conversation'}
+            {isConnecting ? 'Connecting...' : isConnected ? 'End Conversation' : 'Begin Conversation'}
           </h2>
           <p className="font-crimson text-sm text-white/70">
             {isConnecting 
