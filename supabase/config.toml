@@ -28,13 +28,7 @@ enabled = true
 port = 54322
 major_version = 15
 
-[functions.audio-to-text]
-verify_jwt = false
-
-[functions.lumi-conversation]
-verify_jwt = false
-
-[functions.text-to-speech]
+[functions.openai-realtime]
 verify_jwt = false
 
 [storage]
