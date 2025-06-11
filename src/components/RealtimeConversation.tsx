@@ -17,11 +17,15 @@ export const RealtimeConversation: React.FC = () => {
   } = useRealtimeConversation();
 
   const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (err) {
+      return '--:--:--';
+    }
   };
 
   const getConnectionStatus = () => {
@@ -32,6 +36,25 @@ export const RealtimeConversation: React.FC = () => {
   };
 
   const connectionStatus = getConnectionStatus();
+
+  // Add error boundary behavior
+  if (error && error.includes('React')) {
+    return (
+      <div className="flex flex-col items-center space-y-6">
+        <Card className="border-red-500 bg-red-50/90 backdrop-blur-sm max-w-md">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <div>
+                <p className="text-red-700 text-sm font-medium">Component Error</p>
+                <p className="text-red-600 text-xs mt-1">Please refresh the page</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center space-y-6">
@@ -97,7 +120,7 @@ export const RealtimeConversation: React.FC = () => {
       </div>
 
       {/* Error Display */}
-      {error && (
+      {error && !error.includes('React') && (
         <Card className="border-red-500 bg-red-50/90 backdrop-blur-sm max-w-md">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -112,7 +135,7 @@ export const RealtimeConversation: React.FC = () => {
       )}
 
       {/* Live Transcript */}
-      {isConnected && transcript.length > 0 && (
+      {isConnected && Array.isArray(transcript) && transcript.length > 0 && (
         <Card className="w-full max-w-2xl border-none shadow-sm bg-white/60 backdrop-blur-sm">
           <CardContent className="p-6 space-y-4 max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -166,7 +189,7 @@ export const RealtimeConversation: React.FC = () => {
                   </div>
                   
                   <div className="text-sm leading-relaxed">
-                    {entry.text.replace(' [COMPLETE]', '')}
+                    {entry.text?.replace(' [COMPLETE]', '') || ''}
                   </div>
                 </div>
               </div>
