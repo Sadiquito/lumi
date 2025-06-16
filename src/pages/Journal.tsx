@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConversationsList } from '@/components/ConversationsList';
 import { RealtimeConversation } from '@/components/RealtimeConversation';
 import { JournalHeader } from '@/components/journal/JournalHeader';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 const JournalPage = () => {
   const { signOut } = useAuth();
