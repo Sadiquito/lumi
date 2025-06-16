@@ -10,6 +10,8 @@ const Index = () => {
   function greet() {
     console.log("lol what is this haha")
   }
+
+  greet()
     
   if (loading) {
     return (
