@@ -40,6 +40,6 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error }) => {
           </div>
         </div>
       </CardContent>
-    );
+    </Card>
   );
 };
