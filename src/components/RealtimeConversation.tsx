@@ -3,6 +3,7 @@ import React from 'react';
 import { useRealtimeConversation } from '@/hooks/useRealtimeConversation';
 import { ConversationButton } from './conversation/ConversationButton';
 import { ModelSelector } from './conversation/ModelSelector';
+import { VoiceSelector } from './conversation/VoiceSelector';
 import { ConversationStatus } from './conversation/ConversationStatus';
 import { ErrorDisplay } from './conversation/ErrorDisplay';
 import { LiveTranscript } from './conversation/LiveTranscript';
@@ -16,6 +17,8 @@ export const RealtimeConversation: React.FC = () => {
     error,
     selectedModel,
     setSelectedModel,
+    selectedVoice,
+    setSelectedVoice,
     startConversation,
     endConversation
   } = useRealtimeConversation();
@@ -47,11 +50,20 @@ export const RealtimeConversation: React.FC = () => {
           onToggleConversation={handleToggleConversation}
         />
 
-        <ModelSelector
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-          disabled={isConnected || isConnecting}
-        />
+        {/* Model and Voice Selectors */}
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <ModelSelector
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            disabled={isConnected || isConnecting}
+          />
+          
+          <VoiceSelector
+            selectedVoice={selectedVoice}
+            onVoiceChange={setSelectedVoice}
+            disabled={isConnected || isConnecting}
+          />
+        </div>
         
         <ConversationStatus
           isConnected={isConnected}

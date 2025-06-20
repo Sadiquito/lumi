@@ -1,4 +1,3 @@
-
 // WebRTC-based OpenAI Realtime Agent using the official approach
 export class OpenAIRealtimeAgent {
   private pc: RTCPeerConnection | null = null;
@@ -15,22 +14,23 @@ export class OpenAIRealtimeAgent {
     onMessage: (message: any) => void,
     onSpeakingChange: (speaking: boolean) => void,
     apiKey: string,
-    model: 'gpt-4o' | 'gpt-4o-mini' = 'gpt-4o-mini'
+    model: 'gpt-4o' | 'gpt-4o-mini' = 'gpt-4o-mini',
+    voice: 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse' = 'alloy'
   ) {
-    console.log(`🚀 Initializing OpenAI Realtime Agent with WebRTC using ${model}...`);
+    console.log(`🚀 Initializing OpenAI Realtime Agent with WebRTC using ${model} and ${voice} voice...`);
     
     this.onMessageCallback = onMessage;
     this.onSpeakingChangeCallback = onSpeakingChange;
 
     try {
       // Get ephemeral token from OpenAI
-      const ephemeralToken = await this.getEphemeralToken(apiKey, model);
+      const ephemeralToken = await this.getEphemeralToken(apiKey, model, voice);
       
       // Set up WebRTC connection
-      await this.setupWebRTC(ephemeralToken, model);
+      await this.setupWebRTC(ephemeralToken, model, voice);
       
       this.isConnected = true;
-      console.log(`✅ OpenAI Realtime Agent connected successfully via WebRTC using ${model}`);
+      console.log(`✅ OpenAI Realtime Agent connected successfully via WebRTC using ${model} with ${voice} voice`);
 
       // Send initial configuration
       this.sendEvent({
@@ -38,7 +38,7 @@ export class OpenAIRealtimeAgent {
         session: {
           modalities: ['text', 'audio'],
           instructions: "You are Lumi, a helpful AI assistant for personal reflection and journaling. Speak naturally and conversationally.",
-          voice: 'alloy',
+          voice: voice,
           input_audio_format: 'pcm16',
           output_audio_format: 'pcm16',
           input_audio_transcription: {
@@ -53,7 +53,7 @@ export class OpenAIRealtimeAgent {
     }
   }
 
-  private async getEphemeralToken(apiKey: string, model: string): Promise<string> {
+  private async getEphemeralToken(apiKey: string, model: string, voice: string): Promise<string> {
     const modelMap = {
       'gpt-4o': 'gpt-4o-realtime-preview-2024-12-17',
       'gpt-4o-mini': 'gpt-4o-mini-realtime-preview-2024-12-17'
@@ -67,7 +67,7 @@ export class OpenAIRealtimeAgent {
       },
       body: JSON.stringify({
         model: modelMap[model as keyof typeof modelMap] || modelMap['gpt-4o-mini'],
-        voice: 'alloy'
+        voice: voice
       }),
     });
 
@@ -79,7 +79,7 @@ export class OpenAIRealtimeAgent {
     return data.client_secret.value;
   }
 
-  private async setupWebRTC(ephemeralToken: string, model: string) {
+  private async setupWebRTC(ephemeralToken: string, model: string, voice: string) {
     const modelMap = {
       'gpt-4o': 'gpt-4o-realtime-preview-2024-12-17',
       'gpt-4o-mini': 'gpt-4o-mini-realtime-preview-2024-12-17'

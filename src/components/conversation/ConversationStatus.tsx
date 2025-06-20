@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Volume2, AlertCircle } from 'lucide-react';
-import { ModelOption } from '@/hooks/useRealtimeConversation';
+import { ModelOption, VoiceOption } from '@/hooks/useRealtimeConversation';
 
 interface ConversationStatusProps {
   isConnected: boolean;
@@ -9,6 +9,7 @@ interface ConversationStatusProps {
   isLumiSpeaking: boolean;
   error: string | null;
   selectedModel: ModelOption;
+  selectedVoice?: VoiceOption;
 }
 
 export const ConversationStatus: React.FC<ConversationStatusProps> = ({
@@ -16,10 +17,26 @@ export const ConversationStatus: React.FC<ConversationStatusProps> = ({
   isConnecting,
   isLumiSpeaking,
   error,
-  selectedModel
+  selectedModel,
+  selectedVoice
 }) => {
   const getModelDisplayName = (model: ModelOption) => {
     return model === 'gpt-4o' ? 'GPT-4o (More Capable)' : 'GPT-4o Mini (Faster & Cost-Effective)';
+  };
+
+  const getVoiceDisplayName = (voice?: VoiceOption) => {
+    if (!voice) return '';
+    const voiceLabels = {
+      alloy: 'Alloy',
+      ash: 'Ash',
+      ballad: 'Ballad',
+      coral: 'Coral',
+      echo: 'Echo',
+      sage: 'Sage',
+      shimmer: 'Shimmer',
+      verse: 'Verse'
+    };
+    return voiceLabels[voice];
   };
 
   const getConnectionStatus = () => {
@@ -39,12 +56,12 @@ export const ConversationStatus: React.FC<ConversationStatusProps> = ({
         </h2>
         <p className="font-crimson text-sm text-white/70">
           {isConnecting 
-            ? `Establishing connection with ${getModelDisplayName(selectedModel)}...`
+            ? `Establishing connection with ${getModelDisplayName(selectedModel)} using ${getVoiceDisplayName(selectedVoice)} voice...`
             : isConnected 
               ? isLumiSpeaking 
                 ? 'Lumi is speaking...' 
-                : `Connected to ${getModelDisplayName(selectedModel)} - Speak naturally`
-              : `Start your voice conversation with Lumi using ${getModelDisplayName(selectedModel)}`
+                : `Connected to ${getModelDisplayName(selectedModel)} with ${getVoiceDisplayName(selectedVoice)} voice - Speak naturally`
+              : `Start your voice conversation with Lumi using ${getModelDisplayName(selectedModel)} and ${getVoiceDisplayName(selectedVoice)} voice`
           }
         </p>
       </div>
