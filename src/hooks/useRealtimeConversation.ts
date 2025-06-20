@@ -1,6 +1,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TranscriptEntry {
   id: string;
@@ -94,20 +95,23 @@ export const useRealtimeConversation = () => {
     }
 
     try {
-      console.log('🚀 Starting conversation with OpenAI Agent SDK...');
+      console.log('🚀 Starting conversation with OpenAI Agent...');
       setError(null);
       setIsConnecting(true);
       
-      // We'll need to get the API key from environment or user input
-      // For now, we'll assume it's available in the environment
-      const apiKey = 'your-openai-api-key'; // This should come from secure storage
+      // Get API key from Supabase function
+      const { data, error: functionError } = await supabase.functions.invoke('get-openai-key');
+      
+      if (functionError || !data?.apiKey) {
+        throw new Error('Failed to get OpenAI API key. Please check your configuration.');
+      }
       
       agentRef.current = new OpenAIRealtimeAgent();
-      await agentRef.current.init(handleMessage, handleSpeakingChange, apiKey);
+      await agentRef.current.init(handleMessage, handleSpeakingChange, data.apiKey);
       
       setIsConnected(true);
       setIsConnecting(false);
-      console.log('✅ Conversation started successfully with Agent SDK');
+      console.log('✅ Conversation started successfully');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start conversation';
