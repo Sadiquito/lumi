@@ -1,3 +1,4 @@
+
 // WebRTC-based OpenAI Realtime Agent using the official approach
 export class OpenAIRealtimeAgent {
   private pc: RTCPeerConnection | null = null;
@@ -79,6 +80,11 @@ export class OpenAIRealtimeAgent {
   }
 
   private async setupWebRTC(ephemeralToken: string, model: string) {
+    const modelMap = {
+      'gpt-4o': 'gpt-4o-realtime-preview-2024-12-17',
+      'gpt-4o-mini': 'gpt-4o-mini-realtime-preview-2024-12-17'
+    };
+
     // Create peer connection
     this.pc = new RTCPeerConnection();
 
