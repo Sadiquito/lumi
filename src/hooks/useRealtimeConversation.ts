@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { RealtimeChat } from '@/utils/RealtimeAudio';
+import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 
 interface TranscriptEntry {
   id: string;
@@ -15,48 +15,62 @@ export const useRealtimeConversation = () => {
   const [isLumiSpeaking, setIsLumiSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const chatRef = useRef<RealtimeChat | null>(null);
+  const agentRef = useRef<OpenAIRealtimeAgent | null>(null);
 
-  const handleMessage = useCallback((message: any) => {
-    console.log('📨 Realtime message received:', message.type);
+  const handleMessage = useCallback((event: any) => {
+    console.log('📨 Agent event received:', event.type);
 
-    if (message.type === 'error') {
-      console.error('❌ OpenAI API error:', message);
-      setError(message.error || 'An error occurred with the AI service');
+    if (event.type === 'error') {
+      console.error('❌ Agent error:', event);
+      setError(event.error || 'An error occurred with the AI service');
       return;
     }
 
-    if (message.type === 'response.audio_transcript.delta') {
-      // Handle live transcript from Lumi
+    // Handle conversation updates
+    if (event.type === 'conversation.item.appended' && event.item?.type === 'message') {
+      const role = event.item.role;
+      const content = event.item.content?.[0]?.text || event.item.content?.[0]?.transcript || '';
+      
+      if (content && content.trim()) {
+        setTranscript(prev => [...prev, {
+          id: `${Date.now()}-${role}`,
+          text: content,
+          speaker: role === 'user' ? 'user' : 'lumi',
+          timestamp: Date.now()
+        }]);
+      }
+    }
+
+    // Handle realtime events for live transcript
+    if (event.type === 'response.audio_transcript.delta') {
       setTranscript(prev => {
         const lastEntry = prev[prev.length - 1];
         if (lastEntry && lastEntry.speaker === 'lumi' && !lastEntry.text.includes('[COMPLETE]')) {
-          // Update the last Lumi entry
           return prev.map((entry, index) => 
             index === prev.length - 1 
-              ? { ...entry, text: entry.text + message.delta }
+              ? { ...entry, text: entry.text + event.delta }
               : entry
           );
         } else {
-          // Create new Lumi entry
           return [...prev, {
-            id: `${Date.now()}-lumi`,
-            text: message.delta,
+            id: `${Date.now()}-lumi-live`,
+            text: event.delta,
             speaker: 'lumi' as const,
             timestamp: Date.now()
           }];
         }
       });
-    } else if (message.type === 'response.audio_transcript.done') {
-      // Mark Lumi's response as complete
+    } else if (event.type === 'response.audio_transcript.done') {
       setTranscript(prev => prev.map((entry, index) => 
         index === prev.length - 1 && entry.speaker === 'lumi'
           ? { ...entry, text: entry.text + ' [COMPLETE]' }
           : entry
       ));
-    } else if (message.type === 'conversation.item.input_audio_transcription.completed') {
-      // Handle user speech transcription
-      const userText = message.transcript;
+    }
+
+    // Handle user input transcription
+    if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      const userText = event.transcript;
       if (userText && userText.trim()) {
         setTranscript(prev => [...prev, {
           id: `${Date.now()}-user`,
@@ -65,13 +79,6 @@ export const useRealtimeConversation = () => {
           timestamp: Date.now()
         }]);
       }
-    } else if (message.type === 'session.created') {
-      console.log('✅ Session created successfully');
-      setIsConnected(true);
-      setIsConnecting(false);
-      setError(null);
-    } else if (message.type === 'session.updated') {
-      console.log('✅ Session updated successfully');
     }
   }, []);
 
@@ -87,22 +94,20 @@ export const useRealtimeConversation = () => {
     }
 
     try {
-      console.log('🚀 Starting conversation...');
+      console.log('🚀 Starting conversation with OpenAI Agent SDK...');
       setError(null);
       setIsConnecting(true);
       
-      chatRef.current = new RealtimeChat();
-      await chatRef.current.init(handleMessage, handleSpeakingChange);
+      // We'll need to get the API key from environment or user input
+      // For now, we'll assume it's available in the environment
+      const apiKey = 'your-openai-api-key'; // This should come from secure storage
       
-      console.log('✅ Conversation started successfully');
-
-      // Send initial greeting after a short delay to ensure session is ready
-      setTimeout(() => {
-        if (chatRef.current) {
-          console.log('👋 Sending initial greeting');
-          chatRef.current.sendTextMessage("Hello! I'm Lumi. What's on your mind today?");
-        }
-      }, 2000);
+      agentRef.current = new OpenAIRealtimeAgent();
+      await agentRef.current.init(handleMessage, handleSpeakingChange, apiKey);
+      
+      setIsConnected(true);
+      setIsConnecting(false);
+      console.log('✅ Conversation started successfully with Agent SDK');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start conversation';
@@ -116,9 +121,9 @@ export const useRealtimeConversation = () => {
   const endConversation = useCallback(() => {
     console.log('🛑 Ending conversation...');
     
-    if (chatRef.current) {
-      chatRef.current.disconnect();
-      chatRef.current = null;
+    if (agentRef.current) {
+      agentRef.current.disconnect();
+      agentRef.current = null;
     }
     
     setIsConnected(false);
@@ -132,12 +137,12 @@ export const useRealtimeConversation = () => {
 
   const sendTextMessage = useCallback(async (text: string) => {
     try {
-      if (!chatRef.current) {
-        throw new Error('Chat not initialized');
+      if (!agentRef.current) {
+        throw new Error('Agent not initialized');
       }
       
       console.log('📤 Sending text message:', text);
-      await chatRef.current.sendTextMessage(text);
+      await agentRef.current.sendMessage(text);
     } catch (err) {
       console.error('❌ Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
@@ -146,9 +151,9 @@ export const useRealtimeConversation = () => {
 
   useEffect(() => {
     return () => {
-      if (chatRef.current) {
-        console.log('🧹 Cleaning up chat connection');
-        chatRef.current.disconnect();
+      if (agentRef.current) {
+        console.log('🧹 Cleaning up agent connection');
+        agentRef.current.disconnect();
       }
     };
   }, []);

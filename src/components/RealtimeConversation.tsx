@@ -31,7 +31,7 @@ export const RealtimeConversation: React.FC = () => {
   const getConnectionStatus = () => {
     if (error) return { text: 'Connection Error', color: 'text-red-400' };
     if (isConnecting) return { text: 'Connecting...', color: 'text-yellow-400' };
-    if (isConnected) return { text: 'Connected', color: 'text-green-400' };
+    if (isConnected) return { text: 'Connected (WebRTC)', color: 'text-green-400' };
     return { text: 'Disconnected', color: 'text-gray-400' };
   };
 
@@ -89,12 +89,12 @@ export const RealtimeConversation: React.FC = () => {
           </h2>
           <p className="font-crimson text-sm text-white/70">
             {isConnecting 
-              ? 'Establishing connection with Lumi...'
+              ? 'Establishing WebRTC connection with Lumi...'
               : isConnected 
                 ? isLumiSpeaking 
                   ? 'Lumi is speaking...' 
                   : 'Speak naturally - Lumi will respond in real-time'
-                : 'Start your voice conversation with Lumi'
+                : 'Start your voice conversation with Lumi (Powered by OpenAI Agent SDK)'
             }
           </p>
         </div>
@@ -128,6 +128,11 @@ export const RealtimeConversation: React.FC = () => {
               <div>
                 <p className="text-red-700 text-sm font-medium">Connection Error</p>
                 <p className="text-red-600 text-xs mt-1">{error}</p>
+                {error.includes('API key') && (
+                  <p className="text-red-600 text-xs mt-1">
+                    Note: Direct WebRTC connection requires API key configuration
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -139,7 +144,7 @@ export const RealtimeConversation: React.FC = () => {
         <Card className="w-full max-w-2xl border-none shadow-sm bg-white/60 backdrop-blur-sm">
           <CardContent className="p-6 space-y-4 max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Live Conversation</h3>
+              <h3 className="text-lg font-medium text-gray-900">Live Conversation (WebRTC)</h3>
               <div className="flex items-center space-x-4 text-xs text-gray-500">
                 <div className="flex items-center space-x-1">
                   <User className="w-3 h-3" />
