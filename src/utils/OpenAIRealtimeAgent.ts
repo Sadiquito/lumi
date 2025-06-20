@@ -1,4 +1,3 @@
-
 // WebRTC-based OpenAI Realtime Agent using the official approach
 export class OpenAIRealtimeAgent {
   private pc: RTCPeerConnection | null = null;
@@ -14,22 +13,23 @@ export class OpenAIRealtimeAgent {
   async init(
     onMessage: (message: any) => void,
     onSpeakingChange: (speaking: boolean) => void,
-    apiKey: string
+    apiKey: string,
+    model: 'gpt-4o' | 'gpt-4o-mini' = 'gpt-4o-mini'
   ) {
-    console.log('🚀 Initializing OpenAI Realtime Agent with WebRTC...');
+    console.log(`🚀 Initializing OpenAI Realtime Agent with WebRTC using ${model}...`);
     
     this.onMessageCallback = onMessage;
     this.onSpeakingChangeCallback = onSpeakingChange;
 
     try {
       // Get ephemeral token from OpenAI
-      const ephemeralToken = await this.getEphemeralToken(apiKey);
+      const ephemeralToken = await this.getEphemeralToken(apiKey, model);
       
       // Set up WebRTC connection
-      await this.setupWebRTC(ephemeralToken);
+      await this.setupWebRTC(ephemeralToken, model);
       
       this.isConnected = true;
-      console.log('✅ OpenAI Realtime Agent connected successfully via WebRTC');
+      console.log(`✅ OpenAI Realtime Agent connected successfully via WebRTC using ${model}`);
 
       // Send initial configuration
       this.sendEvent({
@@ -52,7 +52,12 @@ export class OpenAIRealtimeAgent {
     }
   }
 
-  private async getEphemeralToken(apiKey: string): Promise<string> {
+  private async getEphemeralToken(apiKey: string, model: string): Promise<string> {
+    const modelMap = {
+      'gpt-4o': 'gpt-4o-realtime-preview-2024-12-17',
+      'gpt-4o-mini': 'gpt-4o-mini-realtime-preview-2024-12-17'
+    };
+
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -60,7 +65,7 @@ export class OpenAIRealtimeAgent {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2024-12-17',
+        model: modelMap[model as keyof typeof modelMap] || modelMap['gpt-4o-mini'],
         voice: 'alloy'
       }),
     });
@@ -73,7 +78,7 @@ export class OpenAIRealtimeAgent {
     return data.client_secret.value;
   }
 
-  private async setupWebRTC(ephemeralToken: string) {
+  private async setupWebRTC(ephemeralToken: string, model: string) {
     // Create peer connection
     this.pc = new RTCPeerConnection();
 
@@ -124,7 +129,8 @@ export class OpenAIRealtimeAgent {
     const offer = await this.pc.createOffer();
     await this.pc.setLocalDescription(offer);
 
-    const response = await fetch(`https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`, {
+    const realtimeModel = modelMap[model as keyof typeof modelMap] || modelMap['gpt-4o-mini'];
+    const response = await fetch(`https://api.openai.com/v1/realtime?model=${realtimeModel}`, {
       method: 'POST',
       body: offer.sdp,
       headers: {

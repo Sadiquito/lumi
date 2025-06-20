@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mic, MicOff, Volume2, User, Bot, Loader2, AlertCircle } from 'lucide-react';
-import { useRealtimeConversation } from '@/hooks/useRealtimeConversation';
+import { useRealtimeConversation, ModelOption } from '@/hooks/useRealtimeConversation';
 
 export const RealtimeConversation: React.FC = () => {
   const {
@@ -12,6 +12,8 @@ export const RealtimeConversation: React.FC = () => {
     isLumiSpeaking,
     transcript,
     error,
+    selectedModel,
+    setSelectedModel,
     startConversation,
     endConversation
   } = useRealtimeConversation();
@@ -36,6 +38,10 @@ export const RealtimeConversation: React.FC = () => {
   };
 
   const connectionStatus = getConnectionStatus();
+
+  const getModelDisplayName = (model: ModelOption) => {
+    return model === 'gpt-4o' ? 'GPT-4o (More Capable)' : 'GPT-4o Mini (Faster & Cost-Effective)';
+  };
 
   // Add error boundary behavior
   if (error && error.includes('React')) {
@@ -82,6 +88,28 @@ export const RealtimeConversation: React.FC = () => {
             <Mic className="w-8 h-8 text-cyan-400" />
           )}
         </Button>
+
+        {/* Model Selection Dropdown */}
+        <div className="flex flex-col items-center space-y-2">
+          <label className="text-sm font-cinzel text-white/80">AI Model</label>
+          <Select 
+            value={selectedModel} 
+            onValueChange={(value: ModelOption) => setSelectedModel(value)}
+            disabled={isConnected || isConnecting}
+          >
+            <SelectTrigger className="w-64 bg-white/10 border-white/20 text-white backdrop-blur-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-white/20 text-white">
+              <SelectItem value="gpt-4o-mini" className="focus:bg-white/10 focus:text-white">
+                GPT-4o Mini (Faster & Cost-Effective)
+              </SelectItem>
+              <SelectItem value="gpt-4o" className="focus:bg-white/10 focus:text-white">
+                GPT-4o (More Capable)
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         
         <div className="text-center space-y-2">
           <h2 className="text-lg font-cinzel text-white">
@@ -89,12 +117,12 @@ export const RealtimeConversation: React.FC = () => {
           </h2>
           <p className="font-crimson text-sm text-white/70">
             {isConnecting 
-              ? 'Establishing WebRTC connection with Lumi...'
+              ? `Establishing connection with ${getModelDisplayName(selectedModel)}...`
               : isConnected 
                 ? isLumiSpeaking 
                   ? 'Lumi is speaking...' 
-                  : 'Speak naturally - Lumi will respond in real-time'
-                : 'Start your voice conversation with Lumi (Powered by OpenAI Agent SDK)'
+                  : `Connected to ${getModelDisplayName(selectedModel)} - Speak naturally`
+                : `Start your voice conversation with Lumi using ${getModelDisplayName(selectedModel)}`
             }
           </p>
         </div>

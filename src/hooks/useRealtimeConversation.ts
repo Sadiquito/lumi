@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,13 +9,25 @@ interface TranscriptEntry {
   timestamp: number;
 }
 
+export type ModelOption = 'gpt-4o' | 'gpt-4o-mini';
+
 export const useRealtimeConversation = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLumiSpeaking, setIsLumiSpeaking] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(() => {
+    // Load from localStorage or default to gpt-4o-mini
+    const saved = localStorage.getItem('lumi-selected-model');
+    return (saved as ModelOption) || 'gpt-4o-mini';
+  });
   const agentRef = useRef<OpenAIRealtimeAgent | null>(null);
+
+  // Save model selection to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('lumi-selected-model', selectedModel);
+  }, [selectedModel]);
 
   const handleMessage = useCallback((event: any) => {
     console.log('📨 Agent event received:', event.type);
@@ -95,7 +106,7 @@ export const useRealtimeConversation = () => {
     }
 
     try {
-      console.log('🚀 Starting conversation with OpenAI Agent...');
+      console.log(`🚀 Starting conversation with ${selectedModel}...`);
       setError(null);
       setIsConnecting(true);
       
@@ -107,7 +118,7 @@ export const useRealtimeConversation = () => {
       }
       
       agentRef.current = new OpenAIRealtimeAgent();
-      await agentRef.current.init(handleMessage, handleSpeakingChange, data.apiKey);
+      await agentRef.current.init(handleMessage, handleSpeakingChange, data.apiKey, selectedModel);
       
       setIsConnected(true);
       setIsConnecting(false);
@@ -120,7 +131,7 @@ export const useRealtimeConversation = () => {
       setIsConnecting(false);
       setIsConnected(false);
     }
-  }, [handleMessage, handleSpeakingChange, isConnecting, isConnected]);
+  }, [handleMessage, handleSpeakingChange, isConnecting, isConnected, selectedModel]);
 
   const endConversation = useCallback(() => {
     console.log('🛑 Ending conversation...');
@@ -168,6 +179,8 @@ export const useRealtimeConversation = () => {
     isLumiSpeaking,
     transcript,
     error,
+    selectedModel,
+    setSelectedModel,
     startConversation,
     endConversation,
     sendTextMessage
