@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +16,9 @@ export const useSessionManagement = () => {
   
   // Session timeout duration (5 minutes of inactivity)
   const SESSION_TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+  // Minimum conversation requirements
+  const MIN_CONVERSATION_DURATION = 10; // 10 seconds minimum
+  const MIN_MESSAGES = 2; // At least 2 messages (1 user + 1 Lumi response)
 
   // Voice commands that trigger session end
   const SESSION_END_COMMANDS = [
@@ -57,11 +59,11 @@ export const useSessionManagement = () => {
   }, [sessionTimeoutId]);
 
   const addToTranscript = useCallback((speaker: 'user' | 'lumi', text: string) => {
-    if (!currentSession) return;
+    if (!currentSession || !text.trim()) return;
 
     const entry = {
       speaker,
-      text,
+      text: text.trim(),
       timestamp: Date.now()
     };
 
@@ -69,6 +71,8 @@ export const useSessionManagement = () => {
       ...prev,
       transcript: [...prev.transcript, entry]
     } : null);
+
+    console.log('Added to transcript:', entry);
 
     // Reset timeout on any activity
     resetSessionTimeout();
@@ -86,6 +90,41 @@ export const useSessionManagement = () => {
       }
     }
   }, [currentSession, resetSessionTimeout]);
+
+  const isConversationMeaningful = useCallback((transcript: any[], duration: number) => {
+    if (!transcript || transcript.length < MIN_MESSAGES) {
+      console.log('Conversation too short - not saving:', transcript?.length || 0, 'messages');
+      return false;
+    }
+
+    if (duration < MIN_CONVERSATION_DURATION) {
+      console.log('Conversation duration too short - not saving:', duration, 'seconds');
+      return false;
+    }
+
+    // Check if we have both user and lumi messages
+    const hasUserMessage = transcript.some(entry => entry.speaker === 'user' && entry.text.trim().length > 0);
+    const hasLumiMessage = transcript.some(entry => entry.speaker === 'lumi' && entry.text.trim().length > 0);
+
+    if (!hasUserMessage || !hasLumiMessage) {
+      console.log('Missing user or Lumi messages - not saving. User:', hasUserMessage, 'Lumi:', hasLumiMessage);
+      return false;
+    }
+
+    // Check for meaningful content (not just greetings)
+    const meaningfulMessages = transcript.filter(entry => 
+      entry.text.trim().length > 10 && // More than just "hello"
+      !entry.text.toLowerCase().includes('hello') &&
+      !entry.text.toLowerCase().includes('hi there')
+    );
+
+    if (meaningfulMessages.length === 0) {
+      console.log('No meaningful content found - not saving');
+      return false;
+    }
+
+    return true;
+  }, []);
 
   const generateSessionSummary = useCallback(async (transcript: any[], userEndCommand?: string) => {
     if (!transcript.length) return null;
@@ -141,9 +180,19 @@ export const useSessionManagement = () => {
       // Calculate session duration
       const duration = Math.floor((Date.now() - currentSession.startTime.getTime()) / 1000);
 
-      // Generate session summary and reflection if there's meaningful content
+      // Check if conversation is meaningful enough to save
+      if (!isConversationMeaningful(currentSession.transcript, duration)) {
+        console.log('Conversation not meaningful enough - not saving to database');
+        setCurrentSession(null);
+        setIsEndingSession(false);
+        return null;
+      }
+
+      console.log('Saving meaningful conversation with', currentSession.transcript.length, 'messages');
+
+      // Generate session summary and reflection
       let sessionAnalysis = null;
-      if (currentSession.transcript.length > 2) { // More than just greetings
+      if (currentSession.transcript.length > 2) {
         sessionAnalysis = await generateSessionSummary(currentSession.transcript, userEndCommand);
       }
 
@@ -171,6 +220,8 @@ export const useSessionManagement = () => {
         console.error('Error saving conversation:', saveError);
         throw saveError;
       }
+
+      console.log('Conversation saved successfully:', conversation.id);
 
       // Trigger comprehensive session analysis for profile updates
       if (currentSession.transcript.length > 0) {
@@ -210,7 +261,7 @@ export const useSessionManagement = () => {
       console.error('Error ending session:', error);
       setIsEndingSession(false);
     }
-  }, [currentSession, user, sessionTimeoutId, generateSessionSummary, isEndingSession]);
+  }, [currentSession, user, sessionTimeoutId, generateSessionSummary, isEndingSession, isConversationMeaningful]);
 
   // Start session timeout when session is created
   useEffect(() => {
