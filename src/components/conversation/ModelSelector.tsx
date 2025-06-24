@@ -27,10 +27,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         </SelectTrigger>
         <SelectContent className="bg-slate-800 border-white/20 text-white">
           <SelectItem value="gpt-4o-mini" className="focus:bg-white/10 focus:text-white">
-            GPT-4o Mini (Faster & Cost-Effective)
+            GPT-4o Mini
           </SelectItem>
           <SelectItem value="gpt-4o" className="focus:bg-white/10 focus:text-white">
-            GPT-4o (More Capable)
+            GPT-4o
           </SelectItem>
         </SelectContent>
       </Select>

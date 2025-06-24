@@ -21,7 +21,7 @@ export const ConversationStatus: React.FC<ConversationStatusProps> = ({
   selectedVoice
 }) => {
   const getModelDisplayName = (model: ModelOption) => {
-    return model === 'gpt-4o' ? 'GPT-4o (More Capable)' : 'GPT-4o Mini (Faster & Cost-Effective)';
+    return model === 'gpt-4o' ? 'GPT-4o' : 'GPT-4o Mini';
   };
 
   const getVoiceDisplayName = (voice?: VoiceOption) => {
@@ -61,7 +61,7 @@ export const ConversationStatus: React.FC<ConversationStatusProps> = ({
               ? isLumiSpeaking 
                 ? 'Lumi is speaking...' 
                 : `Connected to ${getModelDisplayName(selectedModel)} with ${getVoiceDisplayName(selectedVoice)} voice - Speak naturally`
-              : `Start your voice conversation with Lumi using ${getModelDisplayName(selectedModel)} and ${getVoiceDisplayName(selectedVoice)} voice`
+              : `Start your conversation`
           }
         </p>
       </div>
