@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,17 +59,20 @@ export const useRealtimeConversation = () => {
       const content = event.item.content?.[0]?.text || event.item.content?.[0]?.transcript || '';
       
       if (content && content.trim()) {
-        const newEntry = {
+        // Properly type the speaker based on role
+        const speaker: 'user' | 'lumi' = role === 'user' ? 'user' : 'lumi';
+        
+        const newEntry: TranscriptEntry = {
           id: `${Date.now()}-${role}`,
           text: content,
-          speaker: role === 'user' ? 'user' : 'lumi',
+          speaker: speaker,
           timestamp: Date.now()
         };
         
         setTranscript(prev => [...prev, newEntry]);
         
         // Add to session transcript
-        addToTranscript(newEntry.speaker, newEntry.text);
+        addToTranscript(speaker, newEntry.text);
       }
     }
 
@@ -85,10 +87,10 @@ export const useRealtimeConversation = () => {
               : entry
           );
         } else {
-          const newEntry = {
+          const newEntry: TranscriptEntry = {
             id: `${Date.now()}-lumi-live`,
             text: event.delta,
-            speaker: 'lumi' as const,
+            speaker: 'lumi',
             timestamp: Date.now()
           };
           return [...prev, newEntry];
@@ -117,10 +119,10 @@ export const useRealtimeConversation = () => {
     if (event.type === 'conversation.item.input_audio_transcription.completed') {
       const userText = event.transcript;
       if (userText && userText.trim()) {
-        const newEntry = {
+        const newEntry: TranscriptEntry = {
           id: `${Date.now()}-user`,
           text: userText,
-          speaker: 'user' as const,
+          speaker: 'user',
           timestamp: Date.now()
         };
         
