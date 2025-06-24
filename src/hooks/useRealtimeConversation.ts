@@ -42,38 +42,68 @@ export const useRealtimeConversation = () => {
   } = useModelSettings();
 
   const handleMessage = useCallback((event: any) => {
-    console.log('📨 Agent event received:', event.type);
+    console.log('📨 WebRTC event received:', event.type, event);
 
     if (event.type === 'error') {
-      console.error('❌ Agent error:', event);
+      console.error('❌ WebRTC error:', event);
       return;
     }
 
-    // Handle conversation updates
-    if (event.type === 'conversation.item.appended' && event.item?.type === 'message') {
+    // Handle conversation item creation (when messages are added to conversation)
+    if (event.type === 'conversation.item.created') {
+      console.log('📝 Conversation item created:', event);
       handleConversationItem(event);
     }
 
-    // Handle realtime events for live transcript
-    if (event.type === 'response.audio_transcript.delta') {
+    // Handle live audio transcript deltas (Lumi speaking)
+    if (event.type === 'response.text.delta') {
+      console.log('🗣️ Response text delta:', event.delta);
       handleAudioTranscriptDelta(event);
-    } else if (event.type === 'response.audio_transcript.done') {
+    } else if (event.type === 'response.text.done') {
+      console.log('✅ Response text done');
       handleAudioTranscriptDone();
     }
 
-    // Handle user input transcription
+    // Handle user input transcription (user speaking)
+    if (event.type === 'input_audio_buffer.speech_stopped') {
+      console.log('🎤 User speech stopped');
+      // The transcription will come in a separate event
+    }
+
+    // Handle user speech transcription completion
     if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      console.log('📝 User transcription completed:', event.transcript);
       handleUserInputTranscription(event);
+    }
+
+    // Handle response creation and completion
+    if (event.type === 'response.created') {
+      console.log('🤖 Response started');
+    } else if (event.type === 'response.done') {
+      console.log('✅ Response completed');
     }
   }, [handleConversationItem, handleAudioTranscriptDelta, handleAudioTranscriptDone, handleUserInputTranscription]);
 
   const startConversation = useCallback(async () => {
-    await startConnection(selectedModel, selectedVoice, handleMessage, startSession);
+    console.log('🚀 Starting conversation and session...');
+    
+    // Start session first
+    const session = startSession();
+    console.log('📋 Session started:', session.id);
+    
+    // Then start WebRTC connection
+    await startConnection(selectedModel, selectedVoice, handleMessage, () => {
+      console.log('🔗 Connection established, session already started');
+    });
   }, [startConnection, selectedModel, selectedVoice, handleMessage, startSession]);
 
   const endConversation = useCallback(async () => {
+    console.log('🛑 Ending conversation and session...');
+    
     await endConnection(async () => {
-      await endSession();
+      console.log('💾 Saving session...');
+      const result = await endSession();
+      console.log('✅ Session saved:', result);
       clearTranscript();
     });
   }, [endConnection, endSession, clearTranscript]);

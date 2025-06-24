@@ -28,35 +28,47 @@ export const useSessionManagement = () => {
   const { shouldEndSession: shouldEndSessionByVoice } = useVoiceCommands();
 
   const endSession = useCallback(async (isTimeout: boolean = false, userEndCommand?: string) => {
-    if (!currentSession || !user || isEndingSession) return;
+    if (!currentSession || !user || isEndingSession) {
+      console.log('⚠️ Cannot end session:', { hasSession: !!currentSession, hasUser: !!user, isEnding: isEndingSession });
+      return;
+    }
 
     try {
       setIsEndingSession(true);
-      console.log('Ending session...', { isTimeout, userEndCommand });
+      console.log('🛑 Ending session...', { 
+        sessionId: currentSession.id,
+        transcriptLength: currentSession.transcript.length,
+        isTimeout, 
+        userEndCommand 
+      });
       
       // Clear any active timeout
       clearSessionTimeout();
 
       // Calculate session duration
       const duration = Math.floor((Date.now() - currentSession.startTime.getTime()) / 1000);
+      console.log('⏱️ Session duration:', duration, 'seconds');
 
       // Check if conversation is meaningful enough to save
       if (!isConversationMeaningful(currentSession.transcript, duration)) {
-        console.log('Conversation not meaningful enough - not saving to database');
+        console.log('❌ Conversation not meaningful enough - not saving to database');
         clearSession();
         setIsEndingSession(false);
         return null;
       }
 
-      console.log('Saving meaningful conversation with', currentSession.transcript.length, 'messages');
+      console.log('✅ Conversation is meaningful - saving to database with', currentSession.transcript.length, 'messages');
 
       // Generate session summary and reflection
       let sessionAnalysis = null;
       if (currentSession.transcript.length > 2) {
+        console.log('🧠 Generating session analysis...');
         sessionAnalysis = await generateSessionSummary(currentSession.transcript, userEndCommand);
+        console.log('📋 Session analysis generated:', !!sessionAnalysis);
       }
 
       // Save conversation to database with summary
+      console.log('💾 Saving conversation to database...');
       const { data: conversation, error: saveError } = await supabase
         .from('conversations')
         .insert({
@@ -77,14 +89,15 @@ export const useSessionManagement = () => {
         .single();
 
       if (saveError) {
-        console.error('Error saving conversation:', saveError);
+        console.error('❌ Error saving conversation:', saveError);
         throw saveError;
       }
 
-      console.log('Conversation saved successfully:', conversation.id);
+      console.log('✅ Conversation saved successfully with ID:', conversation.id);
 
       // Trigger comprehensive session analysis for profile updates
       if (currentSession.transcript.length > 0) {
+        console.log('🔍 Triggering comprehensive analysis...');
         const lastUserMessage = currentSession.transcript
           .filter(entry => entry.speaker === 'user')
           .pop();
@@ -101,16 +114,16 @@ export const useSessionManagement = () => {
           });
 
           if (analysisError) {
-            console.error('Error in session analysis:', analysisError);
+            console.error('❌ Error in comprehensive analysis:', analysisError);
           } else {
-            console.log('Session analysis completed successfully');
+            console.log('✅ Comprehensive analysis completed successfully');
           }
         }
       }
 
       clearSession();
       setIsEndingSession(false);
-      console.log('Session ended and analyzed');
+      console.log('🎉 Session ended and analyzed successfully');
 
       return {
         conversationId: conversation.id,
@@ -118,13 +131,17 @@ export const useSessionManagement = () => {
       };
 
     } catch (error) {
-      console.error('Error ending session:', error);
+      console.error('❌ Error ending session:', error);
       setIsEndingSession(false);
+      throw error;
     }
   }, [currentSession, user, isEndingSession, clearSessionTimeout, isConversationMeaningful, clearSession, generateSessionSummary, setIsEndingSession]);
 
   const addToTranscript = useCallback((speaker: 'user' | 'lumi', text: string) => {
-    if (!currentSession || !text.trim()) return;
+    if (!currentSession || !text.trim()) {
+      console.log('⚠️ Cannot add to transcript:', { hasSession: !!currentSession, hasText: !!text.trim() });
+      return;
+    }
 
     const entry = {
       speaker,
@@ -132,8 +149,8 @@ export const useSessionManagement = () => {
       timestamp: Date.now()
     };
 
+    console.log('➕ Adding to session transcript:', entry);
     updateSessionTranscript(entry);
-    console.log('Added to transcript:', entry);
 
     // Reset timeout on any activity
     resetSessionTimeout(() => endSession(true));
@@ -141,7 +158,7 @@ export const useSessionManagement = () => {
     // Check for voice command session endings
     if (speaker === 'user') {
       if (shouldEndSessionByVoice(text)) {
-        console.log('Voice command detected for session end:', text);
+        console.log('🗣️ Voice command detected for session end:', text);
         setTimeout(() => endSession(false, text), 1000); // Delay to allow processing
       }
     }
@@ -150,6 +167,7 @@ export const useSessionManagement = () => {
   // Start session timeout when session is created
   useEffect(() => {
     if (currentSession && !sessionTimeoutId) {
+      console.log('⏰ Setting up session timeout for session:', currentSession.id);
       resetSessionTimeout(() => endSession(true));
     }
   }, [currentSession, sessionTimeoutId, resetSessionTimeout, endSession]);

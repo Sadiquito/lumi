@@ -32,8 +32,8 @@ export const useConnectionManager = () => {
       setError(null);
       setIsConnecting(true);
       
-      // Start session management
-      onSessionStart();
+      // Session is now started externally before connection
+      console.log('📋 Session management handled externally');
       
       // Get API key from Supabase function
       const { data, error: functionError } = await supabase.functions.invoke('get-openai-key');
@@ -47,7 +47,7 @@ export const useConnectionManager = () => {
       
       setIsConnected(true);
       setIsConnecting(false);
-      console.log('✅ Conversation started successfully');
+      console.log('✅ WebRTC connection established successfully');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start conversation';
@@ -59,7 +59,7 @@ export const useConnectionManager = () => {
   }, [handleSpeakingChange, isConnecting, isConnected]);
 
   const endConnection = useCallback(async (onSessionEnd: () => Promise<void>) => {
-    console.log('🛑 Ending conversation...');
+    console.log('🛑 Ending WebRTC connection...');
     
     if (agentRef.current) {
       agentRef.current.disconnect();
@@ -67,6 +67,7 @@ export const useConnectionManager = () => {
     }
     
     // End session and save if meaningful
+    console.log('💾 Processing session end...');
     await onSessionEnd();
     
     setIsConnected(false);
@@ -74,7 +75,7 @@ export const useConnectionManager = () => {
     setIsLumiSpeaking(false);
     setError(null);
     
-    console.log('✅ Conversation ended');
+    console.log('✅ Connection and session ended');
   }, []);
 
   const sendTextMessage = useCallback(async (text: string) => {
