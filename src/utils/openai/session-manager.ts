@@ -10,15 +10,24 @@ export class SessionManager {
     
     const sessionConfig: SessionConfig = {
       modalities: ['text', 'audio'],
-      instructions: "You are Lumi, a helpful AI assistant for personal reflection and journaling. Speak naturally and conversationally.",
+      instructions: "You are Lumi, a helpful AI assistant for personal reflection and journaling. Speak naturally and conversationally. Keep responses thoughtful but concise.",
       voice: voice,
       input_audio_format: 'pcm16',
       output_audio_format: 'pcm16',
       input_audio_transcription: {
         model: 'whisper-1'
-      }
+      },
+      turn_detection: {
+        type: 'server_vad',
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 1000
+      },
+      temperature: 0.8,
+      max_response_output_tokens: 'inf'
     };
 
+    console.log('📡 Sending session configuration:', sessionConfig);
     this.connection.sendEvent({
       type: 'session.update',
       session: sessionConfig

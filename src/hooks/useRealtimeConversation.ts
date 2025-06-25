@@ -64,16 +64,17 @@ export const useRealtimeConversation = () => {
       handleAudioTranscriptDone();
     }
 
-    // Handle user input transcription (user speaking)
-    if (event.type === 'input_audio_buffer.speech_stopped') {
-      console.log('🎤 User speech stopped');
-      // The transcription will come in a separate event
+    // Handle user input transcription (user speaking) - FIXED
+    if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      console.log('🎤 User transcription completed:', event);
+      handleUserInputTranscription(event);
     }
 
-    // Handle user speech transcription completion
-    if (event.type === 'conversation.item.input_audio_transcription.completed') {
-      console.log('📝 User transcription completed:', event.transcript);
-      handleUserInputTranscription(event);
+    // Handle user speech detection
+    if (event.type === 'input_audio_buffer.speech_started') {
+      console.log('🎤 User speech started');
+    } else if (event.type === 'input_audio_buffer.speech_stopped') {
+      console.log('🎤 User speech stopped');
     }
 
     // Handle response creation and completion

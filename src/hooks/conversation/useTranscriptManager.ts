@@ -36,7 +36,7 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
           timestamp: Date.now()
         };
         
-        console.log('➕ Adding transcript entry:', newEntry);
+        console.log('➕ Adding transcript entry from conversation item:', newEntry);
         setTranscript(prev => [...prev, newEntry]);
         
         // Add to session transcript
@@ -93,9 +93,10 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
   }, [addToTranscript]);
 
   const handleUserInputTranscription = useCallback((event: any) => {
-    console.log('🎤 User input transcription:', event);
+    console.log('🎤 Processing user input transcription event:', event);
     
-    const userText = event.transcript;
+    // Handle the actual WebRTC event structure
+    const userText = event.transcript || event.text;
     if (userText && userText.trim()) {
       const newEntry: TranscriptEntry = {
         id: `${Date.now()}-user-${Math.random()}`,
@@ -108,7 +109,10 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
       setTranscript(prev => [...prev, newEntry]);
       
       // Add to session transcript
+      console.log('💾 Adding user message to session transcript:', userText.trim());
       addToTranscript('user', userText.trim());
+    } else {
+      console.warn('⚠️ No valid transcript found in event:', event);
     }
   }, [addToTranscript]);
 
