@@ -6,7 +6,7 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
   const handleConversationItem = useCallback((event: any) => {
-    console.log('📝 Processing conversation item:', event);
+    console.log('📝 PHASE 1 DEBUG - Processing conversation item:', event);
     
     // Handle WebRTC conversation.item.created events
     if (event.item) {
@@ -36,17 +36,18 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
           timestamp: Date.now()
         };
         
-        console.log('➕ Adding transcript entry from conversation item:', newEntry);
+        console.log('➕ PHASE 1 DEBUG - Adding transcript entry from conversation item:', newEntry);
         setTranscript(prev => [...prev, newEntry]);
         
-        // Add to session transcript
+        // PHASE 2: Ensure session transcript is updated
+        console.log('💾 PHASE 2 - Adding to session transcript from conversation item:', speaker, content.trim());
         addToTranscript(speaker, newEntry.text);
       }
     }
   }, [addToTranscript]);
 
   const handleAudioTranscriptDelta = useCallback((event: any) => {
-    console.log('🔄 Audio transcript delta:', event.delta);
+    console.log('🔄 PHASE 1 DEBUG - Audio transcript delta:', event.delta);
     
     setTranscript(prev => {
       const lastEntry = prev[prev.length - 1];
@@ -71,7 +72,7 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
   }, []);
 
   const handleAudioTranscriptDone = useCallback(() => {
-    console.log('✅ Audio transcript completed');
+    console.log('✅ PHASE 1 DEBUG - Audio transcript completed');
     
     setTranscript(prev => {
       const updatedTranscript = prev.map((entry, index) => 
@@ -84,7 +85,7 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
       const lastEntry = updatedTranscript[updatedTranscript.length - 1];
       if (lastEntry && lastEntry.speaker === 'lumi') {
         const cleanText = lastEntry.text.replace(' [COMPLETE]', '');
-        console.log('💾 Adding completed Lumi response to session:', cleanText);
+        console.log('💾 PHASE 2 - Adding completed Lumi response to session:', cleanText);
         addToTranscript('lumi', cleanText);
       }
       
@@ -93,10 +94,32 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
   }, [addToTranscript]);
 
   const handleUserInputTranscription = useCallback((event: any) => {
-    console.log('🎤 Processing user input transcription event:', event);
+    console.log('🎤 PHASE 1 DEBUG - Processing user input transcription event:', event);
     
-    // Handle the actual WebRTC event structure
-    const userText = event.transcript || event.text;
+    // PHASE 2: Handle multiple possible event structures with fallbacks
+    let userText = null;
+    
+    // Try different possible locations for the transcript text
+    if (event.transcript) {
+      userText = event.transcript;
+      console.log('📝 PHASE 2 - Found transcript in event.transcript');
+    } else if (event.text) {
+      userText = event.text;
+      console.log('📝 PHASE 2 - Found transcript in event.text');
+    } else if (event.item && event.item.content) {
+      // Handle nested content structures
+      if (Array.isArray(event.item.content)) {
+        userText = event.item.content
+          .map(c => c.text || c.transcript || '')
+          .filter(text => text.trim())
+          .join(' ');
+        console.log('📝 PHASE 2 - Found transcript in event.item.content array');
+      } else if (typeof event.item.content === 'string') {
+        userText = event.item.content;
+        console.log('📝 PHASE 2 - Found transcript in event.item.content string');
+      }
+    }
+    
     if (userText && userText.trim()) {
       const newEntry: TranscriptEntry = {
         id: `${Date.now()}-user-${Math.random()}`,
@@ -105,19 +128,40 @@ export const useTranscriptManager = (addToTranscript: (speaker: 'user' | 'lumi',
         timestamp: Date.now()
       };
       
-      console.log('➕ Adding user transcript entry:', newEntry);
+      console.log('➕ PHASE 2 - Adding user transcript entry:', newEntry);
       setTranscript(prev => [...prev, newEntry]);
       
-      // Add to session transcript
-      console.log('💾 Adding user message to session transcript:', userText.trim());
+      // PHASE 2: Critical - Add to session transcript
+      console.log('💾 PHASE 2 - Adding user message to session transcript:', userText.trim());
       addToTranscript('user', userText.trim());
     } else {
-      console.warn('⚠️ No valid transcript found in event:', event);
+      console.warn('⚠️ PHASE 2 - No valid transcript found in event, trying fallback approaches:', {
+        eventType: event.type,
+        eventKeys: Object.keys(event),
+        fullEvent: event
+      });
+      
+      // PHASE 2: Fallback - try to extract any text content from the event
+      const fallbackText = JSON.stringify(event).match(/"text":"([^"]+)"/)?.[1] || 
+                          JSON.stringify(event).match(/"transcript":"([^"]+)"/)?.[1];
+      
+      if (fallbackText) {
+        console.log('📝 PHASE 2 - Found fallback text:', fallbackText);
+        const newEntry: TranscriptEntry = {
+          id: `${Date.now()}-user-fallback-${Math.random()}`,
+          text: fallbackText.trim(),
+          speaker: 'user',
+          timestamp: Date.now()
+        };
+        
+        setTranscript(prev => [...prev, newEntry]);
+        addToTranscript('user', fallbackText.trim());
+      }
     }
   }, [addToTranscript]);
 
   const clearTranscript = useCallback(() => {
-    console.log('🧹 Clearing transcript');
+    console.log('🧹 PHASE 1 DEBUG - Clearing transcript');
     setTranscript([]);
   }, []);
 

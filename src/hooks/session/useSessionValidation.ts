@@ -2,54 +2,45 @@
 import { useCallback } from 'react';
 
 export const useSessionValidation = () => {
-  // Reduced minimum requirements for better UX
-  const MIN_CONVERSATION_DURATION = 5; // 5 seconds minimum (reduced from 10)
-  const MIN_MESSAGES = 2; // At least 2 messages (1 user + 1 Lumi response)
+  // PHASE 3: Extremely lenient validation for debugging
+  const MIN_CONVERSATION_DURATION = 1; // 1 second minimum (reduced for testing)
+  const MIN_MESSAGES = 1; // At least 1 message (reduced for testing)
 
   const isConversationMeaningful = useCallback((transcript: any[], duration: number) => {
-    console.log('🔍 Validating conversation:', { 
+    console.log('🔍 PHASE 1 DEBUG - Session Validation:', { 
       transcriptLength: transcript?.length || 0, 
       duration,
-      transcript: transcript?.slice(0, 3) // Log first 3 entries for debugging
+      fullTranscript: transcript,
+      validation: 'EXTREMELY_LENIENT_FOR_DEBUGGING'
     });
 
-    if (!transcript || transcript.length < MIN_MESSAGES) {
-      console.log('❌ Conversation too short - not saving:', transcript?.length || 0, 'messages (need', MIN_MESSAGES, ')');
+    // PHASE 3: Save if ANY message exists at all
+    if (!transcript || transcript.length === 0) {
+      console.log('❌ No transcript at all - not saving');
       return false;
     }
 
-    if (duration < MIN_CONVERSATION_DURATION) {
-      console.log('❌ Conversation duration too short - not saving:', duration, 'seconds (need', MIN_CONVERSATION_DURATION, ')');
-      return false;
-    }
-
-    // Check if we have both user and lumi messages
-    const userMessages = transcript.filter(entry => entry.speaker === 'user' && entry.text.trim().length > 0);
-    const lumiMessages = transcript.filter(entry => entry.speaker === 'lumi' && entry.text.trim().length > 0);
-
-    console.log('👥 Message breakdown:', { 
-      userMessages: userMessages.length, 
-      lumiMessages: lumiMessages.length,
-      userTexts: userMessages.map(m => m.text.substring(0, 50) + '...'),
-      lumiTexts: lumiMessages.map(m => m.text.substring(0, 50) + '...')
-    });
-
-    if (userMessages.length === 0 || lumiMessages.length === 0) {
-      console.log('❌ Missing user or Lumi messages - not saving. User:', userMessages.length, 'Lumi:', lumiMessages.length);
-      return false;
-    }
-
-    // More lenient meaningful content check
-    const meaningfulMessages = transcript.filter(entry => 
-      entry.text.trim().length > 3 // Reduced from 10 characters
+    // Check for any non-empty text
+    const anyNonEmptyMessage = transcript.some(entry => 
+      entry && entry.text && entry.text.trim().length > 0
     );
 
-    if (meaningfulMessages.length === 0) {
-      console.log('❌ No meaningful content found - not saving');
+    console.log('🔍 PHASE 1 DEBUG - Message analysis:', {
+      anyNonEmptyMessage,
+      messages: transcript.map(entry => ({
+        speaker: entry?.speaker,
+        text: entry?.text,
+        hasText: !!entry?.text,
+        textLength: entry?.text?.length || 0
+      }))
+    });
+
+    if (!anyNonEmptyMessage) {
+      console.log('❌ No non-empty messages found - not saving');
       return false;
     }
 
-    console.log('✅ Conversation validation passed - will save to database');
+    console.log('✅ PHASE 1 DEBUG - Conversation validation PASSED - will save to database');
     return true;
   }, [MIN_CONVERSATION_DURATION, MIN_MESSAGES]);
 

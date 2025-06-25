@@ -42,7 +42,7 @@ export const useRealtimeConversation = () => {
   } = useModelSettings();
 
   const handleMessage = useCallback((event: any) => {
-    console.log('📨 WebRTC event received:', event.type, event);
+    console.log('📨 PHASE 1 DEBUG - WebRTC event received:', event.type, event);
 
     if (event.type === 'error') {
       console.error('❌ WebRTC error:', event);
@@ -51,22 +51,24 @@ export const useRealtimeConversation = () => {
 
     // Handle conversation item creation (when messages are added to conversation)
     if (event.type === 'conversation.item.created') {
-      console.log('📝 Conversation item created:', event);
+      console.log('📝 PHASE 1 DEBUG - Conversation item created:', event);
       handleConversationItem(event);
     }
 
     // Handle live audio transcript deltas (Lumi speaking)
     if (event.type === 'response.text.delta') {
-      console.log('🗣️ Response text delta:', event.delta);
+      console.log('🗣️ PHASE 1 DEBUG - Response text delta:', event.delta);
       handleAudioTranscriptDelta(event);
     } else if (event.type === 'response.text.done') {
-      console.log('✅ Response text done');
+      console.log('✅ PHASE 1 DEBUG - Response text done');
       handleAudioTranscriptDone();
     }
 
-    // Handle user input transcription (user speaking) - FIXED
-    if (event.type === 'conversation.item.input_audio_transcription.completed') {
-      console.log('🎤 User transcription completed:', event);
+    // PHASE 2: Enhanced user input transcription handling with multiple event types
+    if (event.type === 'conversation.item.input_audio_transcription.completed' || 
+        event.type === 'input_audio_transcription.completed' ||
+        event.type === 'conversation.item.created' && event.item?.role === 'user') {
+      console.log('🎤 PHASE 2 DEBUG - User transcription event detected:', event.type, event);
       handleUserInputTranscription(event);
     }
 
@@ -99,15 +101,15 @@ export const useRealtimeConversation = () => {
   }, [startConnection, selectedModel, selectedVoice, handleMessage, startSession]);
 
   const endConversation = useCallback(async () => {
-    console.log('🛑 Ending conversation and session...');
+    console.log('🛑 PHASE 4 DEBUG - Ending conversation and session with transcript:', transcript.length, 'entries');
     
-    await endConnection(async () => {
-      console.log('💾 Saving session...');
-      const result = await endSession();
+    await endConnection(async (displayTranscript) => {
+      console.log('💾 PHASE 4 DEBUG - Saving session with display transcript backup...');
+      const result = await endSession(false, undefined, displayTranscript || transcript);
       console.log('✅ Session saved:', result);
       clearTranscript();
-    });
-  }, [endConnection, endSession, clearTranscript]);
+    }, transcript);
+  }, [endConnection, endSession, clearTranscript, transcript]);
 
   return {
     isConnected,

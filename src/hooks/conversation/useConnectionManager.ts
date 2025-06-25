@@ -58,17 +58,17 @@ export const useConnectionManager = () => {
     }
   }, [handleSpeakingChange, isConnecting, isConnected]);
 
-  const endConnection = useCallback(async (onSessionEnd: () => Promise<void>) => {
-    console.log('🛑 Ending WebRTC connection...');
+  const endConnection = useCallback(async (onSessionEnd: (displayTranscript?: any[]) => Promise<void>, displayTranscript?: any[]) => {
+    console.log('🛑 PHASE 4 DEBUG - Ending WebRTC connection with display transcript:', displayTranscript?.length || 0, 'entries');
     
     if (agentRef.current) {
       agentRef.current.disconnect();
       agentRef.current = null;
     }
     
-    // End session and save if meaningful
-    console.log('💾 Processing session end...');
-    await onSessionEnd();
+    // PHASE 4: Pass display transcript to session end
+    console.log('💾 PHASE 4 - Processing session end with display transcript...');
+    await onSessionEnd(displayTranscript);
     
     setIsConnected(false);
     setIsConnecting(false);
