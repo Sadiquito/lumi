@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -53,14 +52,9 @@ const Index = () => {
       }}
     >
       <div className="relative z-10 max-w-4xl mx-auto text-center px-4 space-y-12">
-        {/* Main heading */}
+        {/* Main heading with golden glow */}
         <div className="space-y-6">
-          <h1 
-            className="text-6xl md:text-7xl font-cinzel font-bold tracking-wider text-white"
-            style={{
-              textShadow: '0 0 20px rgba(248, 250, 252, 0.5), 0 0 40px rgba(248, 250, 252, 0.3), 0 0 60px rgba(248, 250, 252, 0.1)'
-            }}
-          >
+          <h1 className="text-6xl md:text-7xl font-cinzel font-bold tracking-wider text-white animate-golden-glow">
             LUMI
           </h1>
           <div className="space-y-2 font-cinzel">
