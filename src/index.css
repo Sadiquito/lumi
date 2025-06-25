@@ -109,8 +109,15 @@
     @apply border-border;
   }
 
+  html {
+    background-color: rgb(15, 23, 42) !important;
+    color: rgb(248, 250, 252) !important;
+  }
+
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply font-inter;
+    background-color: rgb(15, 23, 42) !important;
+    color: rgb(248, 250, 252) !important;
   }
 }
 
