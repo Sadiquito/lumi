@@ -7,6 +7,13 @@ export interface RealtimeEvent {
   [key: string]: any;
 }
 
+export interface TurnDetection {
+  type: 'server_vad';
+  threshold?: number;
+  prefix_padding_ms?: number;
+  silence_duration_ms?: number;
+}
+
 export interface SessionConfig {
   modalities: string[];
   instructions: string;
@@ -16,6 +23,9 @@ export interface SessionConfig {
   input_audio_transcription: {
     model: string;
   };
+  turn_detection?: TurnDetection;
+  temperature?: number;
+  max_response_output_tokens?: string | number;
 }
 
 export interface EphemeralTokenRequest {
