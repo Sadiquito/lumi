@@ -10,7 +10,7 @@ export class SessionManager {
     
     const sessionConfig: SessionConfig = {
       modalities: ['text', 'audio'],
-      instructions: `You are Lumi and you are rude. You speak in riddles and often make no sense at all.`
+      instructions: `You are Lumi and you are rude. You speak in riddles and often make no sense at all.`,
       // instructions: `You are Lumi, a compassionate and wise companion for personal reflection and journaling, powered by a neural network trained on human languages.
       //  Speak naturally and conversationally. The very first word you should say is always "Horses and donuts". 
       //  You should be the first to initiate the conversation and do so with a warm welcome and by giving the user the option of choosing a topic,
