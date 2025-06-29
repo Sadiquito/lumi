@@ -1,14 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { User, Bot, Volume2 } from 'lucide-react';
-
-interface TranscriptEntry {
-  id: string;
-  text: string;
-  speaker: 'user' | 'lumi';
-  timestamp: number;
-}
+import { TranscriptEntry } from '@/types/conversation';
 
 interface LiveTranscriptProps {
   transcript: TranscriptEntry[];

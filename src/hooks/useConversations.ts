@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,7 +90,6 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('New conversation added:', payload);
           const newConversation: Conversation = {
             ...payload.new as any,
             transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
@@ -109,7 +107,6 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Conversation updated:', payload);
           const updatedConversation: Conversation = {
             ...payload.new as any,
             transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
@@ -133,7 +130,6 @@ export const useConversations = () => {
     conversations,
     loading,
     hasMore,
-    loadMore,
-    refetch: () => fetchConversations(true)
+    loadMore
   };
 };

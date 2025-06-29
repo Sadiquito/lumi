@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ModelOption } from '@/hooks/useRealtimeConversation';
+import { ModelOption } from '@/types/conversation';
 
 interface ModelSelectorProps {
   selectedModel: ModelOption;

@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { VoiceOption } from '@/hooks/useRealtimeConversation';
+import { VoiceOption } from '@/types/conversation';
 
 interface VoiceSelectorProps {
   selectedVoice: VoiceOption;
@@ -14,20 +13,6 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   onVoiceChange,
   disabled
 }) => {
-  const getVoiceDisplayName = (voice: VoiceOption) => {
-    const voiceLabels = {
-      alloy: 'Alloy (Balanced)',
-      ash: 'Ash (Authoritative)',
-      ballad: 'Ballad (Soothing)',
-      coral: 'Coral (Warm)',
-      echo: 'Echo (Deep)',
-      sage: 'Sage (Wise)',
-      shimmer: 'Shimmer (Bright)',
-      verse: 'Verse (Expressive)'
-    };
-    return voiceLabels[voice];
-  };
-
   return (
     <div className="flex flex-col items-center space-y-2">
       <label className="text-sm font-cinzel text-white/80">Voice</label>

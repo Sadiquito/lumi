@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 
 interface SessionData {
@@ -42,7 +41,6 @@ export const useSessionState = () => {
     setIsEndingSession,
     startSession,
     updateSessionTranscript,
-    clearSession,
-    isSessionActive: !!currentSession
+    clearSession
   };
 };

@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { Volume2, AlertCircle } from 'lucide-react';
-import { ModelOption, VoiceOption } from '@/hooks/useRealtimeConversation';
+import { AlertCircle, Volume2 } from 'lucide-react';
+import { ModelOption, VoiceOption } from '@/types/conversation';
 
 interface ConversationStatusProps {
   isConnected: boolean;

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,8 +18,7 @@ export const useConnectionManager = () => {
   const startConnection = useCallback(async (
     selectedModel: ModelOption,
     selectedVoice: VoiceOption,
-    onMessage: (message: any) => void,
-    onSessionStart: () => void
+    onMessage: (message: any) => void
   ) => {
     if (isConnecting || isConnected) {
       console.log('⚠️ Already connecting or connected');
@@ -31,9 +29,6 @@ export const useConnectionManager = () => {
       console.log(`🚀 Starting conversation with ${selectedModel} using ${selectedVoice} voice...`);
       setError(null);
       setIsConnecting(true);
-      
-      // Session is now started externally before connection
-      console.log('📋 Session management handled externally');
       
       // Get API key from Supabase function
       const { data, error: functionError } = await supabase.functions.invoke('get-openai-key');
@@ -59,15 +54,15 @@ export const useConnectionManager = () => {
   }, [handleSpeakingChange, isConnecting, isConnected]);
 
   const endConnection = useCallback(async (onSessionEnd: (displayTranscript?: any[]) => Promise<void>, displayTranscript?: any[]) => {
-    console.log('🛑 PHASE 4 DEBUG - Ending WebRTC connection with display transcript:', displayTranscript?.length || 0, 'entries');
+    console.log('🛑 Ending WebRTC connection with display transcript:', displayTranscript?.length || 0, 'entries');
     
     if (agentRef.current) {
       agentRef.current.disconnect();
       agentRef.current = null;
     }
     
-    // PHASE 4: Pass display transcript to session end
-    console.log('💾 PHASE 4 - Processing session end with display transcript...');
+    // Process session end with display transcript
+    console.log('💾 Processing session end with display transcript...');
     await onSessionEnd(displayTranscript);
     
     setIsConnected(false);
@@ -76,20 +71,6 @@ export const useConnectionManager = () => {
     setError(null);
     
     console.log('✅ Connection and session ended');
-  }, []);
-
-  const sendTextMessage = useCallback(async (text: string) => {
-    try {
-      if (!agentRef.current) {
-        throw new Error('Agent not initialized');
-      }
-      
-      console.log('📤 Sending text message:', text);
-      await agentRef.current.sendMessage(text);
-    } catch (err) {
-      console.error('❌ Error sending message:', err);
-      setError(err instanceof Error ? err.message : 'Failed to send message');
-    }
   }, []);
 
   // Cleanup on unmount
@@ -108,7 +89,6 @@ export const useConnectionManager = () => {
     isLumiSpeaking,
     error,
     startConnection,
-    endConnection,
-    sendTextMessage
+    endConnection
   };
 };

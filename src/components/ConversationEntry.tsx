@@ -1,13 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Bot, User, Clock, Sparkles } from 'lucide-react';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
+import { TranscriptEntry } from '@/types/conversation';
 
 interface ConversationEntryProps {
   conversation: {
@@ -45,7 +39,7 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 mb-6">
       <CardContent className="p-6">
-        {/* Header with timestamp and duration */}
+        {/* Conversation metadata */}
         <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
           <div className="flex items-center space-x-2">
             <Clock className="w-4 h-4" />
@@ -56,7 +50,7 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
           </div>
         </div>
 
-        {/* Lumi's reflection (if present) */}
+        {/* Lumi's reflection section */}
         {conversation.lumi_reflection && (
           <div className="mb-4 p-4 bg-gradient-to-r from-cyan-50 to-purple-50 rounded-lg border border-cyan-100">
             <div className="flex items-center space-x-2 mb-2">
@@ -67,11 +61,11 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
           </div>
         )}
 
-        {/* Transcript */}
+        {/* Conversation transcript */}
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {conversation.transcript.map((entry, index) => (
             <div
-              key={index}
+              key={entry.id || index}
               className={`flex ${entry.speaker === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
@@ -99,7 +93,7 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
           ))}
         </div>
 
-        {/* Follow-up question (if present) */}
+        {/* Follow-up question section */}
         {conversation.lumi_question && (
           <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100">
             <div className="flex items-center space-x-2 mb-1">

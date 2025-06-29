@@ -25,7 +25,7 @@ const JournalPage = () => {
             className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
-            New Chat
+            Chat
           </Button>
         }
       />

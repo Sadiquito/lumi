@@ -1,4 +1,3 @@
-
 import { OpenAIModel, OpenAIVoice, EphemeralTokenRequest, EphemeralTokenResponse } from '@/types/openai-realtime';
 
 const MODEL_MAP = {

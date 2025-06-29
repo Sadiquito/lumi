@@ -1,4 +1,3 @@
-
 import { OpenAIModel, OpenAIVoice } from '@/types/openai-realtime';
 import { getEphemeralToken } from './openai/ephemeral-token';
 import { WebRTCConnection } from './openai/webrtc-connection';
@@ -41,14 +40,6 @@ export class OpenAIRealtimeAgent {
     }
   }
 
-  async sendMessage(text: string): Promise<void> {
-    if (!this.isConnected || !this.sessionManager) {
-      throw new Error('Agent not connected');
-    }
-
-    this.sessionManager.sendTextMessage(text);
-  }
-
   disconnect(): void {
     console.log('🛑 Disconnecting OpenAI Realtime Agent...');
     
@@ -61,9 +52,5 @@ export class OpenAIRealtimeAgent {
     this.isConnected = false;
     
     console.log('✅ OpenAI Realtime Agent disconnected');
-  }
-
-  isAgentConnected(): boolean {
-    return this.isConnected;
   }
 }

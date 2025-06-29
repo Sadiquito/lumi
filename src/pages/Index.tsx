@@ -5,12 +5,6 @@ import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const { user, loading, signInWithGoogle } = useAuth();
-
-  function greet() {
-    console.log("lol what is this haha")
-  }
-
-  greet()
     
   if (loading) {
     return (

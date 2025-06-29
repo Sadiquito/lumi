@@ -1,12 +1,8 @@
-
 import { useCallback } from 'react';
 import { useSessionManagement } from './useSessionManagement';
 import { useTranscriptManager } from './conversation/useTranscriptManager';
 import { useConnectionManager } from './conversation/useConnectionManager';
 import { useModelSettings } from './conversation/useModelSettings';
-
-// Re-export types for backward compatibility
-export type { ModelOption, VoiceOption } from '@/types/conversation';
 
 export const useRealtimeConversation = () => {
   // Integrate session management
@@ -29,8 +25,7 @@ export const useRealtimeConversation = () => {
     isLumiSpeaking,
     error,
     startConnection,
-    endConnection,
-    sendTextMessage
+    endConnection
   } = useConnectionManager();
 
   // Use model settings
@@ -42,7 +37,7 @@ export const useRealtimeConversation = () => {
   } = useModelSettings();
 
   const handleMessage = useCallback((event: any) => {
-    console.log('📨 PHASE 1 DEBUG - WebRTC event received:', event.type, event);
+    console.log('📨 WebRTC event received:', event.type, event);
 
     if (event.type === 'error') {
       console.error('❌ WebRTC error:', event);
@@ -51,36 +46,33 @@ export const useRealtimeConversation = () => {
 
     // Handle conversation item creation (when messages are added to conversation)
     if (event.type === 'conversation.item.created') {
-      console.log('📝 PHASE 1 DEBUG - Conversation item created:', event);
+      console.log('📝 Conversation item created:', event);
       handleConversationItem(event);
     }
 
     // Handle live audio transcript deltas (Lumi speaking)
     if (event.type === 'response.text.delta') {
-      console.log('🗣️ PHASE 1 DEBUG - Response text delta:', event.delta);
+      console.log('🗣️ Response text delta:', event.delta);
       handleAudioTranscriptDelta(event);
     } else if (event.type === 'response.text.done') {
-      console.log('✅ PHASE 1 DEBUG - Response text done');
+      console.log('✅ Response text done');
       handleAudioTranscriptDone();
     }
 
-    // PHASE 2: Enhanced user input transcription handling with multiple event types
+    // Enhanced user input transcription handling with multiple event types
     if (event.type === 'conversation.item.input_audio_transcription.completed' || 
         event.type === 'input_audio_transcription.completed' ||
         event.type === 'conversation.item.created' && event.item?.role === 'user') {
-      console.log('🎤 PHASE 2 DEBUG - User transcription event detected:', event.type, event);
+      console.log('🎤 User transcription event detected:', event.type, event);
       handleUserInputTranscription(event);
     }
 
-    // Handle user speech detection
+    // Handle user speech detection and response events (logging only)
     if (event.type === 'input_audio_buffer.speech_started') {
       console.log('🎤 User speech started');
     } else if (event.type === 'input_audio_buffer.speech_stopped') {
       console.log('🎤 User speech stopped');
-    }
-
-    // Handle response creation and completion
-    if (event.type === 'response.created') {
+    } else if (event.type === 'response.created') {
       console.log('🤖 Response started');
     } else if (event.type === 'response.done') {
       console.log('✅ Response completed');
@@ -95,16 +87,14 @@ export const useRealtimeConversation = () => {
     console.log('📋 Session started:', session.id);
     
     // Then start WebRTC connection
-    await startConnection(selectedModel, selectedVoice, handleMessage, () => {
-      console.log('🔗 Connection established, session already started');
-    });
+    await startConnection(selectedModel, selectedVoice, handleMessage);
   }, [startConnection, selectedModel, selectedVoice, handleMessage, startSession]);
 
   const endConversation = useCallback(async () => {
-    console.log('🛑 PHASE 4 DEBUG - Ending conversation and session with transcript:', transcript.length, 'entries');
+    console.log('🛑 Ending conversation and session with transcript:', transcript.length, 'entries');
     
     await endConnection(async (displayTranscript) => {
-      console.log('💾 PHASE 4 DEBUG - Saving session with display transcript backup...');
+      console.log('💾 Saving session with display transcript backup...');
       const result = await endSession(false, undefined, displayTranscript || transcript);
       console.log('✅ Session saved:', result);
       clearTranscript();
@@ -122,7 +112,6 @@ export const useRealtimeConversation = () => {
     selectedVoice,
     setSelectedVoice,
     startConversation,
-    endConversation,
-    sendTextMessage
+    endConversation
   };
 };
