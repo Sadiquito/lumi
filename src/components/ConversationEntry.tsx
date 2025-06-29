@@ -30,12 +30,6 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-white/30 shadow-lg hover:shadow-xl transition-all duration-300 mb-6">
       <CardContent className="p-6">
@@ -46,7 +40,10 @@ export const ConversationEntry: React.FC<ConversationEntryProps> = ({ conversati
             <span className="font-crimson">{formatDate(conversation.created_at)}</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span className="font-crimson">{formatDuration(conversation.conversation_duration)}</span>
+            <span className="font-crimson">
+              {Math.floor(conversation.conversation_duration / 60)}:
+              {(conversation.conversation_duration % 60).toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
 

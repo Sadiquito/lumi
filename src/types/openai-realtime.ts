@@ -32,3 +32,95 @@ export interface EphemeralTokenResponse {
     value: string;
   };
 }
+
+// Base interface for all realtime events
+export interface BaseRealtimeEvent {
+  type: string;
+  event_id?: string;
+}
+
+// Specific event types
+export interface AudioDeltaEvent extends BaseRealtimeEvent {
+  type: 'response.audio.delta';
+  delta: string;
+}
+
+export interface AudioDoneEvent extends BaseRealtimeEvent {
+  type: 'response.audio.done';
+}
+
+export interface TextDeltaEvent extends BaseRealtimeEvent {
+  type: 'response.text.delta';
+  delta: string;
+}
+
+export interface TextDoneEvent extends BaseRealtimeEvent {
+  type: 'response.text.done';
+  text: string;
+}
+
+export interface ConversationItemCreatedEvent extends BaseRealtimeEvent {
+  type: 'conversation.item.created';
+  item: {
+    id: string;
+    type: string;
+    content?: any[];
+  };
+}
+
+export interface SpeechStartedEvent extends BaseRealtimeEvent {
+  type: 'input_audio_buffer.speech_started';
+}
+
+export interface SpeechStoppedEvent extends BaseRealtimeEvent {
+  type: 'input_audio_buffer.speech_stopped';
+}
+
+export interface ErrorEvent extends BaseRealtimeEvent {
+  type: 'error';
+  error: {
+    message: string;
+    code?: string;
+  };
+}
+
+// Union type for all possible realtime events
+export type RealtimeEvent = 
+  | AudioDeltaEvent
+  | AudioDoneEvent  
+  | TextDeltaEvent
+  | TextDoneEvent
+  | ConversationItemCreatedEvent
+  | SpeechStartedEvent
+  | SpeechStoppedEvent
+  | ErrorEvent
+  | BaseRealtimeEvent; // fallback for unknown events
+
+// Outgoing message types
+export interface SessionUpdateMessage {
+  type: 'session.update';
+  session: SessionConfig;
+}
+
+export interface ResponseCreateMessage {
+  type: 'response.create';
+  response?: {
+    modalities?: string[];
+    instructions?: string;
+  };
+}
+
+export interface ConversationItemCreateMessage {
+  type: 'conversation.item.create';
+  item: {
+    type: string;
+    content: any[];
+  };
+}
+
+// Union type for all possible outgoing messages  
+export type RealtimeMessage = 
+  | SessionUpdateMessage
+  | ResponseCreateMessage
+  | ConversationItemCreateMessage
+  | { type: string; [key: string]: any }; // fallback for other message types

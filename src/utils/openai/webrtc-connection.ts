@@ -1,5 +1,4 @@
-
-import { OpenAIModel, OpenAIVoice } from '@/types/openai-realtime';
+import { OpenAIModel, OpenAIVoice, RealtimeEvent, RealtimeMessage } from '@/types/openai-realtime';
 import { getRealtimeModel } from './ephemeral-token';
 
 export class WebRTCConnection {
@@ -9,7 +8,7 @@ export class WebRTCConnection {
   private mediaStream: MediaStream | null = null;
 
   constructor(
-    private onMessage: (message: any) => void,
+    private onMessage: (message: RealtimeEvent) => void,
     private onSpeakingChange: (speaking: boolean) => void
   ) {}
 
@@ -23,7 +22,9 @@ export class WebRTCConnection {
 
     // Handle remote audio stream
     this.pc.ontrack = (event) => {
-      console.log('📻 Received remote audio track');
+      if (import.meta.env.DEV) {
+        console.log('📻 Received remote audio track');
+      }
       if (this.audioElement) {
         this.audioElement.srcObject = event.streams[0];
         this.onSpeakingChange(true);
@@ -35,7 +36,9 @@ export class WebRTCConnection {
     this.dc.addEventListener('message', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 Received event:', data.type);
+        if (import.meta.env.DEV) {
+          console.log('📨 Received event:', data.type);
+        }
         this.handleRealtimeEvent(data);
       } catch (error) {
         console.error('❌ Error parsing data channel message:', error);
@@ -85,7 +88,7 @@ export class WebRTCConnection {
     } as RTCSessionDescriptionInit);
   }
 
-  private handleRealtimeEvent(event: any): void {
+  private handleRealtimeEvent(event: RealtimeEvent): void {
     switch (event.type) {
       case 'response.audio.delta':
         this.onSpeakingChange(true);
@@ -105,7 +108,12 @@ export class WebRTCConnection {
       
       case 'error':
         console.error('❌ Realtime API error:', event);
-        this.onMessage({ type: 'error', error: event.error?.message || 'Unknown error' });
+        this.onMessage({ 
+          type: 'error', 
+          error: { 
+            message: (event as ErrorEvent).error?.message || 'Unknown error' 
+          } 
+        });
         break;
       
       default:
@@ -113,7 +121,7 @@ export class WebRTCConnection {
     }
   }
 
-  sendEvent(event: any): void {
+  sendEvent(event: RealtimeMessage): void {
     if (this.dc && this.dc.readyState === 'open') {
       this.dc.send(JSON.stringify(event));
     } else {
@@ -122,7 +130,9 @@ export class WebRTCConnection {
   }
 
   disconnect(): void {
-    console.log('🛑 Disconnecting WebRTC connection...');
+    if (import.meta.env.DEV) {
+      console.log('🛑 Disconnecting WebRTC connection...');
+    }
     
     if (this.mediaStream) {
       this.mediaStream.getTracks().forEach(track => track.stop());

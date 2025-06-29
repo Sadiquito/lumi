@@ -1,4 +1,4 @@
-import { OpenAIModel, OpenAIVoice } from '@/types/openai-realtime';
+import { OpenAIModel, OpenAIVoice, RealtimeEvent } from '@/types/openai-realtime';
 import { getEphemeralToken } from './openai/ephemeral-token';
 import { WebRTCConnection } from './openai/webrtc-connection';
 import { SessionManager } from './openai/session-manager';
@@ -11,13 +11,15 @@ export class OpenAIRealtimeAgent {
   constructor() {}
 
   async init(
-    onMessage: (message: any) => void,
+    onMessage: (message: RealtimeEvent) => void,
     onSpeakingChange: (speaking: boolean) => void,
     apiKey: string,
     model: OpenAIModel = 'gpt-4o-mini',
     voice: OpenAIVoice = 'alloy'
   ): Promise<void> {
-    console.log(`🚀 Initializing OpenAI Realtime Agent with WebRTC using ${model} and ${voice} voice...`);
+    if (import.meta.env.DEV) {
+      console.log(`🚀 Initializing OpenAI Realtime Agent with WebRTC using ${model} and ${voice} voice...`);
+    }
 
     try {
       // Get ephemeral token from OpenAI
@@ -32,7 +34,9 @@ export class OpenAIRealtimeAgent {
       this.sessionManager.initializeSession(voice);
       
       this.isConnected = true;
-      console.log(`✅ OpenAI Realtime Agent connected successfully via WebRTC using ${model} with ${voice} voice`);
+      if (import.meta.env.DEV) {
+        console.log(`✅ OpenAI Realtime Agent connected successfully via WebRTC using ${model} with ${voice} voice`);
+      }
 
     } catch (error) {
       console.error('❌ Error initializing OpenAI Realtime Agent:', error);
@@ -41,7 +45,9 @@ export class OpenAIRealtimeAgent {
   }
 
   disconnect(): void {
-    console.log('🛑 Disconnecting OpenAI Realtime Agent...');
+    if (import.meta.env.DEV) {
+      console.log('🛑 Disconnecting OpenAI Realtime Agent...');
+    }
     
     if (this.connection) {
       this.connection.disconnect();
@@ -51,6 +57,8 @@ export class OpenAIRealtimeAgent {
     this.sessionManager = null;
     this.isConnected = false;
     
-    console.log('✅ OpenAI Realtime Agent disconnected');
+    if (import.meta.env.DEV) {
+      console.log('✅ OpenAI Realtime Agent disconnected');
+    }
   }
 }

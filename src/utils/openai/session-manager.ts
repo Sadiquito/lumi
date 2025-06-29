@@ -5,7 +5,9 @@ export class SessionManager {
   constructor(private connection: WebRTCConnection) {}
 
   initializeSession(voice: OpenAIVoice): void {
-    console.log(`🔧 Initializing session with ${voice} voice`);
+    if (import.meta.env.DEV) {
+      console.log(`🔧 Initializing session with ${voice} voice`);
+    }
     
     const sessionConfig: SessionConfig = {
       modalities: ['text', 'audio'],
@@ -28,7 +30,9 @@ export class SessionManager {
       max_response_output_tokens: 'inf'
     };
 
-    console.log('📡 Sending session configuration');
+    if (import.meta.env.DEV) {
+      console.log('📡 Sending session configuration');
+    }
     this.connection.sendEvent({
       type: 'session.update',
       session: sessionConfig
