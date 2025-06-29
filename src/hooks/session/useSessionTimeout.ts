@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 
 export const useSessionTimeout = (sessionTimeoutId: number | null, setSessionTimeoutId: (id: number | null) => void) => {
@@ -13,7 +12,6 @@ export const useSessionTimeout = (sessionTimeoutId: number | null, setSessionTim
 
     // Set new timeout
     const timeoutId = window.setTimeout(() => {
-      console.log('Session timed out due to inactivity');
       onTimeout();
     }, SESSION_TIMEOUT_DURATION);
 

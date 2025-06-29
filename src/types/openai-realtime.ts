@@ -1,11 +1,5 @@
-
 export type OpenAIModel = 'gpt-4o' | 'gpt-4o-mini';
 export type OpenAIVoice = 'alloy' | 'ash' | 'ballad' | 'coral' | 'echo' | 'sage' | 'shimmer' | 'verse';
-
-export interface RealtimeEvent {
-  type: string;
-  [key: string]: any;
-}
 
 export interface TurnDetection {
   type: 'server_vad';

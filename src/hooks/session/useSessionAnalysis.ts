@@ -1,17 +1,33 @@
-
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+  [key: string]: unknown;
+}
+
+interface SessionAnalysisResult {
+  summary: string;
+  reflection: string;
+  followUpQuestion: string;
+}
+
+interface AnalysisResponse {
+  sessionSummary?: string;
+  lumiReflection?: string;
+  followUpQuestion?: string;
+}
+
 export const useSessionAnalysis = () => {
   const { user } = useAuth();
 
-  const generateSessionSummary = useCallback(async (transcript: any[], userEndCommand?: string) => {
+  const generateSessionSummary = useCallback(async (transcript: TranscriptEntry[], userEndCommand?: string): Promise<SessionAnalysisResult | null> => {
     if (!transcript.length) return null;
 
     try {
-      console.log('Generating session summary and reflection...');
-
       // Prepare conversation text for analysis
       const conversationText = transcript
         .map(entry => `${entry.speaker}: ${entry.text}`)
@@ -28,18 +44,18 @@ export const useSessionAnalysis = () => {
       });
 
       if (error) {
-        console.error('Error generating session summary:', error);
         return null;
       }
 
+      const analysisData = data as AnalysisResponse;
+
       return {
-        summary: data.sessionSummary || 'Had a meaningful conversation today.',
-        reflection: data.lumiReflection || 'Thank you for sharing your thoughts with me today.',
-        followUpQuestion: data.followUpQuestion || 'What would you like to explore in our next conversation?'
+        summary: analysisData.sessionSummary || 'Had a meaningful conversation today.',
+        reflection: analysisData.lumiReflection || 'Thank you for sharing your thoughts with me today.',
+        followUpQuestion: analysisData.followUpQuestion || 'What would you like to explore in our next conversation?'
       };
 
     } catch (error) {
-      console.error('Error in generateSessionSummary:', error);
       return null;
     }
   }, [user]);

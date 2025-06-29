@@ -3,6 +3,11 @@ import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
 import { ModelOption, VoiceOption } from '@/types/conversation';
 
+interface RealtimeMessage {
+  type: string;
+  [key: string]: unknown;
+}
+
 export const useConnectionManager = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -11,22 +16,19 @@ export const useConnectionManager = () => {
   const agentRef = useRef<OpenAIRealtimeAgent | null>(null);
 
   const handleSpeakingChange = useCallback((speaking: boolean) => {
-    console.log('🗣️ Speaking state changed:', speaking);
     setIsLumiSpeaking(speaking);
   }, []);
 
   const startConnection = useCallback(async (
     selectedModel: ModelOption,
     selectedVoice: VoiceOption,
-    onMessage: (message: any) => void
+    onMessage: (message: RealtimeMessage) => void
   ) => {
     if (isConnecting || isConnected) {
-      console.log('⚠️ Already connecting or connected');
       return;
     }
 
     try {
-      console.log(`🚀 Starting conversation with ${selectedModel} using ${selectedVoice} voice...`);
       setError(null);
       setIsConnecting(true);
       
@@ -42,19 +44,16 @@ export const useConnectionManager = () => {
       
       setIsConnected(true);
       setIsConnecting(false);
-      console.log('✅ WebRTC connection established successfully');
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start conversation';
-      console.error('❌ Error starting conversation:', err);
       setError(errorMessage);
       setIsConnecting(false);
       setIsConnected(false);
     }
   }, [handleSpeakingChange, isConnecting, isConnected]);
 
-  const endConnection = useCallback(async (onSessionEnd: (displayTranscript?: any[]) => Promise<void>, displayTranscript?: any[]) => {
-    console.log('🛑 Ending WebRTC connection with display transcript:', displayTranscript?.length || 0, 'entries');
+  const endConnection = useCallback(async (onSessionEnd: (displayTranscript?: unknown[]) => Promise<void>, displayTranscript?: unknown[]) => {
     
     if (agentRef.current) {
       agentRef.current.disconnect();
@@ -62,22 +61,18 @@ export const useConnectionManager = () => {
     }
     
     // Process session end with display transcript
-    console.log('💾 Processing session end with display transcript...');
     await onSessionEnd(displayTranscript);
     
     setIsConnected(false);
     setIsConnecting(false);
     setIsLumiSpeaking(false);
     setError(null);
-    
-    console.log('✅ Connection and session ended');
   }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (agentRef.current) {
-        console.log('🧹 Cleaning up agent connection');
         agentRef.current.disconnect();
       }
     };

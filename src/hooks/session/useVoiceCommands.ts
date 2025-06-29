@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 
 export const useVoiceCommands = () => {
@@ -17,7 +16,7 @@ export const useVoiceCommands = () => {
   const shouldEndSession = useCallback((text: string) => {
     const lowerText = text.toLowerCase().trim();
     return SESSION_END_COMMANDS.some(command => lowerText.includes(command));
-  }, []);
+  }, [SESSION_END_COMMANDS]);
 
   return {
     shouldEndSession

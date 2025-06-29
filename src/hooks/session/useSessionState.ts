@@ -1,8 +1,14 @@
 import { useState, useCallback } from 'react';
 
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+}
+
 interface SessionData {
   id: string;
-  transcript: any[];
+  transcript: TranscriptEntry[];
   startTime: Date;
 }
 
@@ -18,11 +24,10 @@ export const useSessionState = () => {
       startTime: new Date()
     };
     setCurrentSession(newSession);
-    console.log('Started new session:', newSession.id);
     return newSession;
   }, []);
 
-  const updateSessionTranscript = useCallback((entry: any) => {
+  const updateSessionTranscript = useCallback((entry: TranscriptEntry) => {
     setCurrentSession(prev => prev ? {
       ...prev,
       transcript: [...prev.transcript, entry]

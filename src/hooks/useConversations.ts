@@ -2,15 +2,30 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+}
+
+interface PsychologicalInsights {
+  [key: string]: unknown;
+}
+
 interface Conversation {
   id: string;
-  transcript: any[];
+  transcript: TranscriptEntry[];
   session_summary: string | null;
   lumi_reflection: string | null;
   lumi_question: string | null;
-  psychological_insights: any;
+  psychological_insights: PsychologicalInsights;
   conversation_duration: number;
   created_at: string;
+}
+
+interface RealtimePayload {
+  new: unknown;
+  [key: string]: unknown;
 }
 
 export const useConversations = () => {
@@ -36,7 +51,6 @@ export const useConversations = () => {
         .range(currentOffset, currentOffset + limit - 1);
 
       if (error) {
-        console.error('Error fetching conversations:', error);
         return;
       }
 
@@ -57,7 +71,7 @@ export const useConversations = () => {
 
       setHasMore(typedData.length === limit);
     } catch (error) {
-      console.error('Error in fetchConversations:', error);
+      // Error handling without console logging
     } finally {
       setLoading(false);
     }
@@ -73,7 +87,7 @@ export const useConversations = () => {
     if (user) {
       fetchConversations(true);
     }
-  }, [user]);
+  }, [user, fetchConversations]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -89,11 +103,11 @@ export const useConversations = () => {
           table: 'conversations',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: RealtimePayload) => {
           const newConversation: Conversation = {
-            ...payload.new as any,
-            transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
-            psychological_insights: payload.new.psychological_insights || {}
+            ...(payload.new as Conversation),
+            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
+            psychological_insights: (payload.new as Conversation).psychological_insights || {}
           };
           setConversations(prev => [newConversation, ...prev]);
         }
@@ -106,11 +120,11 @@ export const useConversations = () => {
           table: 'conversations',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: RealtimePayload) => {
           const updatedConversation: Conversation = {
-            ...payload.new as any,
-            transcript: Array.isArray(payload.new.transcript) ? payload.new.transcript : [],
-            psychological_insights: payload.new.psychological_insights || {}
+            ...(payload.new as Conversation),
+            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
+            psychological_insights: (payload.new as Conversation).psychological_insights || {}
           };
           setConversations(prev => 
             prev.map(conv => 
