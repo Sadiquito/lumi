@@ -61,7 +61,9 @@ export const useConversations = () => {
               timestamp: entry.timestamp || Date.now()
             }))
           : [],
-        psychological_insights: item.psychological_insights || {},
+        psychological_insights: (typeof item.psychological_insights === 'object' && item.psychological_insights !== null) 
+          ? item.psychological_insights as PsychologicalInsights
+          : {},
         conversation_duration: item.conversation_duration || 0
       }));
 
@@ -119,7 +121,9 @@ export const useConversations = () => {
                   timestamp: entry.timestamp || Date.now()
                 }))
               : [],
-            psychological_insights: rawConversation.psychological_insights || {},
+            psychological_insights: (typeof rawConversation.psychological_insights === 'object' && rawConversation.psychological_insights !== null) 
+              ? rawConversation.psychological_insights as PsychologicalInsights
+              : {},
             conversation_duration: rawConversation.conversation_duration || 0
           };
           setConversations(prev => [newConversation, ...prev]);
@@ -145,7 +149,9 @@ export const useConversations = () => {
                   timestamp: entry.timestamp || Date.now()
                 }))
               : [],
-            psychological_insights: rawConversation.psychological_insights || {},
+            psychological_insights: (typeof rawConversation.psychological_insights === 'object' && rawConversation.psychological_insights !== null) 
+              ? rawConversation.psychological_insights as PsychologicalInsights
+              : {},
             conversation_duration: rawConversation.conversation_duration || 0
           };
           setConversations(prev => 

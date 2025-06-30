@@ -20,6 +20,13 @@ interface SessionEndResult {
   summary: SessionAnalysisResult | null;
 }
 
+// Define session transcript entry type to match the session state
+interface SessionTranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+}
+
 export const useSessionManagement = () => {
   const { user } = useAuth();
   const {
@@ -48,7 +55,7 @@ export const useSessionManagement = () => {
     // Convert display transcript to session transcript format
     displayTranscript.forEach(entry => {
       if (entry && entry.text && entry.speaker) {
-        const sessionEntry = {
+        const sessionEntry: SessionTranscriptEntry = {
           speaker: entry.speaker,
           text: entry.text.replace(' [COMPLETE]', ''), // Clean up display markers
           timestamp: entry.timestamp || Date.now()
@@ -88,7 +95,14 @@ export const useSessionManagement = () => {
       // Generate session summary and reflection
       let sessionAnalysis: SessionAnalysisResult | null = null;
       if (currentSession.transcript.length > 0) {
-        sessionAnalysis = await generateSessionSummary(currentSession.transcript, userEndCommand);
+        // Convert session transcript to the format expected by generateSessionSummary
+        const transcriptForAnalysis = currentSession.transcript.map(entry => ({
+          id: `${entry.timestamp}-${entry.speaker}`,
+          speaker: entry.speaker,
+          text: entry.text,
+          timestamp: entry.timestamp
+        }));
+        sessionAnalysis = await generateSessionSummary(transcriptForAnalysis, userEndCommand);
       }
 
       // Convert transcript to JSON format for database storage
@@ -170,7 +184,7 @@ export const useSessionManagement = () => {
       return;
     }
 
-    const entry = {
+    const entry: SessionTranscriptEntry = {
       speaker,
       text: text.trim(),
       timestamp: Date.now()
