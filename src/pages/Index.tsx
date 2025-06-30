@@ -60,7 +60,7 @@ const Index = () => {
             </h2>
           </div>
           <p className="text-lg md:text-xl font-crimson font-normal max-w-2xl mx-auto leading-relaxed text-white">
-            Your AI companion for daily reflection through natural conversation
+            Your AI companion for daily self-reflection and planning
           </p>
         </div>
 
@@ -91,7 +91,7 @@ const Index = () => {
             </div>
             <h3 className="text-lg font-cinzel font-medium text-white">VOICE-FIRST, FOREVER</h3>
             <p className="text-sm font-crimson leading-relaxed text-white">
-              Writing sucks. Just speak your mind.
+              Let your thoughts flow freely through a voice-first experience
             </p>
           </div>
           
@@ -105,7 +105,7 @@ const Index = () => {
             </div>
             <h3 className="text-lg font-cinzel font-medium text-white">THOUGHTFUL GUIDANCE</h3>
             <p className="text-sm font-crimson leading-relaxed text-white">
-              Let Lumi guide you when you don't know what to say
+              Let Lumi guide you when you don't know where to start
             </p>
           </div>
           
@@ -119,7 +119,7 @@ const Index = () => {
             </div>
             <h3 className="text-lg font-cinzel font-medium text-white">DAY IN, DAY OUT</h3>
             <p className="text-sm font-crimson leading-relaxed text-white">
-              Build a daily habit that will last until you croak
+              Build a daily practice that will shed light on your inner world
             </p>
           </div>
         </div>
