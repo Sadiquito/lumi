@@ -104,7 +104,7 @@ export const useSessionManagement = () => {
       let sessionAnalysis: SessionAnalysisResult | null = null;
       if (currentSession.transcript.length > 0) {
         // Convert session transcript to the format expected by generateSessionSummary
-        const transcriptForAnalysis = currentSession.transcript.map(entry => ({
+        const transcriptForAnalysis: TranscriptEntry[] = currentSession.transcript.map(entry => ({
           id: `${entry.timestamp}-${entry.speaker}`,
           speaker: entry.speaker,
           text: entry.text,
