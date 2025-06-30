@@ -1,8 +1,12 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { TranscriptEntry } from '@/types/conversation';
+
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+}
 
 interface PsychologicalInsights {
   [key: string]: unknown;
@@ -50,21 +54,11 @@ export const useConversations = () => {
         return;
       }
 
-      // Type cast and normalize the data to match our Conversation interface
+      // Type cast the data to match our Conversation interface
       const typedData: Conversation[] = (data || []).map(item => ({
         ...item,
-        transcript: Array.isArray(item.transcript) 
-          ? (item.transcript as any[]).map((entry: any, index: number) => ({
-              id: entry.id || `${item.id}-${index}`,
-              speaker: entry.speaker || 'user',
-              text: entry.text || '',
-              timestamp: entry.timestamp || Date.now()
-            }))
-          : [],
-        psychological_insights: (typeof item.psychological_insights === 'object' && item.psychological_insights !== null) 
-          ? item.psychological_insights as PsychologicalInsights
-          : {},
-        conversation_duration: item.conversation_duration || 0
+        transcript: Array.isArray(item.transcript) ? item.transcript : [],
+        psychological_insights: item.psychological_insights || {}
       }));
 
       if (reset) {
@@ -110,21 +104,10 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: RealtimePayload) => {
-          const rawConversation = payload.new as any;
           const newConversation: Conversation = {
-            ...rawConversation,
-            transcript: Array.isArray(rawConversation.transcript) 
-              ? (rawConversation.transcript as any[]).map((entry: any, index: number) => ({
-                  id: entry.id || `${rawConversation.id}-${index}`,
-                  speaker: entry.speaker || 'user',
-                  text: entry.text || '',
-                  timestamp: entry.timestamp || Date.now()
-                }))
-              : [],
-            psychological_insights: (typeof rawConversation.psychological_insights === 'object' && rawConversation.psychological_insights !== null) 
-              ? rawConversation.psychological_insights as PsychologicalInsights
-              : {},
-            conversation_duration: rawConversation.conversation_duration || 0
+            ...(payload.new as Conversation),
+            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
+            psychological_insights: (payload.new as Conversation).psychological_insights || {}
           };
           setConversations(prev => [newConversation, ...prev]);
         }
@@ -138,21 +121,10 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: RealtimePayload) => {
-          const rawConversation = payload.new as any;
           const updatedConversation: Conversation = {
-            ...rawConversation,
-            transcript: Array.isArray(rawConversation.transcript) 
-              ? (rawConversation.transcript as any[]).map((entry: any, index: number) => ({
-                  id: entry.id || `${rawConversation.id}-${index}`,
-                  speaker: entry.speaker || 'user',
-                  text: entry.text || '',
-                  timestamp: entry.timestamp || Date.now()
-                }))
-              : [],
-            psychological_insights: (typeof rawConversation.psychological_insights === 'object' && rawConversation.psychological_insights !== null) 
-              ? rawConversation.psychological_insights as PsychologicalInsights
-              : {},
-            conversation_duration: rawConversation.conversation_duration || 0
+            ...(payload.new as Conversation),
+            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
+            psychological_insights: (payload.new as Conversation).psychological_insights || {}
           };
           setConversations(prev => 
             prev.map(conv => 

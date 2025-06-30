@@ -1,17 +1,11 @@
-
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
-import { ModelOption, VoiceOption, TranscriptEntry } from '@/types/conversation';
+import { ModelOption, VoiceOption } from '@/types/conversation';
 
 interface RealtimeMessage {
   type: string;
   [key: string]: unknown;
-}
-
-interface SessionEndResult {
-  conversationId: string;
-  summary: any;
 }
 
 export const useConnectionManager = () => {
@@ -59,10 +53,7 @@ export const useConnectionManager = () => {
     }
   }, [handleSpeakingChange, isConnecting, isConnected]);
 
-  const endConnection = useCallback(async (
-    onSessionEnd: (isTimeout?: boolean, userEndCommand?: string, displayTranscript?: TranscriptEntry[]) => Promise<SessionEndResult | null>, 
-    displayTranscript?: TranscriptEntry[]
-  ) => {
+  const endConnection = useCallback(async (onSessionEnd: (displayTranscript?: unknown[]) => Promise<void>, displayTranscript?: unknown[]) => {
     
     if (agentRef.current) {
       agentRef.current.disconnect();
@@ -70,7 +61,7 @@ export const useConnectionManager = () => {
     }
     
     // Process session end with display transcript
-    await onSessionEnd(false, undefined, displayTranscript);
+    await onSessionEnd(displayTranscript);
     
     setIsConnected(false);
     setIsConnecting(false);

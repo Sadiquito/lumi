@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +6,12 @@ import { useSessionTimeout } from './session/useSessionTimeout';
 import { useSessionValidation } from './session/useSessionValidation';
 import { useSessionAnalysis } from './session/useSessionAnalysis';
 import { useVoiceCommands } from './session/useVoiceCommands';
-import { TranscriptEntry } from '@/types/conversation';
+
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+}
 
 interface SessionAnalysisResult {
   summary: string;
@@ -18,13 +22,6 @@ interface SessionAnalysisResult {
 interface SessionEndResult {
   conversationId: string;
   summary: SessionAnalysisResult | null;
-}
-
-// Define session transcript entry type to match the session state
-interface SessionTranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
 }
 
 export const useSessionManagement = () => {
@@ -55,7 +52,7 @@ export const useSessionManagement = () => {
     // Convert display transcript to session transcript format
     displayTranscript.forEach(entry => {
       if (entry && entry.text && entry.speaker) {
-        const sessionEntry: SessionTranscriptEntry = {
+        const sessionEntry = {
           speaker: entry.speaker,
           text: entry.text.replace(' [COMPLETE]', ''), // Clean up display markers
           timestamp: entry.timestamp || Date.now()
@@ -85,16 +82,8 @@ export const useSessionManagement = () => {
       // Calculate session duration
       const duration = Math.floor((Date.now() - currentSession.startTime.getTime()) / 1000);
 
-      // Convert session transcript to conversation transcript format for validation
-      const transcriptForValidation: TranscriptEntry[] = currentSession.transcript.map(entry => ({
-        id: `${entry.timestamp}-${entry.speaker}`,
-        speaker: entry.speaker,
-        text: entry.text,
-        timestamp: entry.timestamp
-      }));
-
       // Check if conversation is meaningful enough to save
-      if (!isConversationMeaningful(transcriptForValidation, duration)) {
+      if (!isConversationMeaningful(currentSession.transcript, duration)) {
         clearSession();
         setIsEndingSession(false);
         return null;
@@ -103,30 +92,15 @@ export const useSessionManagement = () => {
       // Generate session summary and reflection
       let sessionAnalysis: SessionAnalysisResult | null = null;
       if (currentSession.transcript.length > 0) {
-        // Convert session transcript to the format expected by generateSessionSummary
-        const transcriptForAnalysis: TranscriptEntry[] = currentSession.transcript.map(entry => ({
-          id: `${entry.timestamp}-${entry.speaker}`,
-          speaker: entry.speaker,
-          text: entry.text,
-          timestamp: entry.timestamp
-        }));
-        sessionAnalysis = await generateSessionSummary(transcriptForAnalysis, userEndCommand);
+        sessionAnalysis = await generateSessionSummary(currentSession.transcript, userEndCommand);
       }
-
-      // Convert transcript to JSON format for database storage
-      const transcriptForDb = currentSession.transcript.map(entry => ({
-        id: `${entry.timestamp}-${entry.speaker}`,
-        speaker: entry.speaker,
-        text: entry.text,
-        timestamp: entry.timestamp
-      }));
 
       // Save conversation to database with summary
       const { data: conversation, error: saveError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          transcript: transcriptForDb as any,
+          transcript: currentSession.transcript,
           conversation_duration: duration,
           session_summary: sessionAnalysis?.summary || null,
           lumi_reflection: sessionAnalysis?.reflection || null,
@@ -192,7 +166,7 @@ export const useSessionManagement = () => {
       return;
     }
 
-    const entry: SessionTranscriptEntry = {
+    const entry: TranscriptEntry = {
       speaker,
       text: text.trim(),
       timestamp: Date.now()

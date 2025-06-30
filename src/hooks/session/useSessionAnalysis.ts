@@ -1,8 +1,13 @@
-
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { TranscriptEntry } from '@/types/conversation';
+
+interface TranscriptEntry {
+  speaker: 'user' | 'lumi';
+  text: string;
+  timestamp: number;
+  [key: string]: unknown;
+}
 
 interface SessionAnalysisResult {
   summary: string;
