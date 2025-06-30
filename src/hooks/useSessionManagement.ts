@@ -85,8 +85,16 @@ export const useSessionManagement = () => {
       // Calculate session duration
       const duration = Math.floor((Date.now() - currentSession.startTime.getTime()) / 1000);
 
+      // Convert session transcript to conversation transcript format for validation
+      const transcriptForValidation: TranscriptEntry[] = currentSession.transcript.map(entry => ({
+        id: `${entry.timestamp}-${entry.speaker}`,
+        speaker: entry.speaker,
+        text: entry.text,
+        timestamp: entry.timestamp
+      }));
+
       // Check if conversation is meaningful enough to save
-      if (!isConversationMeaningful(currentSession.transcript, duration)) {
+      if (!isConversationMeaningful(transcriptForValidation, duration)) {
         clearSession();
         setIsEndingSession(false);
         return null;
