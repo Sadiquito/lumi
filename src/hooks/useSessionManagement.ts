@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,12 +7,7 @@ import { useSessionTimeout } from './session/useSessionTimeout';
 import { useSessionValidation } from './session/useSessionValidation';
 import { useSessionAnalysis } from './session/useSessionAnalysis';
 import { useVoiceCommands } from './session/useVoiceCommands';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
+import { TranscriptEntry } from '@/types/conversation';
 
 interface SessionAnalysisResult {
   summary: string;
@@ -95,12 +91,20 @@ export const useSessionManagement = () => {
         sessionAnalysis = await generateSessionSummary(currentSession.transcript, userEndCommand);
       }
 
+      // Convert transcript to JSON format for database storage
+      const transcriptForDb = currentSession.transcript.map(entry => ({
+        id: `${entry.timestamp}-${entry.speaker}`,
+        speaker: entry.speaker,
+        text: entry.text,
+        timestamp: entry.timestamp
+      }));
+
       // Save conversation to database with summary
       const { data: conversation, error: saveError } = await supabase
         .from('conversations')
         .insert({
           user_id: user.id,
-          transcript: currentSession.transcript,
+          transcript: transcriptForDb as any,
           conversation_duration: duration,
           session_summary: sessionAnalysis?.summary || null,
           lumi_reflection: sessionAnalysis?.reflection || null,
@@ -166,7 +170,7 @@ export const useSessionManagement = () => {
       return;
     }
 
-    const entry: TranscriptEntry = {
+    const entry = {
       speaker,
       text: text.trim(),
       timestamp: Date.now()

@@ -1,12 +1,8 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
+import { TranscriptEntry } from '@/types/conversation';
 
 interface PsychologicalInsights {
   [key: string]: unknown;
@@ -54,11 +50,19 @@ export const useConversations = () => {
         return;
       }
 
-      // Type cast the data to match our Conversation interface
+      // Type cast and normalize the data to match our Conversation interface
       const typedData: Conversation[] = (data || []).map(item => ({
         ...item,
-        transcript: Array.isArray(item.transcript) ? item.transcript : [],
-        psychological_insights: item.psychological_insights || {}
+        transcript: Array.isArray(item.transcript) 
+          ? (item.transcript as any[]).map((entry: any, index: number) => ({
+              id: entry.id || `${item.id}-${index}`,
+              speaker: entry.speaker || 'user',
+              text: entry.text || '',
+              timestamp: entry.timestamp || Date.now()
+            }))
+          : [],
+        psychological_insights: item.psychological_insights || {},
+        conversation_duration: item.conversation_duration || 0
       }));
 
       if (reset) {
@@ -104,10 +108,19 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: RealtimePayload) => {
+          const rawConversation = payload.new as any;
           const newConversation: Conversation = {
-            ...(payload.new as Conversation),
-            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
-            psychological_insights: (payload.new as Conversation).psychological_insights || {}
+            ...rawConversation,
+            transcript: Array.isArray(rawConversation.transcript) 
+              ? (rawConversation.transcript as any[]).map((entry: any, index: number) => ({
+                  id: entry.id || `${rawConversation.id}-${index}`,
+                  speaker: entry.speaker || 'user',
+                  text: entry.text || '',
+                  timestamp: entry.timestamp || Date.now()
+                }))
+              : [],
+            psychological_insights: rawConversation.psychological_insights || {},
+            conversation_duration: rawConversation.conversation_duration || 0
           };
           setConversations(prev => [newConversation, ...prev]);
         }
@@ -121,10 +134,19 @@ export const useConversations = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload: RealtimePayload) => {
+          const rawConversation = payload.new as any;
           const updatedConversation: Conversation = {
-            ...(payload.new as Conversation),
-            transcript: Array.isArray((payload.new as Conversation).transcript) ? (payload.new as Conversation).transcript : [],
-            psychological_insights: (payload.new as Conversation).psychological_insights || {}
+            ...rawConversation,
+            transcript: Array.isArray(rawConversation.transcript) 
+              ? (rawConversation.transcript as any[]).map((entry: any, index: number) => ({
+                  id: entry.id || `${rawConversation.id}-${index}`,
+                  speaker: entry.speaker || 'user',
+                  text: entry.text || '',
+                  timestamp: entry.timestamp || Date.now()
+                }))
+              : [],
+            psychological_insights: rawConversation.psychological_insights || {},
+            conversation_duration: rawConversation.conversation_duration || 0
           };
           setConversations(prev => 
             prev.map(conv => 
