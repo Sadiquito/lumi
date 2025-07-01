@@ -1,19 +1,7 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-  [key: string]: unknown;
-}
-
-interface SessionAnalysisResult {
-  summary: string;
-  reflection: string;
-  followUpQuestion: string;
-}
+import type { TranscriptEntry, SessionAnalysisResult } from '@/shared/types/conversation';
 
 interface AnalysisResponse {
   sessionSummary?: string;

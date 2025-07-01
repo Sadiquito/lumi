@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, Volume2 } from 'lucide-react';
-import { ModelOption, VoiceOption } from '@/types/conversation';
+import type { ModelOption, VoiceOption } from '@/shared/types/conversation';
 
 interface ConversationStatusProps {
   isConnected: boolean;

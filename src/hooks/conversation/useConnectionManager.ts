@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { OpenAIRealtimeAgent } from '@/utils/OpenAIRealtimeAgent';
 import { supabase } from '@/integrations/supabase/client';
-import { ModelOption, VoiceOption } from '@/types/conversation';
+import type { ModelOption, VoiceOption } from '@/shared/types/conversation';
 
 interface RealtimeMessage {
   type: string;

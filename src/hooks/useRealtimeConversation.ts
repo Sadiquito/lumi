@@ -3,7 +3,7 @@ import { useSessionManagement } from './useSessionManagement';
 import { useTranscriptManager } from './conversation/useTranscriptManager';
 import { useConnectionManager } from './conversation/useConnectionManager';
 import { useModelSettings } from './conversation/useModelSettings';
-import { TranscriptEntry } from '@/types/conversation';
+import type { TranscriptEntry } from '@/shared/types/conversation';
 
 interface RealtimeEvent {
   type: string;

@@ -1,11 +1,5 @@
 import { useCallback } from 'react';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-  [key: string]: unknown;
-}
+import type { TranscriptEntry } from '@/shared/types/conversation';
 
 export const useSessionValidation = () => {
   // Lenient validation to capture meaningful conversations

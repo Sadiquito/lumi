@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { ModelOption, VoiceOption } from '@/types/conversation';
+import type { ModelOption, VoiceOption } from '@/shared/types/conversation';
 
 export const useModelSettings = () => {
   const [selectedModel, setSelectedModel] = useState<ModelOption>(() => {

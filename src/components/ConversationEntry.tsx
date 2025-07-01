@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Bot, User, Clock, Sparkles } from 'lucide-react';
-import { TranscriptEntry } from '@/types/conversation';
+import type { TranscriptEntry } from '@/shared/types/conversation';
 
 interface ConversationEntryProps {
   conversation: {

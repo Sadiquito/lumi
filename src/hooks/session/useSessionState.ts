@@ -1,10 +1,5 @@
 import { useState, useCallback } from 'react';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
+import type { TranscriptEntry } from '@/shared/types/conversation';
 
 interface SessionData {
   id: string;

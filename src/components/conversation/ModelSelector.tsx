@@ -1,6 +1,6 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ModelOption } from '@/types/conversation';
+import type { ModelOption } from '@/shared/types/conversation';
 
 interface ModelSelectorProps {
   selectedModel: ModelOption;

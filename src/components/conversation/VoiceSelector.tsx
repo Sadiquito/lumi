@@ -1,6 +1,6 @@
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { VoiceOption } from '@/types/conversation';
+import type { VoiceOption } from '@/shared/types/conversation';
 
 interface VoiceSelectorProps {
   selectedVoice: VoiceOption;

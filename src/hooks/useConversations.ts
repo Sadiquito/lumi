@@ -1,27 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
-
-interface PsychologicalInsights {
-  [key: string]: unknown;
-}
-
-interface Conversation {
-  id: string;
-  transcript: TranscriptEntry[];
-  session_summary: string | null;
-  lumi_reflection: string | null;
-  lumi_question: string | null;
-  psychological_insights: PsychologicalInsights;
-  conversation_duration: number;
-  created_at: string;
-}
+import type { TranscriptEntry, Conversation, PsychologicalInsights } from '@/shared/types/conversation';
 
 interface RealtimePayload {
   new: unknown;

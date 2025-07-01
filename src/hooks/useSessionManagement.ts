@@ -6,18 +6,7 @@ import { useSessionTimeout } from './session/useSessionTimeout';
 import { useSessionValidation } from './session/useSessionValidation';
 import { useSessionAnalysis } from './session/useSessionAnalysis';
 import { useVoiceCommands } from './session/useVoiceCommands';
-
-interface TranscriptEntry {
-  speaker: 'user' | 'lumi';
-  text: string;
-  timestamp: number;
-}
-
-interface SessionAnalysisResult {
-  summary: string;
-  reflection: string;
-  followUpQuestion: string;
-}
+import type { TranscriptEntry, SessionAnalysisResult } from '@/shared/types/conversation';
 
 interface SessionEndResult {
   conversationId: string;

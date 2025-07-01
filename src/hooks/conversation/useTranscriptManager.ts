@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { TranscriptEntry } from '@/types/conversation';
+import type { TranscriptEntry } from '@/shared/types/conversation';
 
 interface RealtimeEvent {
   type: string;
